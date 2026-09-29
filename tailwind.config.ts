@@ -9,8 +9,16 @@ const config: Config = {
     extend: {
       colors: {
         pine: "#2b3d33",
+        "pine-dark": "#1c2921",
+        moss: "#5c7a63",
         apricot: "#e2792b",
-        stone: "#f6f4ee",
+        "apricot-dark": "#c4631d",
+        stone: "#f7f4ee",
+        sand: "#ece5d6",
+      },
+      fontFamily: {
+        serif: ["var(--font-fraunces)", "Georgia", "serif"],
+        sans: ["var(--font-inter)", "ui-sans-serif", "sans-serif"],
       },
     },
   },

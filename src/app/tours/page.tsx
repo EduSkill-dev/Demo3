@@ -1,43 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Tour } from "@/types/database";
+import type { TourWithClub } from "@/types/database";
+import { DEMO_TOURS } from "@/data/demoTours";
+import ToursExplorer from "@/components/ToursExplorer";
 
 export default async function ToursPage() {
-  const supabase = createClient();
-
-  // Once the "tours" table has real data, this will return it directly.
-  // Until then it will just return an empty array — that's expected.
-  const { data: tours } = await supabase
+  const supabase = await createClient();
+  const { data } = await supabase
     .from("tours")
-    .select("*")
+    .select("*, clubs(name)")
     .order("date", { ascending: true });
 
-  const list = (tours ?? []) as Tour[];
+  const real: TourWithClub[] = (data ?? []).map((t: any) => ({
+    ...t,
+    club_name: t.clubs?.name ?? "",
+  }));
+  const tours = real.length > 0 ? real : DEMO_TOURS;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <h1 className="text-2xl font-bold text-pine">Discover & book</h1>
-
-      {list.length === 0 ? (
-        <p className="mt-6 text-neutral-500">
-          No tours yet — once clubs start publishing, they&apos;ll show up
-          here.
-        </p>
-      ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {list.map((tour) => (
-            <div
-              key={tour.id}
-              className="rounded-xl border border-neutral-200 p-5"
-            >
-              <p className="text-xs font-semibold uppercase text-apricot">
-                {tour.region}
-              </p>
-              <h2 className="mt-1 text-lg font-semibold">{tour.title}</h2>
-              <p className="mt-2 text-sm text-neutral-500">{tour.date}</p>
-            </div>
-          ))}
-        </div>
-      )}
+    <main className="mx-auto max-w-6xl px-6 py-12">
+      <h1 className="text-center font-serif text-3xl font-semibold text-pine sm:text-4xl">
+        Արշավներ
+      </h1>
+      <p className="mx-auto mt-2 max-w-xl text-center text-neutral-500">
+        Ֆիլտրիր ըստ մարզի, ակումբի, տեսակի ու բարդության, կամ ուղղակի սեղմիր
+        քարտի վրայի մարզի/ակումբի անվան վրա։
+      </p>
+      <div className="mt-8">
+        <ToursExplorer tours={tours} />
+      </div>
     </main>
   );
 }

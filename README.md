@@ -44,3 +44,12 @@ platform, matching `PROJECT_BRIEF.md`.
 Wire up `/register` for clubs (a second form, or a role toggle on the
 existing one), then build the club dashboard's "Listings" section so clubs
 can create tours — that unblocks `/tours` showing real data.
+
+## Update 2 (home page, filters, role-based signup)
+- Home page: hero, tour grid with details modal, right-side filters.
+- Put your own hero photo at `public/images/ararat-hero.jpg`.
+- Run `supabase/migrations/0002_tour_fields.sql` in the Supabase SQL editor
+  (after 0001). It adds tour type/overnight, club policies, and a trigger that
+  creates the profile (and club) automatically on signup.
+- /register asks: individual or club. /register/club has START/Advanced/Pro.
+- Nav links (/about, /clubs, /faq) and /dashboard are not built yet.

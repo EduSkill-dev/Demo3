@@ -1,0 +1,217 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { TourWithClub, TourType } from "@/types/database";
+
+const TYPE_LABELS: Record<TourType, string> = {
+  mountain: "Արշավ սարերում",
+  lake: "Արշավ լճերի մոտ",
+  other: "Այլ",
+};
+
+export default function HomeToursSection({
+  tours,
+}: {
+  tours: TourWithClub[];
+}) {
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [regions, setRegions] = useState<string[]>([]);
+  const [types, setTypes] = useState<TourType[]>([]);
+  const [overnightOnly, setOvernightOnly] = useState(false);
+  const [clubs, setClubs] = useState<string[]>([]);
+  const [selected, setSelected] = useState<TourWithClub | null>(null);
+
+  const allRegions = useMemo(
+    () => [...new Set(tours.map((t) => t.region))].sort(),
+    [tours]
+  );
+  const allClubs = useMemo(
+    () => [...new Set(tours.map((t) => t.club_name).filter(Boolean))].sort(),
+    [tours]
+  );
+
+  const filtered = tours.filter(
+    (t) =>
+      (!dateFrom || t.date >= dateFrom) &&
+      (!dateTo || t.date <= dateTo) &&
+      (regions.length === 0 || regions.includes(t.region)) &&
+      (types.length === 0 || types.includes(t.type)) &&
+      (!overnightOnly || t.overnight) &&
+      (clubs.length === 0 || clubs.includes(t.club_name))
+  );
+
+  function toggle<T>(list: T[], value: T, set: (v: T[]) => void) {
+    set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  }
+
+  function reset() {
+    setDateFrom("");
+    setDateTo("");
+    setRegions([]);
+    setTypes([]);
+    setOvernightOnly(false);
+    setClubs([]);
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1fr_260px]">
+      {/* Tour grid */}
+      <div>
+        <h2 className="text-2xl font-bold text-pine">Առաջիկա արշավներ</h2>
+        {filtered.length === 0 ? (
+          <p className="mt-6 text-neutral-500">
+            Ընտրված պայմաններով արշավ չի գտնվել։
+          </p>
+        ) : (
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((t) => (
+              <article
+                key={t.id}
+                className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white"
+              >
+                <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="text-xs font-semibold uppercase text-apricot">
+                    {t.region}
+                  </p>
+                  <h3 className="mt-1 font-semibold">{t.title}</h3>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {t.date}
+                    {t.overnight ? " · գիշերակացով" : ""}
+                  </p>
+                  <button
+                    onClick={() => setSelected(t)}
+                    className="mt-4 self-start rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold hover:bg-stone"
+                  >
+                    Տեսնել ավելին
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Filters (right) */}
+      <aside className="h-fit space-y-5 rounded-xl border border-neutral-200 bg-white p-5 lg:sticky lg:top-24">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Ֆիլտրեր</h3>
+          <button onClick={reset} className="text-xs text-apricot">
+            Մաքրել
+          </button>
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium">Ամսաթիվ (միջակայք)</p>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="mb-2 w-full rounded-lg border border-neutral-300 p-2 text-sm"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-full rounded-lg border border-neutral-300 p-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium">Մարզ</p>
+          {allRegions.map((r) => (
+            <label key={r} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={regions.includes(r)}
+                onChange={() => toggle(regions, r, setRegions)}
+              />
+              {r}
+            </label>
+          ))}
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium">Տեսակ</p>
+          {(Object.keys(TYPE_LABELS) as TourType[]).map((k) => (
+            <label key={k} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={types.includes(k)}
+                onChange={() => toggle(types, k, setTypes)}
+              />
+              {TYPE_LABELS[k]}
+            </label>
+          ))}
+          <label className="mt-1 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={overnightOnly}
+              onChange={(e) => setOvernightOnly(e.target.checked)}
+            />
+            Գիշերակացով
+          </label>
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium">Ակումբ</p>
+          {allClubs.map((c) => (
+            <label key={c} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={clubs.includes(c)}
+                onChange={() => toggle(clubs, c, setClubs)}
+              />
+              {c}
+            </label>
+          ))}
+        </div>
+      </aside>
+
+      {/* Details modal */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-[8vh]"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl bg-white p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelected(null)}
+              aria-label="Փակել"
+              className="absolute right-4 top-4 text-xl text-neutral-500 hover:text-black"
+            >
+              ✕
+            </button>
+            <p className="text-xs font-semibold uppercase text-apricot">
+              {selected.region}
+            </p>
+            <h3 className="mt-1 pr-8 text-xl font-bold text-pine">
+              {selected.title}
+            </h3>
+            <dl className="mt-4 space-y-1 text-sm text-neutral-700">
+              <div><b>Ամսաթիվ՝</b> {selected.date}</div>
+              <div><b>Ակումբ՝</b> {selected.club_name || "—"}</div>
+              <div><b>Տեսակ՝</b> {TYPE_LABELS[selected.type]}</div>
+              <div><b>Գիշերակաց՝</b> {selected.overnight ? "Այո" : "Ոչ"}</div>
+              <div><b>Առավելագույն մասնակիցներ՝</b> {selected.max_participants}</div>
+            </dl>
+            {selected.description && (
+              <p className="mt-4 text-neutral-600">{selected.description}</p>
+            )}
+            <button
+              disabled
+              className="mt-6 w-full cursor-not-allowed rounded-lg bg-apricot/60 py-3 font-semibold text-white"
+              title="Գրանցումը կավելացվի հաջորդ փուլում"
+            >
+              Գրանցվել արշավին (շուտով)
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

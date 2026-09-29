@@ -23,6 +23,16 @@ export interface Club {
   created_at: string;
 }
 
+export type TourType = "mountain" | "lake" | "other";
+export type Difficulty = "easy" | "medium" | "hard" | "prof";
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "Հեշտ",
+  medium: "Միջին",
+  hard: "Բարդ",
+  prof: "Պրոֆեսիոնալ",
+};
+
 export interface Tour {
   id: string;
   club_id: string;
@@ -32,7 +42,16 @@ export interface Tour {
   date: string; // ISO date
   max_participants: number;
   photo_urls: string[];
+  type: TourType;
+  overnight: boolean;
+  difficulty: Difficulty;
+  popular: boolean;
   created_at: string;
+}
+
+// Tour joined with its club's name — what the home page query returns.
+export interface TourWithClub extends Tour {
+  club_name: string;
 }
 
 export interface Booking {

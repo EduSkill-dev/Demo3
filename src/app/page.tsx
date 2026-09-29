@@ -1,29 +1,57 @@
-import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import type { TourWithClub } from "@/types/database";
+import HomeToursSection from "@/components/HomeToursSection";
+import { DEMO_TOURS } from "@/data/demoTours";
+import Footer from "@/components/Footer";
 
-export default function LandingPage() {
+// Shown only while the database has no tours yet, so the page never looks empty.
+
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tours")
+    .select("*, clubs(name)")
+    .order("date", { ascending: true });
+
+  const real: TourWithClub[] = (data ?? []).map((t: any) => ({
+    ...t,
+    club_name: t.clubs?.name ?? "",
+  }));
+  const tours = real.length > 0 ? real : DEMO_TOURS;
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <h1 className="text-4xl font-bold text-pine">
-        Every hike in Armenia, in one place.
-      </h1>
-      <p className="mt-4 text-lg text-neutral-600">
-        Highland brings together the country&apos;s hiking clubs and tour
-        operators so you can find a trip, book it, and go.
-      </p>
-      <div className="mt-8 flex gap-4">
-        <Link
-          href="/tours"
-          className="rounded-lg bg-apricot px-5 py-3 font-semibold text-white"
-        >
-          Find a hike
-        </Link>
-        <Link
-          href="/register"
-          className="rounded-lg border border-neutral-300 px-5 py-3 font-semibold"
-        >
-          Create an account
-        </Link>
-      </div>
+    <main>
+      {/* Hero */}
+      <section
+        className="relative flex min-h-[420px] items-center justify-center bg-pine bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/ararat-hero.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
+        <div className="relative mx-auto max-w-3xl px-6 py-20 text-center text-white">
+          <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
+            Սարերը սպասում են քեզ
+          </h1>
+          <p className="mt-4 text-lg text-white/90">
+            Գտիր քո հաջորդ արշավը՝ Արարատի հայացքի տակ, Հայաստանի բոլոր
+            ակումբների հետ մեկ վայրում։
+          </p>
+          <div className="mt-8 flex justify-center gap-3">
+            <a
+              href="#tours"
+              className="rounded-lg bg-apricot px-5 py-3 font-semibold text-white"
+            >
+              Գտնել արշավ
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Tours grid + filters */}
+      <section id="tours" className="mx-auto max-w-6xl px-6 py-12">
+        <HomeToursSection tours={tours} />
+      </section>
+
+      <Footer />
     </main>
   );
 }

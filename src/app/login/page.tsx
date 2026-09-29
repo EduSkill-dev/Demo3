@@ -17,7 +17,7 @@ export default function LoginPage() {
       password,
     });
     if (error) setError(error.message);
-    else window.location.href = "/tours";
+    else window.location.href = "/";
   }
 
   return (
