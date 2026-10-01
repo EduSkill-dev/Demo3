@@ -9,6 +9,7 @@ const tabs = [
   { href: "/account", label: "Իմ արշավները" },
   { href: "/account/history", label: "Պատմություն" },
   { href: "/account/favorites", label: "Սիրված ակումբներ" },
+  { href: "/account/notifications", label: "Ծանուցումներ" },
   { href: "/account/comments", label: "Մեկնաբանություններ" },
   { href: "/account/profile", label: "Անձնական տվյալներ" },
 ];

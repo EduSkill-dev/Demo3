@@ -12,22 +12,37 @@ const links = [
   { href: "/faq", label: "ՀՈՒՊ" },
 ];
 
-type AuthState = { loggedIn: boolean; role: "individual" | "club" | null };
+type AuthState = {
+  loggedIn: boolean;
+  role: "individual" | "club" | null;
+  unread: number;
+};
 
 export default function Navbar() {
-  const [auth, setAuth] = useState<AuthState>({ loggedIn: false, role: null });
+  const [auth, setAuth] = useState<AuthState>({ loggedIn: false, role: null, unread: 0 });
   const router = useRouter();
 
   async function refreshAuth() {
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
-    if (!data.user) return setAuth({ loggedIn: false, role: null });
+    if (!data.user) return setAuth({ loggedIn: false, role: null, unread: 0 });
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", data.user.id)
       .single();
-    setAuth({ loggedIn: true, role: (profile?.role as "individual" | "club") ?? null });
+    const role = (profile?.role as "individual" | "club") ?? null;
+
+    let unread = 0;
+    if (role === "individual") {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", data.user.id)
+        .eq("read", false);
+      unread = count ?? 0;
+    }
+    setAuth({ loggedIn: true, role, unread });
   }
 
   useEffect(() => {
@@ -62,9 +77,23 @@ export default function Navbar() {
             </Link>
           )}
           {auth.role === "individual" && (
-            <Link href="/account" className="font-semibold text-apricot hover:text-apricot-dark">
-              Իմ էջը
-            </Link>
+            <>
+              <Link
+                href="/account/notifications"
+                className="relative font-semibold text-apricot hover:text-apricot-dark"
+                title="Ծանուցումներ"
+              >
+                🔔
+                {auth.unread > 0 && (
+                  <span className="absolute -right-2.5 -top-2 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] leading-none text-white">
+                    {auth.unread}
+                  </span>
+                )}
+              </Link>
+              <Link href="/account" className="font-semibold text-apricot hover:text-apricot-dark">
+                Իմ էջը
+              </Link>
+            </>
           )}
         </nav>
         <div className="flex gap-2">

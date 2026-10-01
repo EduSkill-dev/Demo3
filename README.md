@@ -77,3 +77,18 @@ can create tours — that unblocks `/tours` showing real data.
 - **Run `supabase/migrations/0010_club_guides.sql`** — it creates
   `club_guides` and the public `club-assets` storage bucket with the upload
   policies. Without it, adding a guide reports an error in `/dashboard/club`.
+
+## Update 5 (ratings, comments, notifications)
+- `/tours/[id]`: tour ratings (average + comments) and a score/comment form
+  that only unlocks once you have a confirmed booking on that tour.
+- `/clubs/[id]`: the same form for rating the club itself — attendees only,
+  exactly what RLS enforces.
+- `/dashboard/comments`: comments the club's tours received, authors and all
+  — gated to Advanced/Pro, START gets the "change tariff" pitch instead.
+- `/account/notifications` + a 🔔 badge in the navbar: the rows written by the
+  "new tour published" trigger, with read/unread state.
+- **Run `supabase/migrations/0011_notifications_ratings.sql`** (idempotent).
+  It also backfills `get_about_stats`, the `profiles.phone/photo_url` columns
+  and the notification trigger — on this project 0004 and 0008 were never run,
+  so the About stats showed "—", profile saving failed, and no notification
+  was ever created.

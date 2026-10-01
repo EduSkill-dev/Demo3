@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TARIFF_LIMITS, parseFocusAreas, type Club, type ClubGuide, type Rating, type Tariff } from "@/types/database";
 import FavoriteToggle from "@/components/FavoriteToggle";
+import RatingBox from "@/components/RatingBox";
 
 export default async function ClubDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient();
@@ -120,12 +121,15 @@ export default async function ClubDetailPage({ params }: { params: { id: string 
             <h2 className="font-serif text-lg font-semibold text-pine">Մեկնաբանություններ</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Մեկնաբանություն կարող են թողնել միայն այն օգտատերերը, ովքեր
-              մասնակցել են այս ակումբի առնվազն մեկ արշավին։ Այս գործառույթը
-              կակտիվանա, երբ արշավներին գրանցումն ավելացվի։
+              մասնակցել են այս ակումբի առնվազն մեկ արշավին։
             </p>
 
+            <div className="mt-4 rounded-2xl border border-sand bg-white p-5">
+              <RatingBox target="club" clubId={c.id} noun="ակումբը" />
+            </div>
+
             {ratings.filter((r) => r.comment).length === 0 ? (
-              <p className="mt-4 text-neutral-500">Դեռ մեկնաբանություն չկա։</p>
+              <p className="mt-4 text-neutral-500">Դեռ մեկնաբանություն չկա։ Եթե մասնակցել ես, առաջինը գրիր։</p>
             ) : (
               <ul className="mt-4 space-y-4">
                 {ratings

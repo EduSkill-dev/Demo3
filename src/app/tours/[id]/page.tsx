@@ -11,6 +11,7 @@ import {
 } from "@/types/database";
 import BackLink from "@/components/BackLink";
 import TourSignup from "@/components/TourSignup";
+import RatingBox from "@/components/RatingBox";
 
 type TourWithClub = Tour & { clubs: Club | null };
 
@@ -67,6 +68,22 @@ export default async function TourDetailPage({
   const supabase = await createClient();
   const { data: takenRaw } = await supabase.rpc("seats_taken", { p_tour: tour.id });
   const taken = typeof takenRaw === "number" ? takenRaw : 0;
+
+  const { data: ratingRows } = await supabase
+    .from("ratings")
+    .select("id, score, comment, created_at")
+    .eq("tour_id", tour.id)
+    .order("created_at", { ascending: false });
+  const tourRatings = (ratingRows ?? []) as {
+    id: string;
+    score: number;
+    comment: string | null;
+    created_at: string;
+  }[];
+  const avgRating =
+    tourRatings.length > 0
+      ? tourRatings.reduce((a, r) => a + r.score, 0) / tourRatings.length
+      : null;
 
   const club = tour.clubs;
   const tariff: Tariff = (club?.tariff as Tariff) ?? "start";
@@ -161,6 +178,39 @@ export default async function TourDetailPage({
               → Ակումբի մասին՝ {club.name}
             </Link>
           )}
+
+          {/* Ratings */}
+          <div className="mt-10 border-t border-sand pt-6">
+            <h2 className="font-serif text-lg font-semibold text-pine">
+              Գնահատականներ
+              {avgRating != null && (
+                <span className="ml-2 text-sm font-semibold text-apricot">
+                  ★ {avgRating.toFixed(1)} ({tourRatings.length})
+                </span>
+              )}
+            </h2>
+
+            <div className="mt-4 rounded-2xl border border-sand bg-white p-5">
+              <RatingBox target="tour" tourId={tour.id} noun="արշավը" />
+            </div>
+
+            {tourRatings.length === 0 ? (
+              <p className="mt-4 text-sm text-neutral-500">
+                Դեռ գնահատական չկա։ Եթե մասնակցել ես, առաջինը գնահատիր։
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {tourRatings
+                  .filter((r) => r.comment)
+                  .map((r) => (
+                    <li key={r.id} className="rounded-lg border border-sand bg-white p-4 text-sm">
+                      <span className="font-semibold text-apricot">★ {r.score}</span>
+                      <p className="mt-1 text-neutral-600">{r.comment}</p>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         {/* Sign-up */}
