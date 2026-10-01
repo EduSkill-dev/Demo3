@@ -3,6 +3,26 @@
 This is the initial Next.js + Supabase scaffold for the Highland hiking
 platform, matching `PROJECT_BRIEF.md`.
 
+## Running SQL without the dashboard
+
+Add a personal access token (https://supabase.com/dashboard/account/tokens) to
+`.env.local` (gitignored):
+
+```
+SUPABASE_ACCESS_TOKEN=sbp_...
+```
+
+Then any migration can be run from the terminal — no DB password needed:
+
+```
+node scripts/run-sql.cjs supabase/migrations/0011_notifications_ratings.sql
+node scripts/run-sql.cjs -e "select count(*) from tours"
+```
+
+The project ref is derived from `NEXT_PUBLIC_SUPABASE_URL` (set
+`SUPABASE_PROJECT_REF` only if that ever changes). The token is org-wide, so
+keep its expiry short and revoke it when you stop needing it.
+
 ## What's here
 - `src/app/` — pages: landing (`/`), tour discovery (`/tours`), `/login`,
   `/register`
