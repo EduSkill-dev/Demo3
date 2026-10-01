@@ -144,7 +144,11 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((t) => (
               <article key={t.id} className="flex flex-col overflow-hidden rounded-xl border border-sand bg-white">
-                <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
+                {t.photo_urls?.[0] ? (
+                  <img src={t.photo_urls[0]} alt="" className="h-32 w-full object-cover" />
+                ) : (
+                  <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
+                )}
                 <div className="flex flex-1 flex-col p-4">
                   <div className="flex flex-wrap items-center gap-1 text-xs font-semibold uppercase">
                     {t.regions.map((r, i) => (

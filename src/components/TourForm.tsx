@@ -20,6 +20,9 @@ const TYPE_LABELS: Record<TourType, string> = {
   other: "Այլ",
 };
 
+const MAX_PHOTOS = 5;
+const BUCKET = "club-assets";
+
 export default function TourForm({
   mode,
   clubId,
@@ -43,6 +46,9 @@ export default function TourForm({
   const [coordinatorPhone, setCoordinatorPhone] = useState(initialTour?.coordinator_phone ?? "");
   const [description, setDescription] = useState(initialTour?.description ?? "");
   const [notes, setNotes] = useState(initialTour?.notes ?? "");
+
+  const [savedPhotos, setSavedPhotos] = useState<string[]>(initialTour?.photo_urls ?? []);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -90,6 +96,31 @@ export default function TourForm({
 
     setSaving(true);
     const supabase = createClient();
+
+    // Upload the new photos first, keeping the ones already stored.
+    const photoUrls = [...savedPhotos];
+    if (newFiles.length > 0) {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        setSaving(false);
+        return setError("Նորից մուտք գործիր։");
+      }
+      for (const file of newFiles) {
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `tours/${auth.user.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, { contentType: file.type || "image/jpeg" });
+        if (uploadError) {
+          setSaving(false);
+          return setError(`Նկարը բեռնվել չկարողացավ՝ ${uploadError.message}`);
+        }
+        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+        if (pub?.publicUrl) photoUrls.push(pub.publicUrl);
+      }
+      setNewFiles([]);
+    }
+
     const payload = {
       club_id: clubId,
       title,
@@ -102,6 +133,7 @@ export default function TourForm({
       coordinator_phone: coordinatorPhone.trim(),
       description: description || null,
       notes: notes || null,
+      photo_urls: photoUrls,
     };
 
     const { error: dbError } =
@@ -116,6 +148,15 @@ export default function TourForm({
   }
 
   const input = "w-full rounded-lg border border-neutral-300 p-3";
+
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    setNewFiles((cur) => {
+      const room = MAX_PHOTOS - savedPhotos.length - cur.length;
+      return room > 0 ? [...cur, ...files].slice(0, cur.length + room) : cur;
+    });
+    e.target.value = "";
+  }
 
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-5">
@@ -231,6 +272,54 @@ export default function TourForm({
           rows={3}
           className={input}
         />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium">
+          Լուսանկարներ ({savedPhotos.length + newFiles.length} / {MAX_PHOTOS})
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFiles}
+          disabled={savedPhotos.length + newFiles.length >= MAX_PHOTOS}
+          className="w-full text-sm"
+        />
+
+        {savedPhotos.length + newFiles.length > 0 && (
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {savedPhotos.map((url) => (
+              <div key={url} className="relative">
+                <img src={url} alt="" className="h-20 w-full rounded-lg object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setSavedPhotos((cur) => cur.filter((u) => u !== url))}
+                  title="Հեռացնել նկարը"
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm text-neutral-600 shadow"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {newFiles.map((f, i) => (
+              <div key={`${f.name}-${i}`} className="relative">
+                <img src={URL.createObjectURL(f)} alt="" className="h-20 w-full rounded-lg object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setNewFiles((cur) => cur.filter((_, idx) => idx !== i))}
+                  title="Հեռացնել նկարը"
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm text-neutral-600 shadow"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-1 text-xs text-neutral-400">
+          Առաջին նկարը կդառնա քարտի պատկերը։ Նկարները բեռնվում են հրապարակման պահին։
+        </p>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

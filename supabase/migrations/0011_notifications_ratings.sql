@@ -1,5 +1,6 @@
 -- Highland — 0011: one idempotent run for everything the app assumes but the
--- database is still missing, plus the new rating/notification rules.
+-- database is still missing, plus the new rating/notification rules and the
+-- storage policies for tour photos.
 --
 -- Safe to re-run, and safe to run even if you think you already ran 0004/0008:
 -- on this project those two never made it into the SQL editor, which is why
@@ -79,3 +80,33 @@ create policy "Users update their own ratings" on ratings
 drop policy if exists "Users delete their own ratings" on ratings;
 create policy "Users delete their own ratings" on ratings
   for delete using (auth.uid() = user_id);
+
+-- 7) Tour photos live in the same bucket, under tours/<user id>/... so the
+--    club owner may only write inside their own folder (public read is
+--    already covered by "Guide photos are publicly readable").
+drop policy if exists "Club owners upload their tour photos" on storage.objects;
+create policy "Club owners upload their tour photos" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'club-assets'
+    and (storage.foldername(name))[1] = 'tours'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+drop policy if exists "Club owners replace their tour photos" on storage.objects;
+create policy "Club owners replace their tour photos" on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'club-assets'
+    and (storage.foldername(name))[1] = 'tours'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+drop policy if exists "Club owners delete their tour photos" on storage.objects;
+create policy "Club owners delete their tour photos" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'club-assets'
+    and (storage.foldername(name))[1] = 'tours'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  );

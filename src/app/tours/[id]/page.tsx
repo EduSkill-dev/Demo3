@@ -126,6 +126,19 @@ export default async function TourDetailPage({
         </div>
       )}
 
+      {(tour.photo_urls?.length ?? 0) > 1 && (
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {tour.photo_urls.map((url, i) => (
+            <img
+              key={`${url}-${i}`}
+              src={url}
+              alt={`${tour.title} — ${i + 1}`}
+              className="h-20 w-28 shrink-0 rounded-lg object-cover"
+            />
+          ))}
+        </div>
+      )}
+
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
         {/* Main info */}
         <div>

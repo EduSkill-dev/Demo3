@@ -92,3 +92,10 @@ can create tours — that unblocks `/tours` showing real data.
   and the notification trigger — on this project 0004 and 0008 were never run,
   so the About stats showed "—", profile saving failed, and no notification
   was ever created.
+
+## Update 6 (tour photos)
+- Clubs upload up to 5 photos per listing right in `TourForm` (preview grid,
+  remove before saving, uploaded on submit). The first photo becomes the card
+  image on `/` and `/tours`, and the tour page shows the rest as thumbnails.
+- Storage path is `tours/<user id>/...`, locked down by the section-7 policies
+  in migration 0011 — owners can only write inside their own folder.

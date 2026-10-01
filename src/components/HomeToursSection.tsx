@@ -65,7 +65,11 @@ export default function HomeToursSection({
                 key={t.id}
                 className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white"
               >
-                <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
+                {t.photo_urls?.[0] ? (
+                  <img src={t.photo_urls[0]} alt="" className="h-32 w-full object-cover" />
+                ) : (
+                  <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
+                )}
                 <div className="flex flex-1 flex-col p-4">
                   <p className="text-xs font-semibold uppercase text-apricot">
                     {t.regions.join(", ")}
