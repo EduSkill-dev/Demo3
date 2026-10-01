@@ -12,6 +12,8 @@ export interface Profile {
   age: number | null;
   gender: string | null;
   email: string;
+  phone: string | null;
+  photo_url: string | null;
   created_at: string;
 }
 
@@ -20,6 +22,11 @@ export interface Club {
   owner_id: string; // profiles.id
   name: string;
   tariff: Tariff;
+  photo_url: string | null;
+  description: string | null;
+  team_info: string | null;
+  guides_info: string | null;
+  focus_areas: string | null;
   created_at: string;
 }
 
@@ -38,7 +45,7 @@ export interface Tour {
   club_id: string;
   title: string;
   description: string | null;
-  region: string;
+  regions: string[];
   date: string; // ISO date
   max_participants: number;
   photo_urls: string[];
@@ -46,8 +53,24 @@ export interface Tour {
   overnight: boolean;
   difficulty: Difficulty;
   popular: boolean;
+  coordinator_phone: string;
+  notes: string | null;
   created_at: string;
 }
+
+export const ARMENIA_REGIONS = [
+  "Երևան",
+  "Արագածոտն",
+  "Արարատ",
+  "Արմավիր",
+  "Գեղարքունիք",
+  "Կոտայք",
+  "Լոռի",
+  "Շիրակ",
+  "Սյունիք",
+  "Վայոց ձոր",
+  "Տավուշ",
+] as const;
 
 // Tour joined with its club's name — what the home page query returns.
 export interface TourWithClub extends Tour {

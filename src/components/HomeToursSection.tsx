@@ -23,7 +23,7 @@ export default function HomeToursSection({
   const [selected, setSelected] = useState<TourWithClub | null>(null);
 
   const allRegions = useMemo(
-    () => [...new Set(tours.map((t) => t.region))].sort(),
+    () => [...new Set(tours.flatMap((t) => t.regions))].sort(),
     [tours]
   );
   const allClubs = useMemo(
@@ -35,7 +35,7 @@ export default function HomeToursSection({
     (t) =>
       (!dateFrom || t.date >= dateFrom) &&
       (!dateTo || t.date <= dateTo) &&
-      (regions.length === 0 || regions.includes(t.region)) &&
+      (regions.length === 0 || t.regions.some((r) => regions.includes(r))) &&
       (types.length === 0 || types.includes(t.type)) &&
       (!overnightOnly || t.overnight) &&
       (clubs.length === 0 || clubs.includes(t.club_name))
@@ -73,7 +73,7 @@ export default function HomeToursSection({
                 <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
                 <div className="flex flex-1 flex-col p-4">
                   <p className="text-xs font-semibold uppercase text-apricot">
-                    {t.region}
+                    {t.regions.join(", ")}
                   </p>
                   <h3 className="mt-1 font-semibold">{t.title}</h3>
                   <p className="mt-1 text-sm text-neutral-500">
@@ -187,7 +187,7 @@ export default function HomeToursSection({
               ✕
             </button>
             <p className="text-xs font-semibold uppercase text-apricot">
-              {selected.region}
+              {selected.regions.join(", ")}
             </p>
             <h3 className="mt-1 pr-8 text-xl font-bold text-pine">
               {selected.title}
