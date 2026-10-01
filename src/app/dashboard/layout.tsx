@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 const tabs = [
   { href: "/dashboard", label: "Հայտարարություններ" },
   { href: "/dashboard/applications", label: "Հայտեր" },
+  { href: "/dashboard/club", label: "Ակումբի տվյալներ" },
   { href: "/dashboard/comments", label: "Մեկնաբանություններ" },
   { href: "/dashboard/tariff", label: "Տարիֆ" },
 ];

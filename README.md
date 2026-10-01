@@ -66,3 +66,14 @@ can create tours — that unblocks `/tours` showing real data.
   editor.** It adds the listing/participant cap triggers, `seats_taken()`,
   and RLS so clubs can read their own applicants — without it the seat count
   and the Applications tab stay empty.
+
+## Update 4 (club data)
+- `/dashboard/club` ("Ակումբի տվյալներ" tab): edit the club's about text
+  (creation & history), pick orientation chips (mountains, historical sites,
+  ...), and manage guides — add one opens name / surname / photo upload right
+  away, and any guide can be removed with the "−" button.
+- `/clubs/[id]` now shows that about text, the orientation chips, and the
+  guides with their photos.
+- **Run `supabase/migrations/0010_club_guides.sql`** — it creates
+  `club_guides` and the public `club-assets` storage bucket with the upload
+  policies. Without it, adding a guide reports an error in `/dashboard/club`.

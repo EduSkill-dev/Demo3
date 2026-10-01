@@ -30,6 +30,32 @@ export interface Club {
   created_at: string;
 }
 
+export interface ClubGuide {
+  id: string;
+  club_id: string;
+  first_name: string;
+  last_name: string;
+  photo_url: string | null;
+  created_at: string;
+}
+
+// The club's "orientation" chips (stored comma-separated in clubs.focus_areas).
+export const FOCUS_TAGS = [
+  "Լեռներ ու սարեր",
+  "Լճեր և ափամերձարշավներ",
+  "Պատմամշակութային վայրեր",
+  "Անտառներ ու բնություն",
+  "Գիշերակացով արշավներ",
+  "Հեշտ և ընտանեկան արշավներ",
+] as const;
+
+export function parseFocusAreas(value: string | null): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export type TourType = "mountain" | "lake" | "other";
 export type Difficulty = "easy" | "medium" | "hard" | "prof";
 
