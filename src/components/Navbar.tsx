@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const links = [
@@ -21,6 +21,7 @@ type AuthState = {
 export default function Navbar() {
   const [auth, setAuth] = useState<AuthState>({ loggedIn: false, role: null, unread: 0 });
   const router = useRouter();
+  const pathname = usePathname();
 
   async function refreshAuth() {
     const supabase = createClient();
@@ -51,6 +52,11 @@ export default function Navbar() {
     const { data: sub } = supabase.auth.onAuthStateChange(() => refreshAuth());
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Re-check the unread badge after navigating (e.g. leaving the inbox).
+  useEffect(() => {
+    refreshAuth();
+  }, [pathname]);
 
   async function handleLogout() {
     const supabase = createClient();

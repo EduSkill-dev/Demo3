@@ -3,6 +3,21 @@
 This is the initial Next.js + Supabase scaffold for the Highland hiking
 platform, matching `PROJECT_BRIEF.md`.
 
+## Testing
+
+```
+node scripts/e2e-flows.cjs          # 35 end-to-end checks, live database
+node scripts/run-sql.cjs <file.sql>  # apply a migration from the terminal
+node scripts/run-sql.cjs -e "select 1"
+```
+
+`e2e-flows.cjs` creates throwaway accounts and deletes them afterwards, so it
+is safe to re-run. It covers: signup triggers, favorites, booking + seat
+caps, rating rules, tariff listing caps, applicant visibility, club profile
+data, guides, notifications, the cancel flow, and the privilege guards
+(role/tariff escalation, clubs booking tours). It exits non-zero when a check
+fails.
+
 ## Running SQL without the dashboard
 
 Add a personal access token (https://supabase.com/dashboard/account/tokens) to
@@ -129,6 +144,22 @@ can create tours — that unblocks `/tours` showing real data.
   on the club page header.
 - Migration 0012 was applied from the terminal with
   `node scripts/run-sql.cjs supabase/migrations/0012_meeting_and_logo.sql`.
+
+## Update 9 (tests, and the bugs they found)
+- `scripts/e2e-flows.cjs` — the project's first test harness, 35 checks over
+  the real database.
+- Migration 0013 closed four privilege gaps the suite proved: club accounts
+  could book tours, any club could set its tariff to `pro`, an individual
+  could flip their own `role`, and an individual could create a club row.
+- Migration 0014 fixed the recursion 0013 introduced (the clubs policy asked
+  profiles, the profiles policy asked clubs), which had broken saving a
+  club's description/orientation/photo. The role check now lives in a
+  security-definer trigger instead of the policy.
+- App fixes: cancelling right after signing up now cancels the real booking
+  (the row id was empty), the profile email stays in sync with auth email,
+  `/dashboard/listings/new` no longer hangs when the club row is missing,
+  the navbar badge refreshes after leaving the inbox, and the tour form
+  enforces the participant cap while editing too.
 
 ## Update 7 (cancel a booking)
 - `/account` ("Իմ արշավները") has a "Չեղարկել գրանցումը" button per tour. The seat

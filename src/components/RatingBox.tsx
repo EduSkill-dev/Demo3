@@ -122,7 +122,8 @@ export default function RatingBox({
   if (eligibility === "no")
     return (
       <p className="text-sm text-neutral-500">
-        Գնահատական ու մեկնաբանություն կարող ես թողնել միայն {noun} մասնակցելուց հետո։
+        Գնահատական ու մեկնաբանություն կարող ես թողնել միայն{" "}
+        {target === "tour" ? "այս արշավին" : "այս ակումբի արշավին"} մասնակցելուց հետո։
       </p>
     );
 

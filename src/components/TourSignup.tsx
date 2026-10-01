@@ -79,9 +79,11 @@ export default function TourSignup({
     } else {
       const res = await supabase
         .from("bookings")
-        .insert({ tour_id: tourId, user_id: auth.user.id, status: "confirmed" });
+        .insert({ tour_id: tourId, user_id: auth.user.id, status: "confirmed" })
+        .select("id")
+        .single();
       error = res.error?.message ?? null;
-      if (!error) setBooking({ id: "", status: "confirmed" });
+      if (!error && res.data) setBooking({ id: (res.data as any).id, status: "confirmed" });
     }
 
     setBusy(false);

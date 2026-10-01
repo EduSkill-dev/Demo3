@@ -47,9 +47,19 @@ export default function ProfilePage() {
       .eq("id", profile.id);
     if (profileError) return setError(profileError.message);
 
+    // Keep auth and the profile row in sync: the profile copy is what the
+    // club sees in its applicant list.
     if (profile.email) {
-      const { error: emailError } = await supabase.auth.updateUser({ email: profile.email });
-      if (emailError) return setError(emailError.message);
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData.user?.email !== profile.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: profile.email });
+        if (emailError) return setError(emailError.message);
+      }
+      const { error: emailSync } = await supabase
+        .from("profiles")
+        .update({ email: profile.email })
+        .eq("id", profile.id);
+      if (emailSync) return setError(emailSync.message);
     }
 
     setSavedMsg("Պահպանվեց։ Եթե փոխել ես email-ը, հաստատման նամակ կստանաս նոր հասցեին։");

@@ -65,8 +65,8 @@ export default function TourForm({
     { used: number; max: number; seatCap: number } | null
   >(null);
 
+  // Load the tariff caps in both modes so editing cannot exceed them either.
   useEffect(() => {
-    if (mode !== "create") return;
     (async () => {
       const supabase = createClient();
       const { data: club } = await supabase
