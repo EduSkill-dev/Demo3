@@ -21,6 +21,13 @@ export default function ClubDataPage() {
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [infoError, setInfoError] = useState<string | null>(null);
 
+  // Logo / cover photo
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [savingLogo, setSavingLogo] = useState(false);
+  const [logoMsg, setLogoMsg] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
   // Guides
   const [guides, setGuides] = useState<ClubGuide[]>([]);
   const [addingGuide, setAddingGuide] = useState(false);
@@ -39,7 +46,7 @@ export default function ClubDataPage() {
 
       const { data: club } = await supabase
         .from("clubs")
-        .select("id, description, focus_areas")
+        .select("id, description, focus_areas, photo_url")
         .eq("owner_id", auth.user.id)
         .single();
       if (!club) return setLoading(false);
@@ -47,6 +54,7 @@ export default function ClubDataPage() {
       setClubId(club.id);
       setDescription((club as any).description ?? "");
       setFocus(parseFocusAreas((club as any).focus_areas));
+      setLogoUrl((club as any).photo_url ?? null);
 
       const { data: rows } = await supabase
         .from("club_guides")
@@ -81,6 +89,61 @@ export default function ClubDataPage() {
     setSavingInfo(false);
     if (error) setInfoError(error.message);
     else setInfoMsg("Պահպանվեց։");
+  }
+
+  function removeStored(url: string) {
+    const marker = `/object/public/${BUCKET}/`;
+    const idx = url.indexOf(marker);
+    if (idx === -1) return;
+    const supabase = createClient();
+    supabase.storage.from(BUCKET).remove([url.slice(idx + marker.length)]);
+  }
+
+  async function saveLogo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clubId || !logoFile) return;
+    setLogoError(null);
+    setLogoMsg(null);
+    setSavingLogo(true);
+
+    const supabase = createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      setSavingLogo(false);
+      return setLogoError("Նորից մուտք գործիր։");
+    }
+
+    const ext = (logoFile.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `clubs/${auth.user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, logoFile, { contentType: logoFile.type || "image/jpeg" });
+    if (uploadError) {
+      setSavingLogo(false);
+      return setLogoError(`Նկարը բեռնվել չկարողացավ՝ ${uploadError.message}`);
+    }
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    const url = pub?.publicUrl ?? null;
+
+    const { error } = await supabase.from("clubs").update({ photo_url: url }).eq("id", clubId);
+    setSavingLogo(false);
+    if (error) return setLogoError(error.message);
+
+    if (logoUrl) removeStored(logoUrl);
+    setLogoUrl(url);
+    setLogoFile(null);
+    setLogoMsg("Ակումբի նկարը թարմացվեց։");
+  }
+
+  async function removeLogo() {
+    if (!clubId || !logoUrl) return;
+    if (!confirm("Հեռացնե՞լ ակումբի նկարը։")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("clubs").update({ photo_url: null }).eq("id", clubId);
+    if (error) return setLogoError(error.message);
+    removeStored(logoUrl);
+    setLogoUrl(null);
+    setLogoMsg("Նկարը հեռացվեց։");
   }
 
   async function addGuide(e: React.FormEvent) {
@@ -139,14 +202,7 @@ export default function ClubDataPage() {
     const { error } = await supabase.from("club_guides").delete().eq("id", g.id);
     if (!error) {
       setGuides((cur) => cur.filter((x) => x.id !== g.id));
-      // Best effort: drop the photo too.
-      if (g.photo_url) {
-        const marker = `/object/public/${BUCKET}/`;
-        const idx = g.photo_url.indexOf(marker);
-        if (idx !== -1) {
-          await supabase.storage.from(BUCKET).remove([g.photo_url.slice(idx + marker.length)]);
-        }
-      }
+      if (g.photo_url) removeStored(g.photo_url);
     }
     setBusyId(null);
   }
@@ -159,6 +215,60 @@ export default function ClubDataPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
+      {/* Logo / cover photo */}
+      <section className="rounded-2xl border border-sand bg-white p-5">
+        <h2 className="font-serif text-lg font-semibold text-pine">Ակումբի նկար</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Երևում է «Ակումբներ» ցանկի քարտի վրա և ակումբի էջի գլխին։
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-start gap-4">
+          {logoFile ? (
+            <img src={URL.createObjectURL(logoFile)} alt="" className="h-24 w-24 rounded-xl object-cover" />
+          ) : logoUrl ? (
+            <img src={logoUrl} alt="" className="h-24 w-24 rounded-xl object-cover" />
+          ) : (
+            <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-sand text-3xl">
+              🏔️
+            </div>
+          )}
+
+          <form onSubmit={saveLogo} className="min-w-[220px] flex-1 space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                setLogoFile(e.target.files?.[0] ?? null);
+                setLogoMsg(null);
+                setLogoError(null);
+              }}
+              className="w-full text-sm"
+            />
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={savingLogo || !logoFile}
+                className="rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingLogo ? "Բեռնվում է..." : "Պահպանել նկարը"}
+              </button>
+              {logoUrl && (
+                <button
+                  type="button"
+                  onClick={removeLogo}
+                  className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-600 hover:border-red-300 hover:text-red-600"
+                >
+                  Հեռացնել
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {logoMsg && <p className="mt-3 text-sm text-green-700">{logoMsg}</p>}
+        {logoError && <p className="mt-3 text-sm text-red-600">{logoError}</p>}
+      </section>
+
       {/* About + orientation */}
       <form onSubmit={saveInfo} className="space-y-5 rounded-2xl border border-sand bg-white p-5">
         <div>

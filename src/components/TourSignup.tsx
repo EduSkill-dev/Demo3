@@ -13,11 +13,13 @@ export default function TourSignup({
   date,
   taken,
   limit,
+  cancelHours = null,
 }: {
   tourId: string;
   date: string;
   taken: number;
   limit: number;
+  cancelHours?: number | null;
 }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -165,7 +167,15 @@ export default function TourSignup({
 
       {confirmed && !isPast && (
         <p className="mt-3 text-xs text-neutral-400">
-          Չեղարկելու ժամկետը նշում է ակումբը՝ արշավի նկարագրության մեջ։
+          {cancelHours == null
+            ? "Չեղարկելու ժամկետը նշում է ակումբը՝ արշավի նկարագրության մեջ։"
+            : cancelHours === 0
+              ? "Այս արշավը կարող ես չեղարկել ցանկացած պահի։"
+              : `Չեղարկիր գրանցումը մինչև ${
+                  cancelHours % 24 === 0
+                    ? `${cancelHours / 24} օր`
+                    : `${cancelHours} ժամ`
+                } առաջ, որպեսզի տեղը կարողանա զբաղեցնել ուրիշը։`}
         </p>
       )}
 

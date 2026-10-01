@@ -15,6 +15,12 @@ import RatingBox from "@/components/RatingBox";
 
 type TourWithClub = Tour & { clubs: Club | null };
 
+function cancelLabel(hours: number) {
+  if (hours === 0) return "Ցանկացած պահի";
+  if (hours % 24 === 0) return `Մինչև ${hours / 24} օր առաջ`;
+  return `Մինչև ${hours} ժամ առաջ`;
+}
+
 async function getTour(id: string): Promise<TourWithClub | null> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -107,6 +113,15 @@ export default async function TourDetailPage({
         </a>
       ),
     },
+    ...(tour.meeting_point
+      ? [{ label: "Հավաքի վայր", value: tour.meeting_point }]
+      : []),
+    ...(tour.meeting_time
+      ? [{ label: "Հավաքի ժամ", value: tour.meeting_time.slice(0, 5) }]
+      : []),
+    ...(tour.cancel_deadline_hours != null
+      ? [{ label: "Չեղարկում", value: cancelLabel(tour.cancel_deadline_hours) }]
+      : []),
   ];
 
   return (
@@ -233,6 +248,7 @@ export default async function TourDetailPage({
             date={tour.date}
             taken={taken}
             limit={limit}
+            cancelHours={tour.cancel_deadline_hours}
           />
         </aside>
       </div>

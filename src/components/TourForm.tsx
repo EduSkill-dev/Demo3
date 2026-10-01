@@ -44,6 +44,15 @@ export default function TourForm({
     String(initialTour?.max_participants ?? 15)
   );
   const [coordinatorPhone, setCoordinatorPhone] = useState(initialTour?.coordinator_phone ?? "");
+  const [meetingPoint, setMeetingPoint] = useState(initialTour?.meeting_point ?? "");
+  const [meetingTime, setMeetingTime] = useState(
+    (initialTour?.meeting_time ?? "").slice(0, 5)
+  );
+  const [cancelHours, setCancelHours] = useState(
+    initialTour?.cancel_deadline_hours != null
+      ? String(initialTour.cancel_deadline_hours)
+      : ""
+  );
   const [description, setDescription] = useState(initialTour?.description ?? "");
   const [notes, setNotes] = useState(initialTour?.notes ?? "");
 
@@ -93,6 +102,8 @@ export default function TourForm({
       return setError("Կոորդինատորի հեռախոսահամարը պարտադիր է։");
     if (limitInfo && Number(maxParticipants) > limitInfo.seatCap)
       return setError(`Քո տարիֆով առավելագույնը ${limitInfo.seatCap} մասնակից է։`);
+    if (cancelHours && (Number(cancelHours) < 0 || Number(cancelHours) > 720))
+      return setError("Չեղարկման ժամկետը լրացրու 0-ից 720 ժամի միջակայքում։");
 
     setSaving(true);
     const supabase = createClient();
@@ -131,6 +142,9 @@ export default function TourForm({
       overnight,
       max_participants: Number(maxParticipants),
       coordinator_phone: coordinatorPhone.trim(),
+      meeting_point: meetingPoint.trim() || null,
+      meeting_time: meetingTime || null,
+      cancel_deadline_hours: cancelHours ? Number(cancelHours) : null,
       description: description || null,
       notes: notes || null,
       photo_urls: photoUrls,
@@ -256,6 +270,43 @@ export default function TourForm({
           onChange={(e) => setCoordinatorPhone(e.target.value)}
           className={input}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="mb-1 block text-sm font-medium">Հավաքի վայր</label>
+          <input
+            placeholder="Օր.՝ Կասկադ, արձանի մոտ"
+            value={meetingPoint}
+            onChange={(e) => setMeetingPoint(e.target.value)}
+            className={input}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Հավաքի ժամ</label>
+          <input
+            type="time"
+            value={meetingTime}
+            onChange={(e) => setMeetingTime(e.target.value)}
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium">Չեղարկման ժամկետ՝ ժամ առաջ</label>
+        <input
+          type="number"
+          min={0}
+          max={720}
+          placeholder="Օր.՝ 48"
+          value={cancelHours}
+          onChange={(e) => setCancelHours(e.target.value)}
+          className={input}
+        />
+        <p className="mt-1 text-xs text-neutral-400">
+          Քանի՞ ժամ առաջ կարող է մասնակիցը չեղարկել գրանցումը։ Դատարկ թողնելը նշանակում է՝ ժամկետ սահմանված չէ։
+        </p>
       </div>
 
       <div>

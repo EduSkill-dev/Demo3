@@ -120,6 +120,16 @@ can create tours — that unblocks `/tours` showing real data.
 - Storage path is `tours/<user id>/...`, locked down by the section-7 policies
   in migration 0011 — owners can only write inside their own folder.
 
+## Update 8 (meeting details + club logo)
+- `TourForm` gained հավաքի վայր, հավաքի ժամ and չեղարկման ժամկետ (hours) — the
+  fields the FAQ page always promised. The tour page lists them and the
+  sign-up card repeats the exact cancellation window once you register.
+- `/dashboard/club` gained an "Ակումբի նկար" uploader, stored under
+  `clubs/<user id>/...` in the same bucket and shown on the clubs card and
+  on the club page header.
+- Migration 0012 was applied from the terminal with
+  `node scripts/run-sql.cjs supabase/migrations/0012_meeting_and_logo.sql`.
+
 ## Update 7 (cancel a booking)
 - `/account` ("Իմ արշավները") has a "Չեղարկել գրանցումը" button per tour. The seat
   frees up immediately (capacity counts confirmed bookings only) and the club

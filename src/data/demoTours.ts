@@ -7,6 +7,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     description: "Օրական արշավ դեպի Արագածի հարավային գագաթ։ Դժվարություն՝ բարձր։ Հավաքը՝ առավոտյան 6:00։",
     max_participants: 14, photo_urls: [], type: "mountain", overnight: false, difficulty: "medium", popular: false,
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
+    meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
   },
   {
@@ -15,6 +16,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     description: "Հեշտ արշավ Դիլիջանի ազգային պարկում՝ անտառ, աղբյուրներ, տեսարաններ։",
     max_participants: 20, photo_urls: [], type: "other", overnight: false, difficulty: "medium", popular: false,
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
+    meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
   },
   {
@@ -23,6 +25,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     description: "Երկօրյա վերելք Խուստուփ՝ վրաններով գիշերակացով։ Պահանջվում է սարքավորում։",
     max_participants: 12, photo_urls: [], type: "mountain", overnight: true, difficulty: "medium", popular: false,
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
+    meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
   },
   {
@@ -31,6 +34,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     description: "Միջին բարդության արշավ Դեբեդի կիրճով, վանական համալիրների այցով։",
     max_participants: 16, photo_urls: [], type: "other", overnight: false, difficulty: "medium", popular: false,
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
+    meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
   },
   {
@@ -39,6 +43,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     description: "Արշավ Սևանա լճի ափով և գիշերակաց լճի մոտ։",
     max_participants: 18, photo_urls: [], type: "lake", overnight: true, difficulty: "medium", popular: false,
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
+    meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
   },
   {
@@ -47,6 +52,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     description: "Հեշտ արշավ Ջերմուկի ջրվեժների և լճակների շուրջ։",
     max_participants: 20, photo_urls: [], type: "lake", overnight: false, difficulty: "medium", popular: false,
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
+    meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
   },
 ];

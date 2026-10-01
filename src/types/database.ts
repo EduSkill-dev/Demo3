@@ -81,6 +81,9 @@ export interface Tour {
   popular: boolean;
   coordinator_phone: string;
   notes: string | null;
+  meeting_point: string | null;
+  meeting_time: string | null; // "HH:MM" from the time column
+  cancel_deadline_hours: number | null;
   created_at: string;
 }
 
