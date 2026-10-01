@@ -99,3 +99,8 @@ can create tours — that unblocks `/tours` showing real data.
   image on `/` and `/tours`, and the tour page shows the rest as thumbnails.
 - Storage path is `tours/<user id>/...`, locked down by the section-7 policies
   in migration 0011 — owners can only write inside their own folder.
+
+## Update 7 (cancel a booking)
+- `/account` ("Իմ արշավները") has a "Չեղարկել գրանցումը" button per tour. The seat
+  frees up immediately (capacity counts confirmed bookings only) and the club
+  sees the row dimmed as cancelled in its Applications tab.
