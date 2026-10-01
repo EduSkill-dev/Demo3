@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TARIFF_LIMITS, type Tariff, type Tour } from "@/types/database";
 
 export default function DashboardHome() {
+  const router = useRouter();
   const [clubId, setClubId] = useState<string | null>(null);
   const [tariff, setTariff] = useState<Tariff>("start");
   const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLimit, setShowLimit] = useState(false);
 
   async function load() {
     const supabase = createClient();
@@ -46,6 +49,13 @@ export default function DashboardHome() {
   if (loading) return <p className="text-neutral-500">Բեռնվում է...</p>;
 
   const max = TARIFF_LIMITS[tariff].maxListings;
+  const atLimit = tours.length >= max;
+  const tariffLabel = tariff === "start" ? "START" : tariff === "advanced" ? "Advanced" : "Pro";
+
+  function handleNew() {
+    if (atLimit) setShowLimit(true);
+    else router.push("/dashboard/listings/new");
+  }
 
   return (
     <div>
@@ -53,13 +63,38 @@ export default function DashboardHome() {
         <p className="text-sm text-neutral-500">
           Հայտարարություններ՝ {tours.length} / {max === Infinity ? "անսահմանափակ" : max}
         </p>
-        <Link
-          href="/dashboard/listings/new"
+        <button
+          onClick={handleNew}
           className="rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark"
         >
           + Նոր տուր
-        </Link>
+        </button>
       </div>
+
+      {showLimit && atLimit && (
+        <div className="mt-5 rounded-xl border border-apricot/40 bg-apricot/10 p-4 text-sm text-apricot-dark">
+          <p className="font-semibold">
+            Դու արդեն սպառել ես «{tariffLabel}» տարիֆով սահմանված {max} հայտարարությունները։
+          </p>
+          <p className="mt-1 text-neutral-700">
+            Ազատիր տեղ՝ ջնջելով մեկ հայտարարություն, կամ բարձրացրու տարիֆդ՝ նոր արշավներ հրապարակելու համար։
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/tariff"
+              className="rounded-lg bg-apricot px-4 py-2 font-semibold text-white hover:bg-apricot-dark"
+            >
+              Փոխել տարիֆը
+            </Link>
+            <button
+              onClick={() => setShowLimit(false)}
+              className="rounded-lg border border-neutral-300 px-4 py-2 font-semibold text-neutral-600"
+            >
+              Փակել
+            </button>
+          </div>
+        </div>
+      )}
 
       {tours.length === 0 ? (
         <p className="mt-8 text-neutral-500">Դեռ հայտարարություն չկա։</p>

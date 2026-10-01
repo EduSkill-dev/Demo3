@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+// Only ever redirect to a path on this site (blocks //evil.com etc.).
+function safeNext() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,7 +23,9 @@ export default function LoginPage() {
       password,
     });
     if (error) setError(error.message);
-    else window.location.href = "/";
+    else {
+      window.location.href = safeNext();
+    }
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -45,7 +46,9 @@ export default function TourForm({
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [limitInfo, setLimitInfo] = useState<{ used: number; max: number } | null>(null);
+  const [limitInfo, setLimitInfo] = useState<
+    { used: number; max: number; seatCap: number } | null
+  >(null);
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -61,7 +64,11 @@ export default function TourForm({
         .select("id", { count: "exact", head: true })
         .eq("club_id", clubId);
       const tariff = (club?.tariff ?? "start") as Tariff;
-      setLimitInfo({ used: count ?? 0, max: TARIFF_LIMITS[tariff].maxListings });
+      setLimitInfo({
+        used: count ?? 0,
+        max: TARIFF_LIMITS[tariff].maxListings,
+        seatCap: TARIFF_LIMITS[tariff].maxParticipants,
+      });
     })();
   }, [mode, clubId]);
 
@@ -78,6 +85,8 @@ export default function TourForm({
     if (regions.length === 0) return setError("Ընտրիր առնվազն մեկ մարզ։");
     if (!coordinatorPhone.trim())
       return setError("Կոորդինատորի հեռախոսահամարը պարտադիր է։");
+    if (limitInfo && Number(maxParticipants) > limitInfo.seatCap)
+      return setError(`Քո տարիֆով առավելագույնը ${limitInfo.seatCap} մասնակից է։`);
 
     setSaving(true);
     const supabase = createClient();
@@ -116,9 +125,14 @@ export default function TourForm({
         </p>
       )}
       {atLimit && (
-        <p className="rounded-lg bg-apricot/10 p-3 text-sm text-apricot-dark">
-          Հասել ես քո տարիֆի սահմանաչափին։ Ջնջիր մի հայտարարություն կամ բարձրացրու տարիֆդ նոր տուր ավելացնելու համար։
-        </p>
+        <div className="rounded-lg bg-apricot/10 p-3 text-sm text-apricot-dark">
+          <p>
+            Հասել ես քո տարիֆի սահմանաչափին։ Ջնջիր մի հայտարարություն կամ բարձրացրու տարիֆդ նոր տուր ավելացնելու համար։
+          </p>
+          <Link href="/dashboard/tariff" className="mt-2 inline-block font-semibold underline">
+            Փոխել տարիֆը
+          </Link>
+        </div>
       )}
 
       <div>
@@ -155,10 +169,16 @@ export default function TourForm({
             required
             type="number"
             min={1}
+            max={limitInfo?.seatCap ?? undefined}
             value={maxParticipants}
             onChange={(e) => setMaxParticipants(e.target.value)}
             className={input}
           />
+          {limitInfo && Number(maxParticipants) > limitInfo.seatCap && (
+            <p className="mt-1 text-xs text-red-600">
+              Քո տարիֆով առավելագույնը {limitInfo.seatCap} մասնակից է։
+            </p>
+          )}
         </div>
       </div>
 

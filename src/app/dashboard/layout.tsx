@@ -9,6 +9,7 @@ const tabs = [
   { href: "/dashboard", label: "Հայտարարություններ" },
   { href: "/dashboard/applications", label: "Հայտեր" },
   { href: "/dashboard/comments", label: "Մեկնաբանություններ" },
+  { href: "/dashboard/tariff", label: "Տարիֆ" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -53,3 +53,16 @@ can create tours — that unblocks `/tours` showing real data.
   creates the profile (and club) automatically on signup.
 - /register asks: individual or club. /register/club has START/Advanced/Pro.
 - Nav links (/about, /clubs, /faq) and /dashboard are not built yet.
+
+## Update 3 (booking flow)
+- `/tours/[id]` — a real tour page (back link uses browser history, all
+  club-provided fields, seats left, sign-up / cancel card).
+- Tour cards on `/` and `/tours` now open that page instead of a modal.
+- `/dashboard/applications` — who signed up per tour (name, age, contact),
+  with cancel/restore; `/dashboard/tariff` — switch START ↔ Advanced.
+- Hitting the listing limit shows an explanation with a "Փոխել տարիֆը" button.
+- `/login?next=/tours/...` returns you to the tour you wanted to join.
+- **Run `supabase/migrations/0009_booking_flow.sql` in the Supabase SQL
+  editor.** It adds the listing/participant cap triggers, `seats_taken()`,
+  and RLS so clubs can read their own applicants — without it the seat count
+  and the Applications tab stay empty.

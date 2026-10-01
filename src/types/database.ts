@@ -58,6 +58,12 @@ export interface Tour {
   created_at: string;
 }
 
+export const TYPE_LABELS: Record<TourType, string> = {
+  mountain: "Արշավ սարերում",
+  lake: "Արշավ լճերի մոտ",
+  other: "Այլ",
+};
+
 export const ARMENIA_REGIONS = [
   "Երևան",
   "Արագածոտն",

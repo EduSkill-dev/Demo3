@@ -1,13 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { TourWithClub, TourType } from "@/types/database";
-
-const TYPE_LABELS: Record<TourType, string> = {
-  mountain: "Արշավ սարերում",
-  lake: "Արշավ լճերի մոտ",
-  other: "Այլ",
-};
+import { TYPE_LABELS } from "@/types/database";
 
 export default function HomeToursSection({
   tours,
@@ -20,7 +16,6 @@ export default function HomeToursSection({
   const [types, setTypes] = useState<TourType[]>([]);
   const [overnightOnly, setOvernightOnly] = useState(false);
   const [clubs, setClubs] = useState<string[]>([]);
-  const [selected, setSelected] = useState<TourWithClub | null>(null);
 
   const allRegions = useMemo(
     () => [...new Set(tours.flatMap((t) => t.regions))].sort(),
@@ -80,12 +75,12 @@ export default function HomeToursSection({
                     {t.date}
                     {t.overnight ? " · գիշերակացով" : ""}
                   </p>
-                  <button
-                    onClick={() => setSelected(t)}
+                  <Link
+                    href={`/tours/${t.id}`}
                     className="mt-4 self-start rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold hover:bg-stone"
                   >
                     Տեսնել ավելին
-                  </button>
+                  </Link>
                 </div>
               </article>
             ))}
@@ -169,49 +164,6 @@ export default function HomeToursSection({
         </div>
       </aside>
 
-      {/* Details modal */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-[8vh]"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="relative w-full max-w-lg rounded-2xl bg-white p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setSelected(null)}
-              aria-label="Փակել"
-              className="absolute right-4 top-4 text-xl text-neutral-500 hover:text-black"
-            >
-              ✕
-            </button>
-            <p className="text-xs font-semibold uppercase text-apricot">
-              {selected.regions.join(", ")}
-            </p>
-            <h3 className="mt-1 pr-8 text-xl font-bold text-pine">
-              {selected.title}
-            </h3>
-            <dl className="mt-4 space-y-1 text-sm text-neutral-700">
-              <div><b>Ամսաթիվ՝</b> {selected.date}</div>
-              <div><b>Ակումբ՝</b> {selected.club_name || "—"}</div>
-              <div><b>Տեսակ՝</b> {TYPE_LABELS[selected.type]}</div>
-              <div><b>Գիշերակաց՝</b> {selected.overnight ? "Այո" : "Ոչ"}</div>
-              <div><b>Առավելագույն մասնակիցներ՝</b> {selected.max_participants}</div>
-            </dl>
-            {selected.description && (
-              <p className="mt-4 text-neutral-600">{selected.description}</p>
-            )}
-            <button
-              disabled
-              className="mt-6 w-full cursor-not-allowed rounded-lg bg-apricot/60 py-3 font-semibold text-white"
-              title="Գրանցումը կավելացվի հաջորդ փուլում"
-            >
-              Գրանցվել արշավին (շուտով)
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
