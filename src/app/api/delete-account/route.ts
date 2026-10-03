@@ -37,7 +37,7 @@ export async function POST() {
   if (tourIds.length) {
     const { data: tours } = await admin
       .from("tours")
-      .select("title, date, clubs(profiles(email))")
+      .select("title, date, clubs(profiles!clubs_owner_id_fkey(email))")
       .in("id", tourIds);
     for (const tour of (tours ?? []) as unknown as {
       title: string;

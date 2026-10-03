@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       // cancelled and unread in its dashboard).
       const { data: owner } = await admin
         .from("bookings")
-        .select("tours(clubs(profiles(email)))")
+        .select("tours(clubs(profiles!clubs_owner_id_fkey(email)))")
         .eq("id", body.booking_id)
         .single();
       const clubEmail = (owner as unknown as { tours: { clubs: { profiles: { email: string } | null } | null } | null } | null)

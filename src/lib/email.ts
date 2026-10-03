@@ -277,3 +277,48 @@ export function clubCancellationEmail(input: {
     text: `${input.participant} չեղարկեց գրանցումը՝ ${input.tourTitle} (${input.date})`,
   };
 }
+
+// To a club: its package lapses soon (7 and 2 days before).
+export function packageExpiryEmail(input: { to: string; clubName: string; packageName: string; endsAt: string; daysLeft: number }) {
+  const html = layout(
+    `Փաթեթի ժամկետը լրանում է ${input.daysLeft} օրից`,
+    `<p>«${esc(input.clubName)}» ակումբի «${esc(input.packageName)}» փաթեթը գործում է մինչև <b>${input.endsAt}</b>։
+     Ժամկետը լրանալուց հետո Ձեր արշավները կայքում չեն երևա, իսկ նոր հայտեր չեք ստանա։</p>
+     <p>Երկարաձգեք փաթեթը վահանակի «Փաթեթներ» բաժնից. նոր ամիսը կհաշվվի ընթացիկ ժամկետի ավարտից։</p>
+     ${button(`${BASE_URL()}/dashboard/packages`, "Երկարաձգել փաթեթը")}`
+  );
+  return {
+    to: input.to,
+    subject: `Highland — «${input.packageName}» փաթեթը լրանում է ${input.daysLeft} օրից`,
+    html,
+    text: `Ձեր «${input.packageName}» փաթեթը գործում է մինչև ${input.endsAt}։ Երկարաձգեք՝ ${BASE_URL()}/dashboard/packages`,
+  };
+}
+
+// To newsletter subscribers: the hikes published since the last digest.
+export function newsletterDigestEmail(input: {
+  to: string;
+  unsubscribeUrl: string;
+  tours: { id: string; title: string; date: string; clubName: string; regions: string[] }[];
+}) {
+  const rows = input.tours
+    .map(
+      (tour) => `<tr><td style="padding:8px 0;border-bottom:1px solid #ece5d6">
+        <a href="${BASE_URL()}/tours/${tour.id}" style="color:${BRAND.pine};font-weight:700;text-decoration:none">${esc(tour.title)}</a><br>
+        <span style="color:#7a736a;font-size:13px">${tour.date} · ${esc(tour.clubName)} · ${tour.regions.map((r) => hyT(`region.${r}`)).join(", ")}</span>
+      </td></tr>`
+    )
+    .join("");
+  const html = layout(
+    "Նոր արշավներ Highland-ում",
+    `<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
+     ${button(`${BASE_URL()}/tours`, "Տեսնել բոլոր արշավները")}
+     <p style="font-size:12px;color:#7a736a;margin-top:18px"><a href="${input.unsubscribeUrl}" style="color:#7a736a">Ապաբաժանորդագրվել</a></p>`
+  );
+  return {
+    to: input.to,
+    subject: `Highland — ${input.tours.length} նոր արշավ`,
+    html,
+    text: input.tours.map((tour) => `${tour.title} (${tour.date}) — ${BASE_URL()}/tours/${tour.id}`).join("\n"),
+  };
+}

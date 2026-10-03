@@ -218,3 +218,26 @@ can create tours — that unblocks `/tours` showing real data.
   `/newsletter/confirm|unsubscribe`) and suggestions (`/api/contact`,
   forwarded to `CONTACT_INBOX`).
 - Migrations: `0018_packages_and_tour_rules.sql`, `0019_signup_fields_and_newsletter.sql`.
+
+## Update 13 (club and account dashboards, public pages, daily job)
+- Club dashboard: Listings (A/B applications with unread badges, hide,
+  cancel instead of delete once people signed up), Applications (k/B,
+  unread in bold, details modal), Club details (photo, about, phone, focus,
+  guides with bios), Packages.
+- Account: Hikes (cancel only >48 h before), History with receipts
+  (`/receipts/<id>?print=1` → Save as PDF), Favourite clubs, Notifications,
+  Reviews, Personal details (photo, email change with confirmation,
+  password, account deletion that keeps history as "deleted user").
+- Public: Hikes page with URL filters and "See more" modal, club pages with
+  Back-to-filters, heart, guides, upcoming hikes and reviews.
+- Every screen is translated (hy/ru/en). `node scripts/check-i18n.cjs`
+  lists missing ru/en keys.
+- Daily job `/api/cron/daily` (scheduled in `vercel.json`, needs
+  `CRON_SECRET`): package reminders 7 and 2 days before expiry, and a
+  digest of new hikes to confirmed newsletter subscribers.
+- Demo data: `node scripts/seed-demo.cjs` (`--remove` to delete).
+- Migrations 0020–0024.
+
+### Order of migrations
+Run every file in `supabase/migrations/` in name order with
+`node scripts/run-sql.cjs <file>` (0002 does not exist; that is expected).

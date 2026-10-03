@@ -452,7 +452,7 @@ async function main() {
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
       stdio: 'pipe',
-      env: { ...process.env, ...env },
+      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret' },
       shell: false,
     });
     devServer.on('error', (err) => console.error('     dev server error:', err.message));
@@ -624,6 +624,18 @@ async function main() {
 
       const clubDelete = await api('/api/delete-account', null, club2Cookie);
       check('a club account cannot delete itself with one click', clubDelete.status === 403, `status=${clubDelete.status}`);
+
+      // ---------- Phase 7: daily job ----------
+      const cronUrl = `http://localhost:${DEV_PORT}/api/cron/daily`;
+      const cronAnon = await fetch(cronUrl);
+      check('HTTP cron: refused without the secret', cronAnon.status === 401, `status=${cronAnon.status}`);
+      await admin.from('clubs').update({ package_ends_at: inDays(1.5) }).eq('id', clubA);
+      const run1 = await fetch(cronUrl, { headers: { Authorization: 'Bearer e2e-cron-secret' } });
+      const run2 = await fetch(cronUrl, { headers: { Authorization: 'Bearer e2e-cron-secret' } });
+      const sentReminders = (await admin.from('package_reminders').select('days').eq('club_id', clubA)).data || [];
+      check('HTTP cron: the 2-day package reminder goes out exactly once',
+        run1.status === 200 && run2.status === 200 && sentReminders.length === 1 && sentReminders[0].days === 2,
+        `runs=${run1.status}/${run2.status} reminders=${JSON.stringify(sentReminders)}`);
 
       check('HTTP: email no-op (RESEND_API_KEY absent from env)', !env.RESEND_API_KEY,
         env.RESEND_API_KEY ? 'API key present!' : 'no key — emails skipped');
