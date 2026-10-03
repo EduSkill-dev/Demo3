@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   bookingCancelledEmail,
   bookingConfirmationEmail,
@@ -14,12 +15,14 @@ type TourRow = {
   meeting_point: string | null;
   meeting_time: string | null;
   cancel_deadline_hours: number | null;
+  price: number | string | null;
   clubs: { name: string } | null;
 };
 
 // Bookings go through the server so the confirmation email is sent from a
 // trusted place: the browser never sees an email key, and a failed send never
-// loses the booking.
+// loses the booking. Reads use the caller's session (RLS); writes use the
+// service role, because browsers may no longer write bookings directly.
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     action?: string;
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
   }
 
   const to = (profile as { email: string }).email;
+  const admin = createAdminClient();
 
   /* ----------------------------------------------------------- cancellation */
   if (body.action === "cancel") {
@@ -64,10 +68,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Գրանցումը չի գտնվել։" }, { status: 404 });
     }
 
-    const { error } = await supabase
+    // The select above runs under RLS, so finding the row proves ownership.
+    const { error } = await admin
       .from("bookings")
       .update({ status: "cancelled" })
-      .eq("id", body.booking_id);
+      .eq("id", body.booking_id)
+      .eq("user_id", auth.user.id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -102,7 +108,7 @@ export async function POST(req: Request) {
 
   const { data: tourRow } = await supabase
     .from("tours")
-    .select("id, title, date, meeting_point, meeting_time, cancel_deadline_hours, clubs(name)")
+    .select("id, title, date, meeting_point, meeting_time, cancel_deadline_hours, price, clubs(name)")
     .eq("id", body.tour_id)
     .maybeSingle();
 
@@ -110,6 +116,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Արշավը չի գտնվել։" }, { status: 404 });
   }
   const tour = tourRow as unknown as TourRow;
+
+  // Paid tours are booked only by /api/payments/charge after the card clears.
+  if (Number(tour.price) > 0) {
+    return NextResponse.json(
+      { error: "Այս արշավը վճարովի է․ գրանցվիր վճարման միջոցով։" },
+      { status: 402 }
+    );
+  }
 
   // One row per user+tour, so a previously cancelled signup is re-activated
   // instead of inserted. Both paths run through the capacity trigger and both
@@ -130,7 +144,7 @@ export async function POST(req: Request) {
         { status: 409 }
       );
     }
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from("bookings")
       .update({ status: "confirmed" })
       .eq("id", existing.id);
@@ -142,7 +156,7 @@ export async function POST(req: Request) {
     }
     booking = { id: existing.id };
   } else {
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from("bookings")
       .insert({ tour_id: tour.id, user_id: auth.user.id, status: "confirmed" })
       .select("id")

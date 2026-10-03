@@ -36,7 +36,37 @@ const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_RO
 // derived from the project sub-domain of the Supabase URL.
 const PROJECT_REF = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split('.')[0];
 const AUTH_COOKIE_NAME = `sb-${PROJECT_REF}-auth-token`;
-const DEV_PORT = 3999;
+let DEV_PORT = 3999;
+
+// Dates relative to today, so the suite never ages into "tour already happened".
+function future(days) {
+  const d = new Date(Date.now() + days * 86400000);
+  return d.toISOString().slice(0, 10);
+}
+
+// Ask the OS for a free port instead of killing whatever holds a fixed one
+// (the old `fuser -k` only worked on Linux).
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = require('net').createServer();
+    srv.unref();
+    srv.on('error', reject);
+    srv.listen(0, () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
+// Stop the dev server and every worker it spawned (Windows needs taskkill /T).
+function stopDevServer(proc) {
+  if (!proc || proc.exitCode !== null) return;
+  if (process.platform === 'win32') {
+    try { require('child_process').execSync(`taskkill /pid ${proc.pid} /T /F`, { stdio: 'ignore' }); } catch { /* already gone */ }
+  } else {
+    proc.kill('SIGTERM');
+  }
+}
 
 
 const results = [];
@@ -120,14 +150,16 @@ async function main() {
     check('signup trigger created the individual profile', profile.data?.role === 'individual' && profile.data?.first_name === 'Աննա', JSON.stringify(profile.data));
 
     const clubRow = await admin.from('clubs').select('id, name, tariff').eq('owner_id', ids.club).single();
-    check('signup trigger created the club with chosen tariff', clubRow.data?.tariff === 'advanced', JSON.stringify(clubRow.data));
+    check('signup ignores a tariff in the metadata (always START)', clubRow.data?.tariff === 'start', JSON.stringify(clubRow.data));
     const clubA = clubRow.data.id;
+    // Club A plays an Advanced club for the rest of the suite (as if it had paid).
+    await admin.from('clubs').update({ tariff: 'advanced' }).eq('id', clubA);
     const clubB = (await admin.from('clubs').select('id').eq('owner_id', ids.club2).single()).data.id;
 
     // The club publishes first — this needs the club's own session.
     await signIn('club');
     const tourA = await anon.from('tours').insert({
-      club_id: clubA, title: 'E2E Tour', regions: ['Կոտայք'], date: '2026-12-20',
+      club_id: clubA, title: 'E2E Tour', regions: ['Կոտայք'], date: future(78),
       max_participants: 4, type: 'mountain', difficulty: 'easy', overnight: false,
       coordinator_phone: '+374 55 123456', meeting_point: 'Կասկադ', meeting_time: '07:00',
       cancel_deadline_hours: 24,
@@ -146,12 +178,18 @@ async function main() {
     const seats0 = await anon.rpc('seats_taken', { p_tour: tourId });
     check('seats start at 0', seats0.data === 0, String(seats0.data));
 
-    const book = await anon.from('bookings').insert({ tour_id: tourId, user_id: ids.ind, status: 'confirmed' });
-    check('individual books the tour', !book.error, book.error ? book.error.message : '');
+    // Browsers may not write bookings; /api/bookings does it with the service role.
+    const directBook = await anon.from('bookings').insert({ tour_id: tourId, user_id: ids.ind, status: 'confirmed' });
+    check('a browser cannot insert a booking directly', !!directBook.error, directBook.error ? directBook.error.code : 'ALLOWED');
+    const forgedPayment = await anon.from('payments').insert({ user_id: ids.ind, kind: 'booking', tour_id: tourId, amount: 5000, status: 'succeeded' });
+    check('a browser cannot record its own payment', !!forgedPayment.error, forgedPayment.error ? forgedPayment.error.code : 'ALLOWED');
+
+    const book = await admin.from('bookings').insert({ tour_id: tourId, user_id: ids.ind, status: 'confirmed' });
+    check('server books the tour', !book.error, book.error ? book.error.message : '');
     const seats1 = await anon.rpc('seats_taken', { p_tour: tourId });
     check('seat counter increments', seats1.data === 1, String(seats1.data));
 
-    const dup = await anon.from('bookings').insert({ tour_id: tourId, user_id: ids.ind, status: 'confirmed' });
+    const dup = await admin.from('bookings').insert({ tour_id: tourId, user_id: ids.ind, status: 'confirmed' });
     check('duplicate booking is rejected', !!dup.error, dup.error ? dup.error.code : 'ALLOWED');
 
     // ratings
@@ -176,11 +214,11 @@ async function main() {
 
     // ---------- capacity ----------
     const zeroTour = await admin.from('tours').insert({
-      club_id: clubA, title: 'E2E Full Tour', regions: ['Կոտայք'], date: '2026-12-21',
+      club_id: clubA, title: 'E2E Full Tour', regions: ['Կոտայք'], date: future(79),
       max_participants: 0, type: 'mountain', difficulty: 'easy', overnight: false,
       coordinator_phone: '+374 55 123456',
     }).select('id').single();
-    const full = await anon.from('bookings').insert({ tour_id: zeroTour.data.id, user_id: ids.ind2, status: 'confirmed' });
+    const full = await admin.from('bookings').insert({ tour_id: zeroTour.data.id, user_id: ids.ind2, status: 'confirmed' });
     check('booking a tour with no seats left is rejected', !!full.error, full.error ? full.error.message : 'ALLOWED');
 
     // ---------- tariff limits (club A, advanced = 5 listings) ----------
@@ -190,7 +228,7 @@ async function main() {
     let created = 0;
     for (let i = 0; i < 5; i++) {
       const r = await anon.from('tours').insert({
-        club_id: clubA, title: `E2E Limited ${i}`, regions: ['Կոտայք'], date: '2027-01-0' + (i + 1),
+        club_id: clubA, title: `E2E Limited ${i}`, regions: ['Կոտայք'], date: future(90 + i),
         max_participants: 5, type: 'mountain', difficulty: 'easy', overnight: false,
         coordinator_phone: '+374 55 123456',
       });
@@ -200,7 +238,7 @@ async function main() {
     check('Advanced club stops exactly at its 5-listing cap', beforeCount + created === 5, `before=${beforeCount} created=${created}`);
 
     const over = await anon.from('tours').insert({
-      club_id: clubA, title: 'E2E Over limit', regions: ['Կոտայք'], date: '2027-02-01',
+      club_id: clubA, title: 'E2E Over limit', regions: ['Կոտայք'], date: future(120),
       max_participants: 5, type: 'mountain', difficulty: 'easy', overnight: false,
       coordinator_phone: '+374 55 123456',
     });
@@ -209,7 +247,7 @@ async function main() {
     // downgrading below the current count must not delete anything, but blocks new ones
     await admin.from('clubs').update({ tariff: 'start' }).eq('id', clubA);
     const afterDowngrade = await anon.from('tours').insert({
-      club_id: clubA, title: 'E2E After downgrade', regions: ['Կոտայք'], date: '2027-03-01',
+      club_id: clubA, title: 'E2E After downgrade', regions: ['Կոտայք'], date: future(150),
       max_participants: 5, type: 'mountain', difficulty: 'easy', overnight: false,
       coordinator_phone: '+374 55 123456',
     });
@@ -219,7 +257,6 @@ async function main() {
     // ---------- applicants visibility ----------
     await anon.auth.signOut();
     await signIn('ind');
-    await anon.from('bookings').insert({ tour_id: tourId, user_id: ids.ind, status: 'confirmed' });
     await anon.auth.signOut();
 
     await signIn('club');
@@ -250,7 +287,8 @@ async function main() {
 
 
     // ---------- clubs cannot book ----------
-    const clubBooking = await anon.from('bookings').insert({ tour_id: tourId, user_id: ids.club2, status: 'confirmed' });
+    // Even the server cannot book a club account onto a tour (DB trigger).
+    const clubBooking = await admin.from('bookings').insert({ tour_id: tourId, user_id: ids.club2, status: 'confirmed' });
     const clubBookingRow = await admin.from('bookings').select('id').eq('user_id', ids.club2);
     check('a club account cannot book a tour', !!clubBooking.error && (clubBookingRow.data || []).length === 0,
       (clubBooking.error ? clubBooking.error.message : 'ALLOWED') + ` | rows=${(clubBookingRow.data || []).length}`);
@@ -260,6 +298,11 @@ async function main() {
     const clubBTariff = (await admin.from('clubs').select('tariff').eq('id', clubB).single()).data?.tariff;
     check('a club cannot set tariff to pro', !!tariffEscalation.error && clubBTariff === 'start',
       (tariffEscalation.error ? tariffEscalation.error.code : 'ALLOWED') + ` | tariff=${clubBTariff}`);
+
+    const freeUpgrade = await anon.from('clubs').update({ tariff: 'advanced' }).eq('id', clubB);
+    const clubBTariff2 = (await admin.from('clubs').select('tariff').eq('id', clubB).single()).data?.tariff;
+    check('a club cannot upgrade itself to Advanced without paying', !!freeUpgrade.error && clubBTariff2 === 'start',
+      (freeUpgrade.error ? freeUpgrade.error.code : 'ALLOWED') + ` | tariff=${clubBTariff2}`);
 
     const foreignClub = await anon.from('clubs').update({ name: 'Hijacked' }).eq('id', clubA);
     const clubAName = (await admin.from('clubs').select('name').eq('id', clubA).single()).data?.name;
@@ -293,7 +336,7 @@ async function main() {
     await anon.auth.signOut();
     await signIn('club2');
     const newTour = await anon.from('tours').insert({
-      club_id: clubB, title: 'E2E Notified Tour', regions: ['Կոտայք'], date: '2027-04-01',
+      club_id: clubB, title: 'E2E Notified Tour', regions: ['Կոտայք'], date: future(180),
       max_participants: 5, type: 'mountain', difficulty: 'easy', overnight: false,
       coordinator_phone: '+374 55 123456',
     }).select('id').single();
@@ -308,14 +351,26 @@ async function main() {
     check('the owner can mark notifications read', !mark.error, mark.error ? mark.error.message : '');
 
     // ---------- cancel flow ----------
-    await anon.from('bookings').insert({ tour_id: tourId, user_id: ids.ind2, status: 'confirmed' }).then(() => {});
+    // Cancelling goes through /api/bookings (tested over HTTP below); a
+    // browser update must not change the row.
+    await admin.from('bookings').insert({ tour_id: tourId, user_id: ids.ind2, status: 'confirmed' });
     const myBooking = await anon.from('bookings').select('id').eq('tour_id', tourId).eq('user_id', ids.ind2).limit(1);
     const cancelTarget = myBooking.data?.[0]?.id;
+    check('individual reads their own booking', !!cancelTarget, JSON.stringify(myBooking.error ?? myBooking.data));
     if (cancelTarget) {
-      const cancel = await anon.from('bookings').update({ status: 'cancelled' }).eq('id', cancelTarget);
-      check('individual cancels their booking', !cancel.error, cancel.error ? cancel.message : '');
-    } else {
-      check('individual can cancel a booking (booking exists)', false, 'no booking found for ind2');
+      await anon.from('bookings').update({ status: 'cancelled' }).eq('id', cancelTarget);
+      const after = (await admin.from('bookings').select('status').eq('id', cancelTarget).single()).data?.status;
+      check('a browser cannot change a booking directly', after === 'confirmed', `status=${after}`);
+    }
+    await anon.auth.signOut();
+
+    // A club may read its applicants but no longer flip their status.
+    await signIn('club');
+    if (cancelTarget) {
+      await admin.from('bookings').update({ status: 'cancelled' }).eq('id', cancelTarget);
+      await anon.from('bookings').update({ status: 'confirmed' }).eq('id', cancelTarget);
+      const after = (await admin.from('bookings').select('status').eq('id', cancelTarget).single()).data?.status;
+      check('a club cannot restore a cancelled booking', after === 'cancelled', `status=${after}`);
     }
     await anon.auth.signOut();
 
@@ -335,7 +390,7 @@ async function main() {
     // Pass the .env.local vars through so the server has the service-role key.
     // Kill any stale processes on the dev port so Next.js doesn't have to
     // climb through 3000→3001→3002→... to find a free one.
-    try { require('child_process').execSync(`fuser -k ${DEV_PORT}/tcp 2>/dev/null || true`); } catch { /* ignore */ }
+    DEV_PORT = await freePort();
 
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
@@ -349,7 +404,7 @@ devServer.on('error', (err) => console.error('     dev server error:', err.messa
 
     let serverReady = false;
     try {
-      await waitForServer(30000);
+      await waitForServer(90000);
       serverReady = true;
     } catch (e2) {
       console.log('     dev server did not start, skipping HTTP tests:', e2.message);
@@ -359,13 +414,13 @@ devServer.on('error', (err) => console.error('     dev server error:', err.messa
       // Two tours created via admin: a free one (for /api/bookings) and a
       // paid one (for /api/payments/charge booking flow).
       const freeTour = await admin.from('tours').insert({
-        club_id: clubA, title: 'E2E HTTP Free', regions: ['Կոտայք'], date: '2026-12-23',
+        club_id: clubA, title: 'E2E HTTP Free', regions: ['Կոտայք'], date: future(81),
         max_participants: 10, type: 'mountain', difficulty: 'easy', overnight: false,
         coordinator_phone: '+374 55 123456', meeting_time: '09:00', price: 0,
       }).select('id').single();
       check('HTTP setup: free tour created by admin', !!freeTour.data?.id, JSON.stringify(freeTour.error));
       const paidTour = await admin.from('tours').insert({
-        club_id: clubA, title: 'E2E HTTP Paid', regions: ['Կոտայք'], date: '2026-12-24',
+        club_id: clubA, title: 'E2E HTTP Paid', regions: ['Կոտայք'], date: future(82),
         max_participants: 10, type: 'mountain', difficulty: 'easy', overnight: false,
         coordinator_phone: '+374 55 123456', meeting_time: '09:00', price: 5000,
       }).select('id').single();
@@ -388,6 +443,11 @@ devServer.on('error', (err) => console.error('     dev server error:', err.messa
       check('HTTP /api/bookings: cancel ok + email skipped',
         cancelRes.status === 200 && cancelRes.body.ok === true && cancelRes.body.email === 'skipped',
         `status=${cancelRes.status} body=${JSON.stringify(cancelRes.body)} raw=${cancelRes.raw.slice(0,200)}`);
+
+      // 2b) A paid tour cannot be booked through the free route.
+      const freeRide = await api('/api/bookings', { tour_id: paidTour.data.id }, indCookie);
+      check('HTTP /api/bookings: paid tour requires payment (402)', freeRide.status === 402,
+        `status=${freeRide.status} body=${JSON.stringify(freeRide.body)}`);
 
       // 3) Declined card (4000...002) — payment recorded, no booking created.
       const declineRes = await api('/api/payments/charge', {
@@ -420,7 +480,14 @@ devServer.on('error', (err) => console.error('     dev server error:', err.messa
         subRes.status === 200 && subRes.body.status === 'succeeded' && subRes.body.tariff === 'advanced',
         `status=${subRes.status} body=${JSON.stringify(subRes.body)} raw=${subRes.raw.slice(0,200)}`);
 
-// 6) Announce the tour to followers (email skipped without RESEND_API_KEY).
+      // 5b) Switching back to START costs nothing and needs no card.
+      const toStart = await api('/api/payments/charge', { kind: 'subscription', tariff: 'start' }, club2Cookie);
+      const club2TariffNow = (await admin.from('clubs').select('tariff').eq('id', clubB).single()).data?.tariff;
+      check('HTTP /api/payments/charge: switch to START without a card',
+        toStart.status === 200 && toStart.body.status === 'succeeded' && club2TariffNow === 'start',
+        `status=${toStart.status} body=${JSON.stringify(toStart.body)} tariff=${club2TariffNow}`);
+
+      // 6) Announce the tour to followers (email skipped without RESEND_API_KEY).
       const announceRes = await api('/api/tours/announce', { tour_id: newTourId }, club2Cookie);
       check('HTTP /api/tours/announce: emails followers (skipped without key)',
         announceRes.status === 200 && announceRes.body.ok === true && announceRes.body.skipped >= 1,
@@ -439,7 +506,7 @@ devServer.on('error', (err) => console.error('     dev server error:', err.messa
   } finally {
     // ---------- cleanup ----------
     if (devServer) {
-      devServer.kill();
+      stopDevServer(devServer);
       console.log('     dev server stopped');
     }
 
@@ -455,7 +522,7 @@ devServer.on('error', (err) => console.error('     dev server error:', err.messa
       admin.from('bookings').select('id', { count: 'exact', head: true }),
       admin.from('notifications').select('id', { count: 'exact', head: true }),
       admin.from('club_guides').select('id', { count: 'exact', head: true }),
-      admin.from('favorite_clubs').select('id', { count: 'exact', head: true }),
+      admin.from('favorite_clubs').select('user_id', { count: 'exact', head: true }),
     ]);
     console.log('\ncleanup -> clubs:', JSON.stringify(clubs.data),
       '| tours:', JSON.stringify((tours.data || []).map((t) => t.title)),

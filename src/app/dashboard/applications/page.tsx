@@ -49,7 +49,6 @@ export default function ApplicationsPage() {
   const [tours, setTours] = useState<TourRow[]>([]);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function load() {
     const supabase = createClient();
@@ -93,34 +92,6 @@ export default function ApplicationsPage() {
   useEffect(() => {
     load();
   }, []);
-
-  async function cancel(bookingId: string) {
-    if (!confirm("Չեղարկե՞լ մասնակցի գրանցումը։")) return;
-    setBusyId(bookingId);
-    const supabase = createClient();
-    await supabase.from("bookings").update({ status: "cancelled" }).eq("id", bookingId);
-    setApplicants((cur) =>
-      cur.map((a) => (a.id === bookingId ? { ...a, status: "cancelled" } : a))
-    );
-    setBusyId(null);
-  }
-
-  async function restore(bookingId: string) {
-    setBusyId(bookingId);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "confirmed" })
-      .eq("id", bookingId);
-    if (!error) {
-      setApplicants((cur) =>
-        cur.map((a) => (a.id === bookingId ? { ...a, status: "confirmed" } : a))
-      );
-    } else {
-      alert("Չստացվեց վերականգնել՝ հավանաբար տեղերը լրացած են։");
-    }
-    setBusyId(null);
-  }
 
   if (loading) return <p className="text-neutral-500">Բեռնվում է...</p>;
 
@@ -192,35 +163,15 @@ export default function ApplicationsPage() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      {a.status === "cancelled" ? (
-                        <>
-                          <span className="text-xs font-semibold text-neutral-400">
-                            Չեղարկված է
-                          </span>
-                          <button
-                            onClick={() => restore(a.id)}
-                            disabled={busyId === a.id}
-                            className="font-semibold text-apricot disabled:opacity-50"
-                          >
-                            Վերականգնել
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
-                            Գրանցված
-                          </span>
-                          <button
-                            onClick={() => cancel(a.id)}
-                            disabled={busyId === a.id}
-                            className="font-semibold text-red-600 disabled:opacity-50"
-                          >
-                            Չեղարկել
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    {a.status === "cancelled" ? (
+                      <span className="text-xs font-semibold text-neutral-400">
+                        Չեղարկված է
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
+                        Գրանցված
+                      </span>
+                    )}
                   </li>
                   );
                 })}

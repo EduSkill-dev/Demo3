@@ -184,3 +184,16 @@ can create tours — that unblocks `/tours` showing real data.
   API routes over HTTP with a cookie built from a real anon-key session. Checks
   cover: free booking + cancel, paid booking (success + decline), subscription
   upgrade, tour announce, and the email no-op path.
+
+## Update 11 (server-only writes)
+- Bookings, payments and club tariffs are written only by the API routes,
+  using `SUPABASE_SERVICE_ROLE_KEY` (now required in every environment,
+  including Vercel). Browsers keep read access through RLS.
+- `/api/bookings` refuses paid tours (402); they go through
+  `/api/payments/charge`. Switching to START goes through the same route
+  without a card.
+- New clubs always start on START; the signup form no longer offers plans.
+- Clubs can no longer cancel or restore an applicant's booking.
+- `src/middleware.ts` refreshes the session and keeps `/account` for
+  individuals and `/dashboard` for clubs on the server side.
+- Migration: `0017_server_only_writes.sql`.

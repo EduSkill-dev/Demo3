@@ -97,14 +97,18 @@ export default function TariffPage() {
     setSaving(true);
     setError(null);
     setMessage(null);
-    const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from("clubs")
-      .update({ tariff: plan })
-      .eq("id", clubId);
+    // Tariffs change only on the server; START costs nothing, so no card.
+    const res = await fetch("/api/payments/charge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "subscription", tariff: plan }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; status?: string };
 
     setSaving(false);
-    if (updateError) return setError(updateError.message);
+    if (!res.ok || data.status !== "succeeded") {
+      return setError(data.error ?? "Չստացվեց փոխել տարիֆը։");
+    }
 
     setTariff(plan);
     setMessage(`Տարիֆը փոխվեց՝ ${target.name}։`);

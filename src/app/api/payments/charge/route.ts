@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { chargeTestCard } from "@/lib/mockPayment";
 import { ADVANCED_PRICE_AMD, type Tariff } from "@/types/database";
 import {
@@ -29,7 +30,8 @@ type TourRow = {
 
 // The single place money-like things happen. Today it runs the mock gateway
 // in src/lib/mockPayment.ts; swapping in a real provider means replacing that
-// one call and keeping the rest of this route.
+// one call and keeping the rest of this route. Payments, tariff changes and
+// bookings are written with the service role: browsers cannot write them.
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as Body;
   const kind = body.kind === "booking" ? "booking" : "subscription";
@@ -46,6 +48,7 @@ export async function POST(req: Request) {
     .eq("id", auth.user.id)
     .single();
   const to = (profile as { email: string } | null)?.email ?? "";
+  const admin = createAdminClient();
 
   let clubId: string | null = null;
   let label = "";
@@ -114,11 +117,15 @@ export async function POST(req: Request) {
     existingBookingId = existing?.id ?? null;
   }
 
-  const charge = chargeTestCard(body.card?.number ?? "", body.card?.exp, body.card?.cvc);
+  // Nothing to charge (switching to the free START plan): skip the gateway.
+  const charge =
+    amount > 0
+      ? chargeTestCard(body.card?.number ?? "", body.card?.exp, body.card?.cvc)
+      : { status: "succeeded" as const, last4: null, message: null };
 
   // Record every attempt, declined ones included — that is what a real
   // gateway's dashboard shows too.
-  const { data: payment, error: paymentError } = await supabase
+  const { data: payment, error: paymentError } = await admin
     .from("payments")
     .insert({
       user_id: auth.user.id,
@@ -151,7 +158,7 @@ export async function POST(req: Request) {
 
   /* ---------------------------------------------------- subscription upgrade */
   if (kind === "subscription" && nextTariff) {
-    const { error: tariffError } = await supabase
+    const { error: tariffError } = await admin
       .from("clubs")
       .update({ tariff: nextTariff })
       .eq("id", clubId!);
@@ -187,7 +194,7 @@ export async function POST(req: Request) {
   if (existingBookingId) {
     // Re-activating the cancelled signup — the seats are re-checked by the
     // capacity trigger just like a fresh insert would be.
-    const { error: reactivateError } = await supabase
+    const { error: reactivateError } = await admin
       .from("bookings")
       .update({ status: "confirmed" })
       .eq("id", existingBookingId);
@@ -199,7 +206,7 @@ export async function POST(req: Request) {
     }
     booking = { id: existingBookingId };
   } else {
-    const { data, error: bookingError } = await supabase
+    const { data, error: bookingError } = await admin
       .from("bookings")
       .insert({ tour_id: t.id, user_id: auth.user.id, status: "confirmed" })
       .select("id")
