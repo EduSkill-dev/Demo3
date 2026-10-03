@@ -8,6 +8,10 @@
 // "use client" file.
 
 import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
+import { makeT } from "@/i18n/translate";
+
+// Emails are Armenian for now; region keys are turned into labels here.
+const hyT = makeT("hy");
 
 export type SendResult =
   | { ok: true; id: string | null }
@@ -163,7 +167,7 @@ export function newTourEmail(input: {
     `Նոր արշավ՝ ${input.clubName}`,
     `<p>Ակումբը, որին դու հետևում ես, հրապարակեց նոր արշավ։</p>
      ${table(
-       [row("Արշավ", input.tourTitle), row("Ամսաթիվ", input.date), row("Մարզեր", input.regions.join(", ") || "—")].join("")
+       [row("Արշավ", input.tourTitle), row("Ամսաթիվ", input.date), row("Մարզեր", input.regions.map((r) => hyT(`region.${r}`)).join(", ") || "—")].join("")
      )}
      ${button(`${BASE_URL()}/tours`, "Տեսնել արշավը")}`
   );
@@ -240,5 +244,36 @@ export function contactInboxEmail(input: { to: string; message: string; email: s
     text: `${input.message}
 
 ${input.email ?? ""} ${input.phone ?? ""}`,
+  };
+}
+
+// To the club: a participant cancelled (the club refunds them, if they paid).
+export function clubCancellationEmail(input: {
+  to: string;
+  tourTitle: string;
+  date: string;
+  participant: string;
+  phone: string | null;
+  email: string;
+}) {
+  const html = layout(
+    "Մասնակիցը չեղարկեց գրանցումը",
+    `<p>«${esc(input.tourTitle)}» արշավի մասնակիցը չեղարկել է գրանցումը։ Տեղն ազատվել է։
+     Եթե նա վճարել է, կապվեք նրա հետ գումարը վերադարձնելու համար։</p>
+     ${table(
+       [
+         row("Մասնակից", esc(input.participant)),
+         row("Էլ. հասցե", esc(input.email)),
+         input.phone ? row("Հեռախոս", esc(input.phone)) : "",
+         row("Արշավի ամսաթիվ", input.date),
+       ].join("")
+     )}
+     ${button(`${BASE_URL()}/dashboard/applications`, "Բացել հայտերը")}`
+  );
+  return {
+    to: input.to,
+    subject: `Չեղարկում՝ ${input.tourTitle}`,
+    html,
+    text: `${input.participant} չեղարկեց գրանցումը՝ ${input.tourTitle} (${input.date})`,
   };
 }

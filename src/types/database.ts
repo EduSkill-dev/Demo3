@@ -13,7 +13,8 @@ export interface Profile {
   role: "individual" | "club";
   first_name: string | null;
   last_name: string | null;
-  age: number | null;
+  age: number | null; // legacy; birth_date replaces it
+  birth_date: string | null;
   gender: string | null;
   email: string;
   phone: string | null;
@@ -29,36 +30,19 @@ export interface Club {
   package_ends_at: string | null;
   photo_url: string | null;
   description: string | null;
-  team_info: string | null;
-  guides_info: string | null;
-  focus_areas: string | null;
+  phone: string | null;
+  focus: string[]; // ClubFocus keys
   created_at: string;
 }
 
 export interface ClubGuide {
   id: string;
   club_id: string;
-  first_name: string;
-  last_name: string;
+  first_name: string; // the guide's full name
+  last_name: string | null; // legacy, unused
+  bio: string | null;
   photo_url: string | null;
   created_at: string;
-}
-
-// The club's "orientation" chips (stored comma-separated in clubs.focus_areas).
-export const FOCUS_TAGS = [
-  "Լեռներ ու սարեր",
-  "Լճեր և ափամերձարշավներ",
-  "Պատմամշակութային վայրեր",
-  "Անտառներ ու բնություն",
-  "Գիշերակացով արշավներ",
-  "Հեշտ և ընտանեկան արշավներ",
-] as const;
-
-export function parseFocusAreas(value: string | null): string[] {
-  return (value ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 export type TourStatus = "active" | "hidden" | "cancelled";
@@ -114,9 +98,11 @@ export interface Rating {
 export interface Notification {
   id: string;
   user_id: string;
-  club_id: string;
+  club_id: string | null; // null for platform notices
   tour_id: string | null;
-  message: string;
+  kind: "new_tour" | "tour_cancelled" | "tour_changed" | "platform";
+  sender_type: "club" | "platform";
+  message: string; // the tour title, or the text of a platform notice
   read: boolean;
   emailed_at: string | null;
   created_at: string;

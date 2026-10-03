@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   bookingCancelledEmail,
+  clubCancellationEmail,
   bookingConfirmationEmail,
   emailStatus,
   sendEmail,
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, first_name, email")
+    .select("role, first_name, last_name, phone, email")
     .eq("id", auth.user.id)
     .single();
 
@@ -98,6 +99,28 @@ export async function POST(req: Request) {
         })
       );
       email = emailStatus(result);
+
+      // The club hears about it too (it also sees the application marked
+      // cancelled and unread in its dashboard).
+      const { data: owner } = await admin
+        .from("bookings")
+        .select("tours(clubs(profiles(email)))")
+        .eq("id", body.booking_id)
+        .single();
+      const clubEmail = (owner as unknown as { tours: { clubs: { profiles: { email: string } | null } | null } | null } | null)
+        ?.tours?.clubs?.profiles?.email;
+      if (clubEmail) {
+        await sendEmail(
+          clubCancellationEmail({
+            to: clubEmail,
+            tourTitle: tour.title,
+            date: tour.date,
+            participant: [profile?.first_name, (profile as { last_name?: string | null }).last_name].filter(Boolean).join(" ") || to,
+            phone: (profile as { phone?: string | null }).phone ?? null,
+            email: to,
+          })
+        );
+      }
     }
 
     return NextResponse.json({ ok: true, email });

@@ -1,185 +1,77 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getMyClub } from "@/lib/myClub";
+import { getT } from "@/i18n/server";
+import ApplicationsTable, { type ApplicationRow } from "@/components/club/ApplicationsTable";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { PACKAGES, activePackage, type PackageId } from "@/lib/catalog";
-
-interface TourRow {
+type Raw = {
   id: string;
-  title: string;
-  date: string;
-  max_participants: number;
-}
-
-interface Profile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  age: number | null;
-  gender: string | null;
-  email: string;
-  phone: string | null;
-}
-
-interface Applicant {
-  id: string;
+  seq: number;
   status: "confirmed" | "cancelled";
   created_at: string;
+  cancelled_at: string | null;
+  read_at: string | null;
   tour_id: string;
-  // PostgREST returns an object for this to-one embed, but older responses
-  // shape it as a one-element array — normalise both.
-  profiles: Profile | Profile[] | null;
-}
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+    birth_date: string | null;
+    age: number | null;
+    gender: string | null;
+    email: string;
+    phone: string | null;
+  } | null;
+};
 
-function profileOf(a: Applicant): Profile | null {
-  if (!a.profiles) return null;
-  return Array.isArray(a.profiles) ? (a.profiles[0] ?? null) : a.profiles;
-}
+export default async function ApplicationsPage() {
+  const mine = await getMyClub();
+  if (!mine) redirect("/login");
+  const { club, limits } = mine;
+  const t = await getT();
+  const supabase = await createClient();
 
-function nameOf(a: Applicant) {
-  const p = profileOf(a);
-  const full = [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim();
-  return full || p?.email || "Անանուն";
-}
+  const { data: tourRows } = await supabase
+    .from("tours")
+    .select("id, title, date, max_participants, status")
+    .eq("club_id", club.id);
+  const tours = new Map(
+    ((tourRows ?? []) as { id: string; title: string; date: string; max_participants: number; status: string }[]).map((x) => [x.id, x])
+  );
 
-export default function ApplicationsPage() {
-  const [clubId, setClubId] = useState<string | null>(null);
-  const [tariff, setTariff] = useState<PackageId | null>(null);
-  const [tours, setTours] = useState<TourRow[]>([]);
-  const [applicants, setApplicants] = useState<Applicant[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  async function load() {
-    const supabase = createClient();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return setLoading(false);
-
-    const { data: club } = await supabase
-      .from("clubs")
-      .select("id, tariff, package_ends_at")
-      .eq("owner_id", auth.user.id)
-      .single();
-    if (!club) return setLoading(false);
-
-    setClubId(club.id);
-    setTariff(activePackage(club));
-
-    const { data: tourRows } = await supabase
-      .from("tours")
-      .select("id, title, date, max_participants")
-      .eq("club_id", club.id)
-      .order("date", { ascending: true });
-    const tourList = (tourRows ?? []) as TourRow[];
-    setTours(tourList);
-
-    if (tourList.length > 0) {
-      const { data: rows } = await supabase
+  const { data } = tours.size
+    ? await supabase
         .from("bookings")
-        .select("id, status, created_at, tour_id, profiles(id, first_name, last_name, age, gender, email, phone)")
-        .in(
-          "tour_id",
-          tourList.map((t) => t.id)
-        )
-        .order("created_at", { ascending: true });
-      setApplicants((rows ?? []) as unknown as Applicant[]);
-    } else {
-      setApplicants([]);
-    }
-    setLoading(false);
-  }
+        .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, profiles(first_name, last_name, birth_date, age, gender, email, phone)")
+        .in("tour_id", [...tours.keys()])
+        .order("created_at", { ascending: false })
+    : { data: [] };
 
-  useEffect(() => {
-    load();
-  }, []);
+  const today = new Date().toISOString().slice(0, 10);
+  const rows: ApplicationRow[] = ((data ?? []) as unknown as Raw[]).map((b) => {
+    const tour = tours.get(b.tour_id)!;
+    return {
+      id: b.id,
+      seq: b.seq,
+      status: b.status,
+      createdAt: b.created_at,
+      cancelledAt: b.cancelled_at,
+      unread: !b.read_at,
+      tourTitle: tour.title,
+      tourDate: tour.date,
+      cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
+      person: b.profiles,
+    };
+  });
 
-  if (loading) return <p className="text-neutral-500">Բեռնվում է...</p>;
-
-  if (tours.length === 0) {
-    return (
-      <p className="text-neutral-500">
-        Դեռ արշավ չունես։{" "}
-        <Link href="/dashboard/listings/new" className="font-semibold text-apricot">
-          Ստեղծիր առաջինը
-        </Link>
-        , որպեսզի մարդիկ կարողանան գրանցվել։
-      </p>
-    );
-  }
-
-  const seatCap = (t: TourRow) =>
-    Math.min(t.max_participants, tariff ? PACKAGES[tariff].maxPerTour : 0);
+  // N/M: live applications on upcoming tours, against what the package allows
+  // in total (listings × applications per listing).
+  const used = rows.filter((r) => r.status === "confirmed" && r.tourDate >= today).length;
+  const max = limits.maxListings * limits.maxPerTour;
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-neutral-500">
-        {clubId ? `Փաթեթ՝ ${tariff ? PACKAGES[tariff].name : "—"}` : null}
-      </p>
-
-      {tours.map((t) => {
-        const rows = applicants.filter((a) => a.tour_id === t.id);
-        const confirmed = rows.filter((a) => a.status === "confirmed");
-        const cap = seatCap(t);
-
-        return (
-          <section key={t.id} className="rounded-2xl border border-sand bg-white p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="font-semibold text-pine">{t.title}</h2>
-                <p className="text-sm text-neutral-500">
-                  {t.date} · Գրանցված՝ {confirmed.length} / {cap}
-                </p>
-              </div>
-              <Link
-                href={`/dashboard/listings/${t.id}/edit`}
-                className="text-sm font-semibold text-apricot"
-              >
-                Խմբագրել
-              </Link>
-            </div>
-
-            {rows.length === 0 ? (
-              <p className="mt-4 text-sm text-neutral-500">Դեռ ոչ ոք չի գրանցվել։</p>
-            ) : (
-              <ul className="mt-4 divide-y divide-sand">
-                {rows.map((a) => {
-                  const p = profileOf(a);
-                  return (
-                  <li
-                    key={a.id}
-                    className={`flex flex-wrap items-center justify-between gap-3 py-3 text-sm ${
-                      a.status === "cancelled" ? "opacity-60" : ""
-                    }`}
-                  >
-                    <div>
-                      <p className="font-medium text-neutral-800">
-                        {nameOf(a)}
-                        {p?.age ? `, ${p.age} տարեկան` : ""}
-                        {p?.gender === "female" ? " (իգ.)" : p?.gender === "male" ? " (ար.)" : ""}
-                      </p>
-                      <p className="text-xs text-neutral-500">
-                        {p?.email}
-                        {p?.phone ? ` · ${p.phone}` : ""}
-                      </p>
-                    </div>
-
-                    {a.status === "cancelled" ? (
-                      <span className="text-xs font-semibold text-neutral-400">
-                        Չեղարկված է
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
-                        Գրանցված
-                      </span>
-                    )}
-                  </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        );
-      })}
+    <div className="space-y-5">
+      <p className="font-semibold text-ink">{t("applications.counter", { used, max })}</p>
+      <ApplicationsTable rows={rows} />
     </div>
   );
 }

@@ -330,7 +330,8 @@ async function main() {
 
     const infoSave = await anon.from('clubs').update({
       description: 'E2E նկարագրություն՝ ստեղծված թեստի կողմից։',
-      focus_areas: 'Լեռներ ու սարեր, Գիշերակացով արշավներ',
+      focus: ['mountaineering', 'overnight'],
+      phone: '+374 10 111111',
     }).eq('id', clubA);
     check('club saves its description and orientation', !infoSave.error, infoSave.error ? infoSave.error.message : '');
 
@@ -406,16 +407,42 @@ async function main() {
 
     // Free a slot under club A's cap (the limit tests filled it).
     await admin.from('tours').delete().eq('club_id', clubA).like('title', 'E2E Limited%');
+    // Cancelling the whole tour tells everyone still signed up.
+    const cancelTourRes = await anon.from('tours').update({ status: 'cancelled' }).eq('id', tourId);
+    const cancelNote = (await admin.from('notifications').select('kind').eq('user_id', ids.ind).eq('tour_id', tourId).eq('kind', 'tour_cancelled')).data || [];
+    check('cancelling a tour notifies its participants', !cancelTourRes.error && cancelNote.length === 1, JSON.stringify(cancelTourRes.error ?? cancelNote));
+    await admin.from('tours').update({ status: 'active' }).eq('id', tourId);
+
     const soonTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Tomorrow', date: future(1) })).select('id').single()).data;
     const soonBooking = (await admin.from('bookings').insert({ tour_id: soonTour.id, user_id: ids.ind2, status: 'confirmed' }).select('id').single()).data;
     const lateCancel = await admin.from('bookings').update({ status: 'cancelled' }).eq('id', soonBooking.id);
     check('cancelling less than 48 h before is rejected', !!lateCancel.error && (await bookingStatus(soonBooking.id)) === 'confirmed',
       lateCancel.error ? lateCancel.error.message : 'ALLOWED');
 
-    const publicClub = await visitor.from('clubs').select('description, focus_areas').eq('id', clubA).single();
+    const publicClub = await visitor.from('clubs').select('description, focus, phone').eq('id', clubA).single();
     check('the public club page reads the saved info',
-      publicClub.data?.description?.startsWith('E2E նկարագրություն') && publicClub.data?.focus_areas?.includes('Գիշերակացով'),
+      publicClub.data?.description?.startsWith('E2E նկարագրություն') && publicClub.data?.focus?.includes('overnight') && publicClub.data?.phone === '+374 10 111111',
       JSON.stringify(publicClub.data));
+
+    // ---------- Phase 3: tours with participants, notices, unread cancellations ----------
+    await signIn('club');
+    const bookedDelete = await anon.from('tours').delete().eq('id', tourId).select('id');
+    const stillThere = (await admin.from('tours').select('id').eq('id', tourId)).data?.length === 1;
+    check('a tour with participants cannot be deleted', !!bookedDelete.error && stillThere,
+      bookedDelete.error ? bookedDelete.error.message : 'ALLOWED');
+
+    const moved = await anon.from('tours').update({ meeting_time: '08:30' }).eq('id', tourId);
+    const changeNote = (await admin.from('notifications').select('kind, message').eq('user_id', ids.ind).eq('tour_id', tourId).eq('kind', 'tour_changed')).data || [];
+    check('changing the meeting time notifies participants', !moved.error && changeNote.length === 1, JSON.stringify(moved.error ?? changeNote));
+
+    const guideBio = await anon.from('club_guides').insert({ club_id: clubA, first_name: 'Արամ Գիդյան', bio: 'Լեռնային ուղեկցող 10 տարի' }).select('id, bio').single();
+    check('club adds a guide with a short bio', !guideBio.error && guideBio.data?.bio?.startsWith('Լեռնային'), guideBio.error ? guideBio.error.message : '');
+
+    await admin.from('bookings').update({ read_at: new Date().toISOString() }).eq('id', book.data.id);
+    const cancelSoonOk = await admin.from('bookings').update({ status: 'cancelled' }).eq('id', book.data.id).select('read_at').single();
+    check('a cancelled application turns unread for the club', !cancelSoonOk.error && cancelSoonOk.data?.read_at === null,
+      JSON.stringify(cancelSoonOk.error ?? cancelSoonOk.data));
+    await admin.from('bookings').update({ status: 'confirmed' }).eq('id', book.data.id);
 
     /* ---------- HTTP route tests (payments + email + announce) ---------- */
     // Make room under club A's cap for the HTTP fixtures.

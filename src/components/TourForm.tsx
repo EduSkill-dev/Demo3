@@ -1,111 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Tour } from "@/types/database";
-import {
-  DIFFICULTIES,
-  PACKAGES,
-  REGIONS,
-  TERRAINS,
-  activePackage,
-  type Difficulty,
-} from "@/lib/catalog";
+import { DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
 import { useT } from "@/i18n/client";
 
 const MAX_PHOTOS = 5;
 const BUCKET = "club-assets";
 
+const input =
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+const label = "mb-1 block text-sm font-medium text-ink";
+const hint = "mt-1 text-xs text-muted";
+
+// Create / edit a listing. The page passes in the package's seat cap; the
+// listing cap and every other rule are enforced again by the database.
 export default function TourForm({
   mode,
   clubId,
   initialTour,
+  seatCap,
 }: {
   mode: "create" | "edit";
   clubId: string;
   initialTour?: Tour;
+  seatCap: number;
 }) {
   const router = useRouter();
   const t = useT();
+  const today = new Date().toISOString().slice(0, 10);
 
   const [title, setTitle] = useState(initialTour?.title ?? "");
   const [regions, setRegions] = useState<string[]>(initialTour?.regions ?? []);
-  const [date, setDate] = useState(initialTour?.date ?? "");
   const [terrains, setTerrains] = useState<string[]>(initialTour?.terrains ?? []);
+  const [date, setDate] = useState(initialTour?.date ?? "");
   const [difficulty, setDifficulty] = useState<Difficulty>(initialTour?.difficulty ?? "medium");
   const [overnight, setOvernight] = useState(initialTour?.overnight ?? false);
   const [maxParticipants, setMaxParticipants] = useState(
-    String(initialTour?.max_participants ?? 15)
+    String(initialTour?.max_participants ?? seatCap)
   );
+  const [price, setPrice] = useState(initialTour?.price != null ? String(initialTour.price) : "0");
   const [coordinatorPhone, setCoordinatorPhone] = useState(initialTour?.coordinator_phone ?? "");
   const [meetingPoint, setMeetingPoint] = useState(initialTour?.meeting_point ?? "");
-  const [meetingTime, setMeetingTime] = useState(
-    (initialTour?.meeting_time ?? "").slice(0, 5)
-  );
-  const [price, setPrice] = useState(
-    initialTour?.price != null ? String(initialTour.price) : "0"
-  );
+  const [meetingTime, setMeetingTime] = useState((initialTour?.meeting_time ?? "").slice(0, 5));
   const [description, setDescription] = useState(initialTour?.description ?? "");
   const [notes, setNotes] = useState(initialTour?.notes ?? "");
-
   const [savedPhotos, setSavedPhotos] = useState<string[]>(initialTour?.photo_urls ?? []);
   const [newFiles, setNewFiles] = useState<File[]>([]);
-
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [limitInfo, setLimitInfo] = useState<
-    { used: number; max: number; seatCap: number } | null
-  >(null);
 
-  // Load the package caps in both modes so editing cannot exceed them either.
-  // Upcoming active + hidden tours count toward the cap (same rule as the DB).
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: club } = await supabase
-        .from("clubs")
-        .select("tariff, package_ends_at")
-        .eq("id", clubId)
-        .single();
-      const { count } = await supabase
-        .from("tours")
-        .select("id", { count: "exact", head: true })
-        .eq("club_id", clubId)
-        .in("status", ["active", "hidden"])
-        .gte("date", new Date().toISOString().slice(0, 10));
-      const pkg = activePackage(club as { tariff: string | null; package_ends_at: string | null } | null);
-      setLimitInfo({
-        used: count ?? 0,
-        max: pkg ? PACKAGES[pkg].maxListings : 0,
-        seatCap: pkg ? PACKAGES[pkg].maxPerTour : 0,
-      });
-    })();
-  }, [mode, clubId]);
+  const toggle = (list: string[], set: (v: string[]) => void, key: string) =>
+    set(list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
 
-  const atLimit = mode === "create" && limitInfo && limitInfo.used >= limitInfo.max;
-
-  function toggleRegion(r: string) {
-    setRegions((cur) => (cur.includes(r) ? cur.filter((x) => x !== r) : [...cur, r]));
-  }
-
-  function toggleTerrain(k: string) {
-    setTerrains((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    setNewFiles((cur) => {
+      const room = MAX_PHOTOS - savedPhotos.length - cur.length;
+      return room > 0 ? [...cur, ...files].slice(0, cur.length + room) : cur;
+    });
+    e.target.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    if (regions.length === 0) return setError("Ընտրիր առնվազն մեկ մարզ։");
-    if (terrains.length === 0) return setError("Ընտրիր առնվազն մեկ տեղանք։");
-    if (!coordinatorPhone.trim())
-      return setError("Կոորդինատորի հեռախոսահամարը պարտադիր է։");
-    if (limitInfo && Number(maxParticipants) > limitInfo.seatCap)
-      return setError(`Քո տարիֆով առավելագույնը ${limitInfo.seatCap} մասնակից է։`);
-    if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0)
-      return setError("Գինը նշիր ճիշտ՝ 0 կամ բարձր (դրամով)։");
+    if (regions.length === 0) return setError(t("tourForm.errRegion"));
+    if (terrains.length === 0) return setError(t("tourForm.errTerrain"));
+    if (mode === "create" && date < today) return setError(t("tourForm.errDate"));
+    if (Number(maxParticipants) > seatCap) return setError(t("tourForm.errCapacity", { max: seatCap }));
+    if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError(t("tourForm.errPrice"));
 
     setSaving(true);
     const supabase = createClient();
@@ -116,7 +82,7 @@ export default function TourForm({
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) {
         setSaving(false);
-        return setError("Նորից մուտք գործիր։");
+        return setError(t("common.error"));
       }
       for (const file of newFiles) {
         const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
@@ -126,20 +92,19 @@ export default function TourForm({
           .upload(path, file, { contentType: file.type || "image/jpeg" });
         if (uploadError) {
           setSaving(false);
-          return setError(`Նկարը բեռնվել չկարողացավ՝ ${uploadError.message}`);
+          return setError(t("clubData.uploadFailed", { message: uploadError.message }));
         }
-        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-        if (pub?.publicUrl) photoUrls.push(pub.publicUrl);
+        photoUrls.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl);
       }
       setNewFiles([]);
     }
 
     const payload = {
       club_id: clubId,
-      title,
+      title: title.trim(),
       regions,
-      date,
       terrains,
+      date,
       difficulty,
       overnight,
       max_participants: Number(maxParticipants),
@@ -147,8 +112,8 @@ export default function TourForm({
       meeting_point: meetingPoint.trim() || null,
       meeting_time: meetingTime || null,
       price: Number(price) || 0,
-      description: description || null,
-      notes: notes || null,
+      description: description.trim() || null,
+      notes: notes.trim() || null,
       photo_urls: photoUrls,
     };
 
@@ -175,210 +140,125 @@ export default function TourForm({
     router.refresh();
   }
 
-  const input = "w-full rounded-lg border border-neutral-300 p-3";
-
-  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    setNewFiles((cur) => {
-      const room = MAX_PHOTOS - savedPhotos.length - cur.length;
-      return room > 0 ? [...cur, ...files].slice(0, cur.length + room) : cur;
-    });
-    e.target.value = "";
-  }
+  const checkboxGrid = "grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-line bg-surface p-3 sm:grid-cols-3";
+  const previews = [
+    ...savedPhotos.map((url) => ({ key: url, src: url, remove: () => setSavedPhotos((c) => c.filter((u) => u !== url)) })),
+    ...newFiles.map((f, i) => ({
+      key: `${f.name}-${i}`,
+      src: URL.createObjectURL(f),
+      remove: () => setNewFiles((c) => c.filter((_, idx) => idx !== i)),
+    })),
+  ];
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-5">
-      {mode === "create" && limitInfo && (
-        <p className="text-sm text-neutral-500">
-          Հայտարարություններ՝ {limitInfo.used} / {limitInfo.max}
-        </p>
-      )}
-      {atLimit && (
-        <div className="rounded-lg bg-apricot/10 p-3 text-sm text-apricot-dark">
-          <p>
-            {limitInfo?.max === 0
-              ? "Հայտարարություն ավելացնելու համար ընտրեք Ձեզ հարմար փաթեթը։"
-              : "Հասել եք փաթեթի սահմանաչափին։ Ջնջեք մի հայտարարություն կամ ընտրեք ավելի մեծ փաթեթ։"}
-          </p>
-          <Link href="/dashboard/packages" className="mt-2 inline-block font-semibold underline">
-            Փաթեթներ
-          </Link>
-        </div>
-      )}
-
+    <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
       <div>
-        <label className="mb-1 block text-sm font-medium">Տեղի անունը</label>
-        <input
-          required
-          placeholder="օր. Արայի լեռ, կամ՝ Խոր Վիրապ – Նորավանք – Տաթև"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className={input}
-        />
+        <label htmlFor="title" className={label}>{t("tourForm.place")}</label>
+        <input id="title" required placeholder={t("tourForm.placeHint")} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium">Մարզ(եր)</label>
-        <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-300 p-3 sm:grid-cols-3">
+      <fieldset>
+        <legend className={label}>{t("tourForm.regions")}</legend>
+        <div className={checkboxGrid}>
           {REGIONS.map((r) => (
-            <label key={r} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggleRegion(r)} />
+            <label key={r} className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggle(regions, setRegions, r)} className="accent-apricot" />
               {t(`region.${r}`)}
             </label>
           ))}
         </div>
-      </div>
+      </fieldset>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Ամսաթիվ</label>
-          <input required type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">Մասնակիցների առավելագույն թիվ</label>
-          <input
-            required
-            type="number"
-            min={1}
-            max={limitInfo?.seatCap ?? undefined}
-            value={maxParticipants}
-            onChange={(e) => setMaxParticipants(e.target.value)}
-            className={input}
-          />
-          {limitInfo && Number(maxParticipants) > limitInfo.seatCap && (
-            <p className="mt-1 text-xs text-red-600">
-              Քո տարիֆով առավելագույնը {limitInfo.seatCap} մասնակից է։
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Տեղանք</label>
-        <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-300 p-3 sm:grid-cols-3">
+      <fieldset>
+        <legend className={label}>{t("tourForm.terrains")}</legend>
+        <div className={checkboxGrid}>
           {TERRAINS.map((k) => (
-            <label key={k} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggleTerrain(k)} />
+            <label key={k} className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggle(terrains, setTerrains, k)} className="accent-apricot" />
               {t(`terrain.${k}`)}
             </label>
           ))}
         </div>
+      </fieldset>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="date" className={label}>{t("tourForm.date")}</label>
+          <input id="date" required type="date" min={mode === "create" ? today : undefined} value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+        </div>
+        <div>
+          <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
+          <input id="cap" required type="number" min={1} max={seatCap} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
+          <p className={hint}>{t("tourForm.capacityHint", { max: seatCap })}</p>
+        </div>
+        <div>
+          <label htmlFor="difficulty" className={label}>{t("tourForm.difficulty")}</label>
+          <select id="difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className={input}>
+            {DIFFICULTIES.map((k) => (
+              <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="price" className={label}>{t("tourForm.price")}</label>
+          <input id="price" type="number" min={0} step="100" value={price} onChange={(e) => setPrice(e.target.value)} className={input} />
+          <p className={hint}>{t("tourForm.priceHint")}</p>
+        </div>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium">Բարդություն</label>
-        <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className={input}>
-          {DIFFICULTIES.map((k) => (
-            <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
-          ))}
-        </select>
-      </div>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} />
-        Գիշերակացով
+      <label className="flex items-center gap-2 text-sm font-medium text-ink">
+        <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-apricot" />
+        {t("tourForm.overnight")}
       </label>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium">Գին՝ դրամով (֏)</label>
-        <input
-          type="number"
-          min={0}
-          step="100"
-          placeholder="0"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className={input}
-        />
-        <p className="mt-1 text-xs text-neutral-400">
-          0 — անվճար գրանցում։ Բարձր գինը մասնակիցը վճարում է գրանցվելիս (թեստային քարտով)։
-        </p>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Կոորդինատորի հեռախոսահամար *</label>
-        <input
-          required
-          placeholder="+374 XX XXXXXX"
-          value={coordinatorPhone}
-          onChange={(e) => setCoordinatorPhone(e.target.value)}
-          className={input}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <label className="mb-1 block text-sm font-medium">Հավաքի վայր</label>
-          <input
-            placeholder="Օր.՝ Կասկադ, արձանի մոտ"
-            value={meetingPoint}
-            onChange={(e) => setMeetingPoint(e.target.value)}
-            className={input}
-          />
+          <label htmlFor="phone" className={label}>{t("tourForm.coordinatorPhone")}</label>
+          <input id="phone" required type="tel" placeholder="+374 XX XXXXXX" value={coordinatorPhone} onChange={(e) => setCoordinatorPhone(e.target.value)} className={input} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Հավաքի ժամ</label>
-          <input
-            type="time"
-            value={meetingTime}
-            onChange={(e) => setMeetingTime(e.target.value)}
-            className={input}
-          />
+          <label htmlFor="mpoint" className={label}>{t("tourForm.meetingPoint")}</label>
+          <input id="mpoint" placeholder={t("tourForm.meetingPointHint")} value={meetingPoint} onChange={(e) => setMeetingPoint(e.target.value)} className={input} />
+        </div>
+        <div>
+          <label htmlFor="mtime" className={label}>{t("tourForm.meetingTime")}</label>
+          <input id="mtime" type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className={input} />
         </div>
       </div>
+      {mode === "edit" && <p className={hint}>{t("tourForm.changeNotice")}</p>}
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Նկարագրություն</label>
-        <textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} rows={3} className={input} />
+        <label htmlFor="desc" className={label}>{t("tourForm.description")}</label>
+        <textarea id="desc" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className={input} />
+      </div>
+      <div>
+        <label htmlFor="notes" className={label}>{t("tourForm.notes")}</label>
+        <textarea id="notes" rows={3} placeholder={t("tourForm.notesHint")} value={notes} onChange={(e) => setNotes(e.target.value)} className={input} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Ինչ վերցնել / նշումներ</label>
-        <textarea
-          placeholder="Օր.՝ հարմարավետ կոշիկ, ջուր, արևապաշտպան քսուք..."
-          value={notes ?? ""}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className={input}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">
-          Լուսանկարներ ({savedPhotos.length + newFiles.length} / {MAX_PHOTOS})
+        <label htmlFor="photos" className={label}>
+          {t("tourForm.photos", { count: previews.length, max: MAX_PHOTOS })}
         </label>
         <input
+          id="photos"
           type="file"
           accept="image/*"
           multiple
           onChange={handleFiles}
-          disabled={savedPhotos.length + newFiles.length >= MAX_PHOTOS}
-          className="w-full text-sm"
+          disabled={previews.length >= MAX_PHOTOS}
+          className="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-sand file:px-3 file:py-2 file:font-semibold file:text-ink"
         />
-
-        {savedPhotos.length + newFiles.length > 0 && (
+        {previews.length > 0 && (
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {savedPhotos.map((url) => (
-              <div key={url} className="relative">
-                <img src={url} alt="" className="h-20 w-full rounded-lg object-cover" />
+            {previews.map((p) => (
+              <div key={p.key} className="relative">
+                <img src={p.src} alt="" className="h-20 w-full rounded-lg object-cover" />
                 <button
                   type="button"
-                  onClick={() => setSavedPhotos((cur) => cur.filter((u) => u !== url))}
-                  title="Հեռացնել նկարը"
-                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm text-neutral-600 shadow"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            {newFiles.map((f, i) => (
-              <div key={`${f.name}-${i}`} className="relative">
-                <img src={URL.createObjectURL(f)} alt="" className="h-20 w-full rounded-lg object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setNewFiles((cur) => cur.filter((_, idx) => idx !== i))}
-                  title="Հեռացնել նկարը"
-                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm text-neutral-600 shadow"
+                  onClick={p.remove}
+                  aria-label={t("tourForm.removePhoto")}
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-surface text-sm text-muted shadow"
                 >
                   ✕
                 </button>
@@ -386,20 +266,27 @@ export default function TourForm({
             ))}
           </div>
         )}
-        <p className="mt-1 text-xs text-neutral-400">
-          Առաջին նկարը կդառնա քարտի պատկերը։ Նկարները բեռնվում են հրապարակման պահին։
-        </p>
+        <p className={hint}>{t("tourForm.photosHint")}</p>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={saving || !!atLimit}
-        className="rounded-lg bg-apricot px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {saving ? "Պահպանվում է..." : mode === "create" ? "Ստեղծել հայտարարությունը" : "Պահպանել փոփոխությունները"}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-apricot px-5 py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? t("tourForm.saving") : mode === "create" ? t("tourForm.create") : t("tourForm.save")}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/dashboard")}
+          className="rounded-lg border border-line px-5 py-3 font-semibold text-ink hover:border-apricot"
+        >
+          {t("common.cancel")}
+        </button>
+      </div>
     </form>
   );
 }

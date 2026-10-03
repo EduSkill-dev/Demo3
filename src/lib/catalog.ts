@@ -70,6 +70,12 @@ export const TERRAINS = [
 ] as const;
 export type Terrain = (typeof TERRAINS)[number];
 
+// What a club does (its profile checkboxes). Labels: focus.<key>.
+export const CLUB_FOCUS = [
+  "mountaineering", "lakes", "gorges", "caves", "waterfalls", "overnight", "kids", "family", "corporate",
+] as const;
+export type ClubFocus = (typeof CLUB_FOCUS)[number];
+
 export const DIFFICULTIES = ["easy", "medium", "hard", "prof"] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 

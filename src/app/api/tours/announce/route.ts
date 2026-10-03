@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     .from("notifications")
     .select("id, user_id, profiles(email)")
     .eq("tour_id", body.tour_id)
+    .eq("kind", "new_tour")
     .is("emailed_at", null);
 
   if (error) {

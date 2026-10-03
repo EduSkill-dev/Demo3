@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { parseFocusAreas, type Club, type ClubGuide, type Rating } from "@/types/database";
+import type { Club, ClubGuide, Rating } from "@/types/database";
+import { getT } from "@/i18n/server";
 import { PACKAGES, activePackage } from "@/lib/catalog";
 import FavoriteToggle from "@/components/FavoriteToggle";
 import RatingBox from "@/components/RatingBox";
@@ -32,7 +33,8 @@ export default async function ClubDetailPage({ params }: { params: { id: string 
     .eq("club_id", c.id)
     .order("created_at", { ascending: true });
   const guides = (guideRows ?? []) as ClubGuide[];
-  const focusTags = parseFocusAreas(c.focus_areas);
+  const t = await getT();
+  const focusTags = c.focus ?? [];
 
   return (
     <main>
@@ -71,7 +73,7 @@ export default async function ClubDetailPage({ params }: { params: { id: string 
                   key={tag}
                   className="rounded-full bg-sand px-3 py-1 text-sm text-pine"
                 >
-                  {tag}
+                  {t(`focus.${tag}`)}
                 </span>
               ))}
             </div>
