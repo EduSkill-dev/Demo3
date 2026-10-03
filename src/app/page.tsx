@@ -1,6 +1,5 @@
 import { getPublicTours } from "@/lib/publicTours";
 import HomeToursSection from "@/components/HomeToursSection";
-import Footer from "@/components/Footer";
 
 export default async function HomePage() {
   const tours = await getPublicTours();
@@ -37,7 +36,6 @@ export default async function HomePage() {
         <HomeToursSection tours={tours} />
       </section>
 
-      <Footer />
     </main>
   );
 }

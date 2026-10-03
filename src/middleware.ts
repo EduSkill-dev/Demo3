@@ -5,6 +5,15 @@ import { NextResponse, type NextRequest } from "next/server";
 // cannot write cookies themselves) and keeps each dashboard to its own role:
 // /account is for individuals, /dashboard is for clubs.
 export async function middleware(request: NextRequest) {
+  // An auth email whose redirect target was not allowed falls back to the
+  // site root; send its token on to the route that verifies it.
+  const { pathname: requestedPath, searchParams } = request.nextUrl;
+  if (searchParams.has("token_hash") && searchParams.has("type") && !requestedPath.startsWith("/auth/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/confirm";
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

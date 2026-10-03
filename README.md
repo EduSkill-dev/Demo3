@@ -197,3 +197,24 @@ can create tours — that unblocks `/tours` showing real data.
 - `src/middleware.ts` refreshes the session and keeps `/account` for
   individuals and `/dashboard` for clubs on the server side.
 - Migration: `0017_server_only_writes.sql`.
+
+## Update 12 (packages, rules, i18n, auth, header/footer)
+- Packages live in `src/lib/catalog.ts` and the `packages` table (0018):
+  START 2/5 free, Advanced 5/10 20 000 ֏, PRO 20/20 40 000 ֏ per month.
+  `/dashboard/packages` buys, extends (7 days before expiry) and shows receipts.
+- Booking rules in the database: confirmed email, active tour, club with an
+  active package, free seat; cancelling only more than 48 h before.
+- UI text lives in `src/i18n/dictionaries/{hy,ru,en}.ts`; the language and
+  the light/dark theme are cookies set from the header.
+- Sign-up collects birth date and phone (individuals) or phone (clubs) and
+  requires email confirmation. Auth emails return to `/auth/confirm`,
+  `/auth/recover` or `/auth/email-change`.
+- `node scripts/configure-auth.cjs` turns confirmation on and sets the
+  redirect allow-list. Supabase's built-in mailer sends only ~2 emails per
+  hour; with `RESEND_API_KEY` and a verified `EMAIL_FROM` domain, run it with
+  `--smtp` to send auth mail through Resend and apply the Armenian templates.
+  Re-run it after deploying to a new domain (`NEXT_PUBLIC_SITE_URL`).
+- Footer on every page: double opt-in newsletter (`/api/newsletter`,
+  `/newsletter/confirm|unsubscribe`) and suggestions (`/api/contact`,
+  forwarded to `CONTACT_INBOX`).
+- Migrations: `0018_packages_and_tour_rules.sql`, `0019_signup_fields_and_newsletter.sql`.

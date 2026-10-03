@@ -132,15 +132,21 @@ async function makeUser(who, user_metadata, confirmed = true) {
 }
 
 async function signIn(who) {
-  await anon.auth.signOut();
+  await anon.auth.signOut({ scope: 'local' });
   const r = await anon.auth.signInWithPassword({ email: email(who), password: PASSWORD });
   if (r.error) throw new Error(`signIn ${who}: ` + r.error.message);
 }
 
+// A separate client per cookie: signing the shared client out (even with
+// scope 'local') ends that session on the server, which would invalidate a
+// cookie built from it earlier.
 async function cookieFor(who) {
-  await signIn(who);
-  const { data } = await anon.auth.getSession();
-  return sessionToCookie(data.session);
+  const c = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const r = await c.auth.signInWithPassword({ email: email(who), password: PASSWORD });
+  if (r.error) throw new Error(`cookieFor ${who}: ` + r.error.message);
+  return sessionToCookie(r.data.session);
 }
 
 // What a successful payment would do: the server sets package + expiry.
@@ -177,17 +183,24 @@ async function main() {
 
     // ---------- accounts ----------
     ids.ind = await makeUser('ind', {
-      role: 'individual', first_name: 'Աննա', last_name: 'Երկրորդ', age: '28', gender: 'female',
+      role: 'individual', first_name: 'Աննա', last_name: 'Երկրորդ', birth_date: '1996-05-14', gender: 'female', phone: '+374 91 000001',
     });
     ids.ind2 = await makeUser('ind2', {
       role: 'individual', first_name: 'Պետրոս', last_name: 'Երկրորդ', age: '31', gender: 'male',
     });
     ids.ind3 = await makeUser('ind3', { role: 'individual', first_name: 'Չհաստատված' }, false);
     ids.club = await makeUser('club', { role: 'club', club_name: 'E2E Club A', tariff: 'advanced' });
-    ids.club2 = await makeUser('club2', { role: 'club', club_name: 'E2E Club B' });
+    ids.club2 = await makeUser('club2', { role: 'club', club_name: 'E2E Club B', phone: '+374 10 000002' });
 
-    const profile = await admin.from('profiles').select('role, first_name').eq('id', ids.ind).single();
-    check('signup trigger created the individual profile', profile.data?.role === 'individual' && profile.data?.first_name === 'Աննա', JSON.stringify(profile.data));
+    const profile = await admin.from('profiles').select('role, first_name, birth_date, phone').eq('id', ids.ind).single();
+    check('signup stores name, birth date and phone',
+      profile.data?.role === 'individual' && profile.data?.first_name === 'Աննա' && profile.data?.birth_date === '1996-05-14' && profile.data?.phone === '+374 91 000001',
+      JSON.stringify(profile.data));
+    const club2Phone = (await admin.from('clubs').select('phone').eq('owner_id', ids.club2).single()).data?.phone;
+    check('club signup stores the phone', club2Phone === '+374 10 000002', String(club2Phone));
+
+    const directSub = await visitor.from('newsletter_subscribers').insert({ email: `e2e-direct-${stamp}@example.com` });
+    check('a browser cannot write the newsletter list directly', !!directSub.error, directSub.error ? directSub.error.code : 'ALLOWED');
 
     const clubRow = await admin.from('clubs').select('id, tariff, package_ends_at').eq('owner_id', ids.club).single();
     check('a new club starts without a package (metadata tariff ignored)',
@@ -503,6 +516,53 @@ async function main() {
       check('HTTP /api/tours/announce: emails followers (skipped without key)',
         announceRes.status === 200 && announceRes.body.ok === true && announceRes.body.skipped >= 1,
         `status=${announceRes.status} body=${JSON.stringify(announceRes.body)}`);
+
+      // ---------- Phase 2: newsletter, suggestions, auth links, middleware ----------
+      const subEmail = `e2e-news-${stamp}@example.com`;
+      const sub = await api('/api/newsletter', { email: subEmail });
+      const subRow = (await admin.from('newsletter_subscribers').select('token, confirmed_at').eq('email', subEmail).single()).data;
+      check('HTTP newsletter: subscribing stores an unconfirmed address', sub.status === 200 && subRow && !subRow.confirmed_at,
+        `status=${sub.status} row=${JSON.stringify(subRow)}`);
+      const page = async (route) => (await fetch(`http://localhost:${DEV_PORT}${route}`)).text();
+      await page(`/newsletter/confirm?token=${subRow?.token}`);
+      const confirmedRow = (await admin.from('newsletter_subscribers').select('confirmed_at').eq('email', subEmail).single()).data;
+      check('HTTP newsletter: the emailed link confirms it', !!confirmedRow?.confirmed_at, JSON.stringify(confirmedRow));
+      await page(`/newsletter/unsubscribe?token=${subRow?.token}`);
+      const unsubRow = (await admin.from('newsletter_subscribers').select('unsubscribed_at').eq('email', subEmail).single()).data;
+      check('HTTP newsletter: the unsubscribe link works', !!unsubRow?.unsubscribed_at, JSON.stringify(unsubRow));
+      await admin.from('newsletter_subscribers').delete().eq('email', subEmail);
+
+      const noReply = await api('/api/contact', { message: 'E2E առաջարկ' });
+      const withPhone = await api('/api/contact', { message: `E2E առաջարկ ${stamp}`, phone: '+374 99 000000' });
+      check('HTTP suggestions: email or phone is required', noReply.status === 400 && withPhone.status === 200,
+        `without=${noReply.status} with=${withPhone.status}`);
+      await admin.from('contact_messages').delete().eq('message', `E2E առաջարկ ${stamp}`);
+
+      const noFollow = (route, cookie) => fetch(`http://localhost:${DEV_PORT}${route}`, { redirect: 'manual', headers: cookie ? { Cookie: cookie } : {} });
+      const bare = await noFollow('/auth/confirm');
+      check('HTTP auth: a link without a token is rejected', (bare.headers.get('location') || '').includes('status=invalid'), bare.headers.get('location'));
+
+      const signupEmail = `e2e-signup-${stamp}@example.com`;
+      const gen = await admin.auth.admin.generateLink({ type: 'signup', email: signupEmail, password: 'E2eTest!2345', options: { data: { role: 'individual', first_name: 'Նոր' } } });
+      ids.signup = gen.data?.user?.id;
+      const confirmRes = await noFollow(`/auth/confirm?token_hash=${gen.data?.properties?.hashed_token}&type=email`);
+      const confirmedUser = (await admin.auth.admin.getUserById(ids.signup)).data?.user;
+      check('HTTP auth: the confirmation link confirms the email and signs in',
+        (confirmRes.headers.get('location') || '').endsWith('/auth/confirmed') && !!confirmedUser?.email_confirmed_at && (confirmRes.headers.get('set-cookie') || '').includes(AUTH_COOKIE_NAME),
+        `location=${confirmRes.headers.get('location')} confirmed=${confirmedUser?.email_confirmed_at}`);
+
+      const rec = await admin.auth.admin.generateLink({ type: 'recovery', email: email('ind') });
+      const recRes = await noFollow(`/auth/recover?token_hash=${rec.data?.properties?.hashed_token}&type=recovery`);
+      check('HTTP auth: the reset link opens the new-password page', (recRes.headers.get('location') || '').endsWith('/auth/reset-password'),
+        recRes.headers.get('location'));
+
+      const wrongDash = await noFollow('/dashboard', indCookie);
+      const wrongAccount = await noFollow('/account', club2Cookie);
+      const anonDash = await noFollow('/dashboard/packages');
+      check('HTTP middleware: each role is sent to its own dashboard',
+        (wrongDash.headers.get('location') || '').endsWith('/account') && (wrongAccount.headers.get('location') || '').endsWith('/dashboard') &&
+          (anonDash.headers.get('location') || '').includes('/login?next=%2Fdashboard%2Fpackages'),
+        `${wrongDash.headers.get('location')} | ${wrongAccount.headers.get('location')} | ${anonDash.headers.get('location')}`);
 
       check('HTTP: email no-op (RESEND_API_KEY absent from env)', !env.RESEND_API_KEY,
         env.RESEND_API_KEY ? 'API key present!' : 'no key — emails skipped');

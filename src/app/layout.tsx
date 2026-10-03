@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter } from "next/font/google";
-import Navbar from "@/components/Navbar";
+import SiteHeader from "@/components/layout/SiteHeader";
+import SiteFooter from "@/components/layout/SiteFooter";
 import { I18nProvider } from "@/i18n/client";
 import { getLocale, getTheme } from "@/i18n/server";
 import "./globals.css";
@@ -30,10 +31,11 @@ export default async function RootLayout({
       lang={locale}
       className={`${fraunces.variable} ${inter.variable}${theme === "dark" ? " dark" : ""}`}
     >
-      <body className="bg-stone font-sans text-ink">
+      <body className="flex min-h-screen flex-col bg-stone font-sans text-ink">
         <I18nProvider locale={locale}>
-          <Navbar />
-          {children}
+          <SiteHeader />
+          <div className="flex-1">{children}</div>
+          <SiteFooter />
         </I18nProvider>
       </body>
     </html>

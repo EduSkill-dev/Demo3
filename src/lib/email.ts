@@ -8,6 +8,7 @@
 // "use client" file.
 
 import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
+
 export type SendResult =
   | { ok: true; id: string | null }
   | { ok: false; skipped: true; reason: string }
@@ -44,6 +45,11 @@ function button(href: string, text: string): string {
   return `<p style="margin-top:18px"><a href="${href}"
     style="display:inline-block;background:${BRAND.apricot};color:#fff;padding:11px 18px;border-radius:9px;text-decoration:none;font-weight:600;font-family:sans-serif">
     ${text}</a></p>`;
+}
+
+// User-typed text goes into HTML emails escaped.
+function esc(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
 const BASE_URL = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -199,5 +205,40 @@ export function paymentReceiptEmail(input: {
     subject: `${ok ? "Վճարումն ընդունված է" : "Վճարումը մերժվեց"}՝ ${input.label}`,
     html,
     text: `Վճարում (${input.status}): ${input.label} — ${input.amount} AMD`,
+  };
+}
+
+export function newsletterConfirmEmail(input: { to: string; confirmUrl: string; unsubscribeUrl: string }) {
+  const html = layout(
+    "Հաստատեք բաժանորդագրությունը",
+    `<p>Ցանկանո՞ւմ եք ստանալ նամակներ Highland-ի նոր արշավների և նորությունների մասին։ Սեղմեք ստորև կոճակը՝ հաստատելու համար։</p>
+    ${button(input.confirmUrl, "Հաստատել բաժանորդագրությունը")}
+    <p style="font-size:13px;color:#7a736a">Եթե դուք չեք բաժանորդագրվել, պարզապես անտեսեք այս նամակը կամ
+    <a href="${input.unsubscribeUrl}" style="color:#7a736a">չեղարկեք այն</a>։</p>`
+  );
+  return {
+    to: input.to,
+    subject: "Highland — հաստատեք բաժանորդագրությունը",
+    html,
+    text: `Հաստատեք բաժանորդագրությունը՝ ${input.confirmUrl}`,
+  };
+}
+
+export function contactInboxEmail(input: { to: string; message: string; email: string | null; phone: string | null }) {
+  const rows = [
+    input.email ? row("Էլ. հասցե", esc(input.email)) : "",
+    input.phone ? row("Հեռախոս", esc(input.phone)) : "",
+  ].join("");
+  const html = layout(
+    "Նոր առաջարկ կայքից",
+    `${table(rows)}<p style="white-space:pre-line;margin-top:14px">${esc(input.message)}</p>`
+  );
+  return {
+    to: input.to,
+    subject: "Highland — նոր առաջարկ",
+    html,
+    text: `${input.message}
+
+${input.email ?? ""} ${input.phone ?? ""}`,
   };
 }
