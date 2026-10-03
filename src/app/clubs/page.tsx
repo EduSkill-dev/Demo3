@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import ClubCard from "@/components/ClubCard";
-import { TARIFF_LIMITS, type Club, type Rating, type Tariff } from "@/types/database";
+import type { Club, Rating } from "@/types/database";
+import { PACKAGES, activePackage } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Ակումբներ | Highland",
@@ -34,7 +35,8 @@ export default async function ClubsPage() {
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((club) => {
             const { rating, count } = ratingFor(club.id);
-            const showRating = TARIFF_LIMITS[club.tariff as Tariff].showRatings;
+            const pkg = activePackage(club);
+            const showRating = !!pkg && PACKAGES[pkg].showsRatings;
             return (
               <ClubCard key={club.id} club={club} showRating={showRating} rating={rating} ratingCount={count} />
             );

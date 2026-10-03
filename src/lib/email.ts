@@ -7,6 +7,7 @@
 // keeps working before the credentials exist. Never import this from a
 // "use client" file.
 
+import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
 export type SendResult =
   | { ok: true; id: string | null }
   | { ok: false; skipped: true; reason: string }
@@ -102,7 +103,6 @@ export function bookingConfirmationEmail(input: {
   clubName: string;
   meetingPoint: string | null;
   meetingTime: string | null;
-  cancelHours: number | null;
 }) {
   const rows = [
     row("Արշավ", input.tourTitle),
@@ -110,9 +110,7 @@ export function bookingConfirmationEmail(input: {
     row("Ակումբ", input.clubName),
     input.meetingPoint ? row("Հավաքի վայր", input.meetingPoint) : "",
     input.meetingTime ? row("Հավաքի ժամ", input.meetingTime.slice(0, 5)) : "",
-    input.cancelHours != null
-      ? row("Չեղարկում", input.cancelHours === 0 ? "ցանկացած պահի" : `մինչև ${input.cancelHours} ժամ առաջ`)
-      : "",
+    row("Չեղարկում", `մինչև ${CANCEL_WINDOW_HOURS} ժամ առաջ`),
   ].join("");
 
   const html = layout(
@@ -187,7 +185,7 @@ export function paymentReceiptEmail(input: {
        [
          row("Տեսակ", input.kind === "subscription" ? "Ակումբի բաժանորդագրություն" : "Արշավի գրանցում"),
          row("Առարկա", input.label),
-         row("Գումար", `${input.amount} ${input.kind === "subscription" ? "֏" : "֏"}`),
+         row("Գումար", formatAmd(input.amount)),
          row("Քարտ", input.cardLast4 ? `•••• ${input.cardLast4}` : "—"),
          row("Կարգավիճակ", ok ? "Հաջող" : "Մերժված"),
        ].join("")

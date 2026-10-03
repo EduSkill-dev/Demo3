@@ -4,21 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { Tour } from "@/types/database";
 import {
-  ARMENIA_REGIONS,
-  DIFFICULTY_LABELS,
-  TARIFF_LIMITS,
+  DIFFICULTIES,
+  PACKAGES,
+  REGIONS,
+  TERRAINS,
+  activePackage,
   type Difficulty,
-  type Tariff,
-  type Tour,
-  type TourType,
-} from "@/types/database";
-
-const TYPE_LABELS: Record<TourType, string> = {
-  mountain: "Սար",
-  lake: "Լիճ",
-  other: "Այլ",
-};
+} from "@/lib/catalog";
+import { useT } from "@/i18n/client";
 
 const MAX_PHOTOS = 5;
 const BUCKET = "club-assets";
@@ -33,11 +28,12 @@ export default function TourForm({
   initialTour?: Tour;
 }) {
   const router = useRouter();
+  const t = useT();
 
   const [title, setTitle] = useState(initialTour?.title ?? "");
   const [regions, setRegions] = useState<string[]>(initialTour?.regions ?? []);
   const [date, setDate] = useState(initialTour?.date ?? "");
-  const [type, setType] = useState<TourType>(initialTour?.type ?? "mountain");
+  const [terrains, setTerrains] = useState<string[]>(initialTour?.terrains ?? []);
   const [difficulty, setDifficulty] = useState<Difficulty>(initialTour?.difficulty ?? "medium");
   const [overnight, setOvernight] = useState(initialTour?.overnight ?? false);
   const [maxParticipants, setMaxParticipants] = useState(
@@ -47,11 +43,6 @@ export default function TourForm({
   const [meetingPoint, setMeetingPoint] = useState(initialTour?.meeting_point ?? "");
   const [meetingTime, setMeetingTime] = useState(
     (initialTour?.meeting_time ?? "").slice(0, 5)
-  );
-  const [cancelHours, setCancelHours] = useState(
-    initialTour?.cancel_deadline_hours != null
-      ? String(initialTour.cancel_deadline_hours)
-      : ""
   );
   const [price, setPrice] = useState(
     initialTour?.price != null ? String(initialTour.price) : "0"
@@ -68,24 +59,27 @@ export default function TourForm({
     { used: number; max: number; seatCap: number } | null
   >(null);
 
-  // Load the tariff caps in both modes so editing cannot exceed them either.
+  // Load the package caps in both modes so editing cannot exceed them either.
+  // Upcoming active + hidden tours count toward the cap (same rule as the DB).
   useEffect(() => {
     (async () => {
       const supabase = createClient();
       const { data: club } = await supabase
         .from("clubs")
-        .select("tariff")
+        .select("tariff, package_ends_at")
         .eq("id", clubId)
         .single();
       const { count } = await supabase
         .from("tours")
         .select("id", { count: "exact", head: true })
-        .eq("club_id", clubId);
-      const tariff = (club?.tariff ?? "start") as Tariff;
+        .eq("club_id", clubId)
+        .in("status", ["active", "hidden"])
+        .gte("date", new Date().toISOString().slice(0, 10));
+      const pkg = activePackage(club as { tariff: string | null; package_ends_at: string | null } | null);
       setLimitInfo({
         used: count ?? 0,
-        max: TARIFF_LIMITS[tariff].maxListings,
-        seatCap: TARIFF_LIMITS[tariff].maxParticipants,
+        max: pkg ? PACKAGES[pkg].maxListings : 0,
+        seatCap: pkg ? PACKAGES[pkg].maxPerTour : 0,
       });
     })();
   }, [mode, clubId]);
@@ -96,17 +90,20 @@ export default function TourForm({
     setRegions((cur) => (cur.includes(r) ? cur.filter((x) => x !== r) : [...cur, r]));
   }
 
+  function toggleTerrain(k: string) {
+    setTerrains((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
     if (regions.length === 0) return setError("Ընտրիր առնվազն մեկ մարզ։");
+    if (terrains.length === 0) return setError("Ընտրիր առնվազն մեկ տեղանք։");
     if (!coordinatorPhone.trim())
       return setError("Կոորդինատորի հեռախոսահամարը պարտադիր է։");
     if (limitInfo && Number(maxParticipants) > limitInfo.seatCap)
       return setError(`Քո տարիֆով առավելագույնը ${limitInfo.seatCap} մասնակից է։`);
-    if (cancelHours && (Number(cancelHours) < 0 || Number(cancelHours) > 720))
-      return setError("Չեղարկման ժամկետը լրացրու 0-ից 720 ժամի միջակայքում։");
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0)
       return setError("Գինը նշիր ճիշտ՝ 0 կամ բարձր (դրամով)։");
 
@@ -142,14 +139,13 @@ export default function TourForm({
       title,
       regions,
       date,
-      type,
+      terrains,
       difficulty,
       overnight,
       max_participants: Number(maxParticipants),
       coordinator_phone: coordinatorPhone.trim(),
       meeting_point: meetingPoint.trim() || null,
       meeting_time: meetingTime || null,
-      cancel_deadline_hours: cancelHours ? Number(cancelHours) : null,
       price: Number(price) || 0,
       description: description || null,
       notes: notes || null,
@@ -200,10 +196,12 @@ export default function TourForm({
       {atLimit && (
         <div className="rounded-lg bg-apricot/10 p-3 text-sm text-apricot-dark">
           <p>
-            Հասել ես քո տարիֆի սահմանաչափին։ Ջնջիր մի հայտարարություն կամ բարձրացրու տարիֆդ նոր տուր ավելացնելու համար։
+            {limitInfo?.max === 0
+              ? "Հայտարարություն ավելացնելու համար ընտրեք Ձեզ հարմար փաթեթը։"
+              : "Հասել եք փաթեթի սահմանաչափին։ Ջնջեք մի հայտարարություն կամ ընտրեք ավելի մեծ փաթեթ։"}
           </p>
-          <Link href="/dashboard/tariff" className="mt-2 inline-block font-semibold underline">
-            Փոխել տարիֆը
+          <Link href="/dashboard/packages" className="mt-2 inline-block font-semibold underline">
+            Փաթեթներ
           </Link>
         </div>
       )}
@@ -222,10 +220,10 @@ export default function TourForm({
       <div>
         <label className="mb-1 block text-sm font-medium">Մարզ(եր)</label>
         <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-300 p-3 sm:grid-cols-3">
-          {ARMENIA_REGIONS.map((r) => (
+          {REGIONS.map((r) => (
             <label key={r} className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={regions.includes(r)} onChange={() => toggleRegion(r)} />
-              {r}
+              {t(`region.${r}`)}
             </label>
           ))}
         </div>
@@ -255,23 +253,25 @@ export default function TourForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Տեսակ</label>
-          <select value={type} onChange={(e) => setType(e.target.value as TourType)} className={input}>
-            {(Object.keys(TYPE_LABELS) as TourType[]).map((k) => (
-              <option key={k} value={k}>{TYPE_LABELS[k]}</option>
-            ))}
-          </select>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Տեղանք</label>
+        <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-300 p-3 sm:grid-cols-3">
+          {TERRAINS.map((k) => (
+            <label key={k} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggleTerrain(k)} />
+              {t(`terrain.${k}`)}
+            </label>
+          ))}
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">Բարդություն</label>
-          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className={input}>
-            {(Object.keys(DIFFICULTY_LABELS) as Difficulty[]).map((k) => (
-              <option key={k} value={k}>{DIFFICULTY_LABELS[k]}</option>
-            ))}
-          </select>
-        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium">Բարդություն</label>
+        <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className={input}>
+          {DIFFICULTIES.map((k) => (
+            <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
+          ))}
+        </select>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
@@ -325,22 +325,6 @@ export default function TourForm({
             className={input}
           />
         </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Չեղարկման ժամկետ՝ ժամ առաջ</label>
-        <input
-          type="number"
-          min={0}
-          max={720}
-          placeholder="Օր.՝ 48"
-          value={cancelHours}
-          onChange={(e) => setCancelHours(e.target.value)}
-          className={input}
-        />
-        <p className="mt-1 text-xs text-neutral-400">
-          Քանի՞ ժամ առաջ կարող է մասնակիցը չեղարկել գրանցումը։ Դատարկ թողնելը նշանակում է՝ ժամկետ սահմանված չէ։
-        </p>
       </div>
 
       <div>

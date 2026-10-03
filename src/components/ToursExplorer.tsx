@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { TourWithClub, TourType, Difficulty } from "@/types/database";
-import { DIFFICULTY_LABELS, TYPE_LABELS, formatAmd } from "@/types/database";
+import type { TourWithClub } from "@/types/database";
+import { DIFFICULTIES, TERRAINS, formatAmd, type Difficulty, type Terrain } from "@/lib/catalog";
+import { useT } from "@/i18n/client";
 import FilterDropdown from "./FilterDropdown";
 
 export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
+  const tr = useT();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [regions, setRegions] = useState<string[]>([]);
   const [clubs, setClubs] = useState<string[]>([]);
-  const [types, setTypes] = useState<TourType[]>([]);
+  const [types, setTypes] = useState<Terrain[]>([]);
   const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
   const [overnightOnly, setOvernightOnly] = useState(false);
   const [popularOnly, setPopularOnly] = useState(false);
@@ -38,7 +40,7 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
       (!dateTo || t.date <= dateTo) &&
       (regions.length === 0 || t.regions.some((r) => regions.includes(r))) &&
       (clubs.length === 0 || clubs.includes(t.club_name)) &&
-      (types.length === 0 || types.includes(t.type)) &&
+      (types.length === 0 || t.terrains.some((k) => types.includes(k as Terrain))) &&
       (difficulties.length === 0 || difficulties.includes(t.difficulty)) &&
       (!overnightOnly || t.overnight) &&
       (!popularOnly || t.popular)
@@ -72,15 +74,16 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
         <FilterDropdown
           label="Մարզ"
           options={allRegions}
+          labels={Object.fromEntries(allRegions.map((r) => [r, tr(`region.${r}`)]))}
           selected={regions}
           onChange={setRegions}
           isOpen={openFilter === "region"}
           onToggle={() => toggleFilter("region")}
         />
         <FilterDropdown
-          label="Տեսակ"
-          options={["mountain", "lake", "other"] as TourType[]}
-          labels={TYPE_LABELS}
+          label="Տեղանք"
+          options={[...TERRAINS]}
+          labels={Object.fromEntries(TERRAINS.map((k) => [k, tr(`terrain.${k}`)])) as Record<Terrain, string>}
           selected={types}
           onChange={setTypes}
           isOpen={openFilter === "type"}
@@ -96,8 +99,8 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
         />
         <FilterDropdown
           label="Բարդություն"
-          options={["easy", "medium", "hard", "prof"] as Difficulty[]}
-          labels={DIFFICULTY_LABELS}
+          options={[...DIFFICULTIES]}
+          labels={Object.fromEntries(DIFFICULTIES.map((k) => [k, tr(`difficulty.${k}`)])) as Record<Difficulty, string>}
           selected={difficulties}
           onChange={setDifficulties}
           isOpen={openFilter === "difficulty"}
@@ -161,7 +164,7 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
                           }}
                           className="text-apricot underline-offset-2 hover:underline"
                         >
-                          {r}
+                          {tr(`region.${r}`)}
                         </button>
                       </span>
                     ))}
@@ -179,7 +182,7 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
                   <h3 className="mt-2 font-semibold">{t.title}</h3>
                   <p className="mt-1 text-sm text-neutral-500">
                     {t.date}
-                    {t.overnight ? " · գիշերակացով" : ""} · {DIFFICULTY_LABELS[t.difficulty]}
+                    {t.overnight ? " · գիշերակացով" : ""} · {tr(`difficulty.${t.difficulty}`)}
                   </p>
                   {Number(t.price) > 0 && (
                     <p className="mt-1 text-sm font-semibold text-pine">

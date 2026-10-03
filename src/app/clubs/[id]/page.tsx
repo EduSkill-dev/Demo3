@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { TARIFF_LIMITS, parseFocusAreas, type Club, type ClubGuide, type Rating, type Tariff } from "@/types/database";
+import { parseFocusAreas, type Club, type ClubGuide, type Rating } from "@/types/database";
+import { PACKAGES, activePackage } from "@/lib/catalog";
 import FavoriteToggle from "@/components/FavoriteToggle";
 import RatingBox from "@/components/RatingBox";
 
@@ -10,7 +11,8 @@ export default async function ClubDetailPage({ params }: { params: { id: string 
   if (!club) notFound();
   const c = club as Club;
 
-  const showRating = TARIFF_LIMITS[c.tariff as Tariff].showRatings;
+  const pkg = activePackage(c);
+  const showRating = !!pkg && PACKAGES[pkg].showsRatings;
 
   const { data: ratingRows } = showRating
     ? await supabase

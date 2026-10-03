@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { TARIFF_LIMITS, type Tariff } from "@/types/database";
+import { PACKAGES, activePackage, type PackageId } from "@/lib/catalog";
 
 interface TourRow {
   id: string;
@@ -45,7 +45,7 @@ function nameOf(a: Applicant) {
 
 export default function ApplicationsPage() {
   const [clubId, setClubId] = useState<string | null>(null);
-  const [tariff, setTariff] = useState<Tariff>("start");
+  const [tariff, setTariff] = useState<PackageId | null>(null);
   const [tours, setTours] = useState<TourRow[]>([]);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,13 +57,13 @@ export default function ApplicationsPage() {
 
     const { data: club } = await supabase
       .from("clubs")
-      .select("id, tariff")
+      .select("id, tariff, package_ends_at")
       .eq("owner_id", auth.user.id)
       .single();
     if (!club) return setLoading(false);
 
     setClubId(club.id);
-    setTariff(club.tariff as Tariff);
+    setTariff(activePackage(club));
 
     const { data: tourRows } = await supabase
       .from("tours")
@@ -108,12 +108,12 @@ export default function ApplicationsPage() {
   }
 
   const seatCap = (t: TourRow) =>
-    Math.min(t.max_participants, TARIFF_LIMITS[tariff].maxParticipants);
+    Math.min(t.max_participants, tariff ? PACKAGES[tariff].maxPerTour : 0);
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-neutral-500">
-        {clubId ? `Ակումբի տարիֆ՝ ${tariff === "start" ? "START" : tariff === "advanced" ? "Advanced" : "Pro"}` : null}
+        {clubId ? `Փաթեթ՝ ${tariff ? PACKAGES[tariff].name : "—"}` : null}
       </p>
 
       {tours.map((t) => {

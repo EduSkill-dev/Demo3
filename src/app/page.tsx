@@ -1,23 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
-import type { TourWithClub } from "@/types/database";
+import { getPublicTours } from "@/lib/publicTours";
 import HomeToursSection from "@/components/HomeToursSection";
-import { DEMO_TOURS } from "@/data/demoTours";
 import Footer from "@/components/Footer";
 
-// Shown only while the database has no tours yet, so the page never looks empty.
-
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("tours")
-    .select("*, clubs(name)")
-    .order("date", { ascending: true });
-
-  const real: TourWithClub[] = (data ?? []).map((t: any) => ({
-    ...t,
-    club_name: t.clubs?.name ?? "",
-  }));
-  const tours = real.length > 0 ? real : DEMO_TOURS;
+  const tours = await getPublicTours();
 
   return (
     <main>

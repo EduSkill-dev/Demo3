@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatAmd } from "@/types/database";
+import { CANCEL_WINDOW_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
 import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
 
 type BookingRow = { id: string; status: "confirmed" | "cancelled" };
@@ -17,14 +17,14 @@ export default function TourSignup({
   date,
   taken,
   limit,
-  cancelHours = null,
+  meetingTime = null,
   price = 0,
 }: {
   tourId: string;
   date: string;
   taken: number;
   limit: number;
-  cancelHours?: number | null;
+  meetingTime?: string | null;
   price?: number;
 }) {
   const router = useRouter();
@@ -63,6 +63,8 @@ export default function TourSignup({
   const confirmed = booking?.status === "confirmed";
   const free = Math.max(0, limit - taken);
   const full = free <= 0;
+  const closed = limit <= 0; // hidden/cancelled tour or the club's package lapsed
+  const cancellable = canCancelBooking(date, meetingTime);
 
   async function book() {
     setBusy(true);
@@ -122,14 +124,14 @@ export default function TourSignup({
     <div className="rounded-2xl border border-sand bg-white p-5">
       <div className="flex items-center justify-between gap-2 text-sm">
         <p className="text-neutral-500">
-          {full ? "Տեղերը լրացած են" : `Ազատ տեղեր՝ ${free} / ${limit}`}
+          {closed ? "Գրանցումը փակ է" : full ? "Տեղերը սպառված են" : `Ազատ տեղեր՝ ${free} / ${limit}`}
         </p>
         <p className="font-semibold text-pine">{price > 0 ? formatAmd(price) : "Անվճար"}</p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-sand">
         <div
           className={`h-full rounded-full ${full ? "bg-red-400" : "bg-apricot"}`}
-          style={{ width: `${Math.min(100, Math.round((taken / limit) * 100))}%` }}
+          style={{ width: `${limit > 0 ? Math.min(100, Math.round((taken / limit) * 100)) : 100}%` }}
         />
       </div>
 
@@ -158,7 +160,8 @@ export default function TourSignup({
             </p>
             <button
               onClick={cancel}
-              disabled={busy}
+              disabled={busy || !cancellable}
+              title={cancellable ? undefined : `Չեղարկել հնարավոր է միայն ${CANCEL_WINDOW_HOURS} ժամ առաջ`}
               className="w-full rounded-lg border border-neutral-300 py-2.5 text-sm font-semibold text-neutral-600 hover:border-red-300 hover:text-red-600 disabled:opacity-50"
             >
               {busy ? "..." : "Չեղարկել գրանցումը"}
@@ -174,16 +177,18 @@ export default function TourSignup({
         ) : (
           <button
             onClick={book}
-            disabled={busy || full}
+            disabled={busy || full || closed}
             className="w-full rounded-lg bg-apricot py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:bg-apricot/50"
             title={full ? "Տեղերը լրացած են" : undefined}
           >
             {busy
               ? "Գրանցվում է..."
-              : booking?.status === "cancelled"
-                ? "Վերականգնել գրանցումը"
+              : closed
+                ? "Գրանցումը փակ է"
                 : full
-                  ? "Տեղերը լրացած են"
+                  ? "Տեղերը սպառված են"
+                  : booking?.status === "cancelled"
+                  ? "Գրանցվել կրկին"
                   : price > 0
                     ? `Գրանցվել ու վճարել (${formatAmd(price)})`
                     : "Գրանցվել արշավին"}
@@ -193,15 +198,9 @@ export default function TourSignup({
 
       {confirmed && !isPast && (
         <p className="mt-3 text-xs text-neutral-400">
-          {cancelHours == null
-            ? "Չեղարկելու ժամկետը նշում է ակումբը՝ արշավի նկարագրության մեջ։"
-            : cancelHours === 0
-              ? "Այս արշավը կարող ես չեղարկել ցանկացած պահի։"
-              : `Չեղարկիր գրանցումը մինչև ${
-                  cancelHours % 24 === 0
-                    ? `${cancelHours / 24} օր`
-                    : `${cancelHours} ժամ`
-                } առաջ, որպեսզի տեղը կարողանա զբաղեցնել ուրիշը։`}
+          {cancellable
+            ? `Չեղարկել կարող եք մինչև արշավից ${CANCEL_WINDOW_HOURS} ժամ առաջ, որպեսզի տեղը կարողանա զբաղեցնել ուրիշը։`
+            : `Արշավին մնացել է ${CANCEL_WINDOW_HOURS} ժամից պակաս. գրանցումն այլևս չի չեղարկվում։`}
         </p>
       )}
 

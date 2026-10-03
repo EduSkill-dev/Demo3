@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chargeTestCard } from "@/lib/mockPayment";
-import { ADVANCED_PRICE_AMD, type Tariff } from "@/types/database";
+import { PACKAGES, isPackageId, planSubscription, type PackageId } from "@/lib/catalog";
 import {
   bookingConfirmationEmail,
   emailStatus,
@@ -12,7 +12,7 @@ import {
 
 type Body = {
   kind?: "subscription" | "booking";
-  tariff?: Tariff;
+  tariff?: PackageId;
   tour_id?: string;
   card?: { number?: string; exp?: string; cvc?: string };
 };
@@ -24,7 +24,6 @@ type TourRow = {
   price: number | string;
   meeting_point: string | null;
   meeting_time: string | null;
-  cancel_deadline_hours: number | null;
   clubs: { name: string } | null;
 };
 
@@ -53,7 +52,8 @@ export async function POST(req: Request) {
   let clubId: string | null = null;
   let label = "";
   let amount = 0;
-  let nextTariff: Tariff | null = null;
+  let nextTariff: PackageId | null = null;
+  let period: { start: Date; end: Date } | null = null;
   let tour: TourRow | null = null;
   let existingBookingId: string | null = null;
 
@@ -64,19 +64,38 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
-    const target = body.tariff === "advanced" ? "advanced" : "start";
+    if (!isPackageId(body.tariff)) {
+      return NextResponse.json({ error: "Անհայտ փաթեթ։" }, { status: 400 });
+    }
+    const target = body.tariff;
     const { data: club } = await supabase
       .from("clubs")
-      .select("id, name, tariff")
+      .select("id, name, tariff, package_ends_at")
       .eq("owner_id", auth.user.id)
       .single();
     if (!club) {
       return NextResponse.json({ error: "Ակումբը չի գտնվել։" }, { status: 404 });
     }
+    const plan = planSubscription(
+      club as { tariff: string | null; package_ends_at: string | null },
+      target
+    );
+    if (!plan.ok) {
+      return NextResponse.json(
+        {
+          error:
+            plan.reason === "downgrade"
+              ? "Ավելի փոքր փաթեթ կարող եք ընտրել ընթացիկի ժամկետը լրանալուց հետո։"
+              : "Երկարաձգել կարող եք ժամկետի ավարտից 7 օր առաջ։",
+        },
+        { status: 409 }
+      );
+    }
     clubId = (club as { id: string }).id;
-    label = `Ակումբի տարիֆ՝ ${target === "advanced" ? "Advanced" : "START"}`;
-    amount = target === "advanced" ? ADVANCED_PRICE_AMD : 0;
+    label = `Փաթեթ՝ ${PACKAGES[target].name}`;
+    amount = PACKAGES[target].priceAmd;
     nextTariff = target;
+    period = { start: plan.periodStart, end: plan.periodEnd };
   } else {
     if (profile?.role !== "individual") {
       return NextResponse.json(
@@ -92,7 +111,7 @@ export async function POST(req: Request) {
     // and an already-confirmed signup must never reach the gateway.
     const { data: tourRow } = await supabase
       .from("tours")
-      .select("id, title, date, price, meeting_point, meeting_time, cancel_deadline_hours, clubs(name)")
+      .select("id, title, date, price, meeting_point, meeting_time, clubs(name)")
       .eq("id", body.tour_id)
       .maybeSingle();
 
@@ -133,6 +152,8 @@ export async function POST(req: Request) {
       tour_id: kind === "booking" ? body.tour_id : null,
       kind,
       tariff: kind === "subscription" ? nextTariff : null,
+      period_start: period?.start.toISOString() ?? null,
+      period_end: period?.end.toISOString() ?? null,
       amount,
       currency: "AMD",
       status: charge.status,
@@ -157,10 +178,10 @@ export async function POST(req: Request) {
   }
 
   /* ---------------------------------------------------- subscription upgrade */
-  if (kind === "subscription" && nextTariff) {
+  if (kind === "subscription" && nextTariff && period) {
     const { error: tariffError } = await admin
       .from("clubs")
-      .update({ tariff: nextTariff })
+      .update({ tariff: nextTariff, package_ends_at: period.end.toISOString() })
       .eq("id", clubId!);
 
     if (tariffError) {
@@ -183,6 +204,7 @@ export async function POST(req: Request) {
       last4: charge.last4,
       payment_id: (payment as { id: string }).id,
       tariff: nextTariff,
+      package_ends_at: period.end.toISOString(),
       email: emailStatus(result),
     });
   }
@@ -241,7 +263,6 @@ export async function POST(req: Request) {
         clubName: t.clubs?.name ?? "—",
         meetingPoint: t.meeting_point,
         meetingTime: t.meeting_time,
-        cancelHours: t.cancel_deadline_hours,
       })
     ),
   ]);

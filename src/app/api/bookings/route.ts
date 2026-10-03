@@ -14,7 +14,6 @@ type TourRow = {
   date: string;
   meeting_point: string | null;
   meeting_time: string | null;
-  cancel_deadline_hours: number | null;
   price: number | string | null;
   clubs: { name: string } | null;
 };
@@ -76,7 +75,10 @@ export async function POST(req: Request) {
       .eq("user_id", auth.user.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.code === "P0001" ? 409 : 400 }
+      );
     }
 
     const tour = booking.tours as unknown as {
@@ -108,7 +110,7 @@ export async function POST(req: Request) {
 
   const { data: tourRow } = await supabase
     .from("tours")
-    .select("id, title, date, meeting_point, meeting_time, cancel_deadline_hours, price, clubs(name)")
+    .select("id, title, date, meeting_point, meeting_time, price, clubs(name)")
     .eq("id", body.tour_id)
     .maybeSingle();
 
@@ -178,7 +180,6 @@ export async function POST(req: Request) {
       clubName: tour.clubs?.name ?? "—",
       meetingPoint: tour.meeting_point,
       meetingTime: tour.meeting_time,
-      cancelHours: tour.cancel_deadline_hours,
     })
   );
 

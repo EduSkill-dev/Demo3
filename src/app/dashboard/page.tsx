@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { TARIFF_LIMITS, type Tariff, type Tour } from "@/types/database";
+import type { Tour } from "@/types/database";
+import { PACKAGES, activePackage, type PackageId } from "@/lib/catalog";
+import { useT } from "@/i18n/client";
 
 export default function DashboardHome() {
   const router = useRouter();
+  const t = useT();
   const [clubId, setClubId] = useState<string | null>(null);
-  const [tariff, setTariff] = useState<Tariff>("start");
+  const [tariff, setTariff] = useState<PackageId | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLimit, setShowLimit] = useState(false);
@@ -20,12 +23,12 @@ export default function DashboardHome() {
     if (!auth.user) return;
     const { data: club } = await supabase
       .from("clubs")
-      .select("id, tariff")
+      .select("id, tariff, package_ends_at")
       .eq("owner_id", auth.user.id)
       .single();
     if (!club) return setLoading(false);
     setClubId(club.id);
-    setTariff(club.tariff as Tariff);
+    setTariff(activePackage(club));
     const { data: tourRows } = await supabase
       .from("tours")
       .select("*")
@@ -48,9 +51,11 @@ export default function DashboardHome() {
 
   if (loading) return <p className="text-neutral-500">Բեռնվում է...</p>;
 
-  const max = TARIFF_LIMITS[tariff].maxListings;
-  const atLimit = tours.length >= max;
-  const tariffLabel = tariff === "start" ? "START" : tariff === "advanced" ? "Advanced" : "Pro";
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = tours.filter((x) => x.date >= today && x.status !== "cancelled").length;
+  const max = tariff ? PACKAGES[tariff].maxListings : 0;
+  const atLimit = upcoming >= max;
+  const tariffLabel = tariff ? PACKAGES[tariff].name : "—";
 
   function handleNew() {
     if (atLimit) setShowLimit(true);
@@ -61,7 +66,7 @@ export default function DashboardHome() {
     <div>
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-500">
-          Հայտարարություններ՝ {tours.length} / {max === Infinity ? "անսահմանափակ" : max}
+          Հայտարարություններ՝ {upcoming}/{max}
         </p>
         <button
           onClick={handleNew}
@@ -81,7 +86,7 @@ export default function DashboardHome() {
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
             <Link
-              href="/dashboard/tariff"
+              href="/dashboard/packages"
               className="rounded-lg bg-apricot px-4 py-2 font-semibold text-white hover:bg-apricot-dark"
             >
               Փոխել տարիֆը
@@ -110,16 +115,16 @@ export default function DashboardHome() {
               </tr>
             </thead>
             <tbody>
-              {tours.map((t) => (
-                <tr key={t.id} className="border-b border-sand text-sm">
-                  <td className="py-3">{t.title}</td>
-                  <td className="py-3">{t.date}</td>
-                  <td className="py-3">{t.regions.join(", ")}</td>
+              {tours.map((x) => (
+                <tr key={x.id} className="border-b border-sand text-sm">
+                  <td className="py-3">{x.title}</td>
+                  <td className="py-3">{x.date}</td>
+                  <td className="py-3">{x.regions.map((r) => t(`region.${r}`)).join(", ")}</td>
                   <td className="py-3 text-right">
-                    <Link href={`/dashboard/listings/${t.id}/edit`} className="mr-4 font-semibold text-apricot">
+                    <Link href={`/dashboard/listings/${x.id}/edit`} className="mr-4 font-semibold text-apricot">
                       Խմբագրել
                     </Link>
-                    <button onClick={() => handleDelete(t.id)} className="font-semibold text-red-600">
+                    <button onClick={() => handleDelete(x.id)} className="font-semibold text-red-600">
                       Ջնջել
                     </button>
                   </td>

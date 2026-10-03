@@ -1,20 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
-import type { TourWithClub } from "@/types/database";
-import { DEMO_TOURS } from "@/data/demoTours";
+import { getPublicTours } from "@/lib/publicTours";
 import ToursExplorer from "@/components/ToursExplorer";
 
 export default async function ToursPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("tours")
-    .select("*, clubs(name)")
-    .order("date", { ascending: true });
-
-  const real: TourWithClub[] = (data ?? []).map((t: any) => ({
-    ...t,
-    club_name: t.clubs?.name ?? "",
-  }));
-  const tours = real.length > 0 ? real : DEMO_TOURS;
+  const tours = await getPublicTours();
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">

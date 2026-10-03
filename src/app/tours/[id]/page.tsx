@@ -1,26 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  DIFFICULTY_LABELS,
-  TYPE_LABELS,
-  TARIFF_LIMITS,
-  formatAmd,
-  type Club,
-  type Tariff,
-  type Tour,
-} from "@/types/database";
+import type { Club, Tour } from "@/types/database";
+import { CANCEL_WINDOW_HOURS, PACKAGES, activePackage, formatAmd } from "@/lib/catalog";
+import { getT } from "@/i18n/server";
 import BackLink from "@/components/BackLink";
 import TourSignup from "@/components/TourSignup";
 import RatingBox from "@/components/RatingBox";
 
 type TourWithClub = Tour & { clubs: Club | null };
-
-function cancelLabel(hours: number) {
-  if (hours === 0) return "Ցանկացած պահի";
-  if (hours % 24 === 0) return `Մինչև ${hours / 24} օր առաջ`;
-  return `Մինչև ${hours} ժամ առաջ`;
-}
 
 async function getTour(id: string): Promise<TourWithClub | null> {
   const supabase = await createClient();
@@ -51,6 +39,7 @@ export default async function TourDetailPage({
   params: { id: string };
 }) {
   const tour = await getTour(params.id);
+  const t = await getT();
 
   if (!tour) {
     return (
@@ -93,19 +82,22 @@ export default async function TourDetailPage({
       : null;
 
   const club = tour.clubs;
-  const tariff: Tariff = (club?.tariff as Tariff) ?? "start";
-  const limit = Math.min(
-    tour.max_participants,
-    TARIFF_LIMITS[tariff].maxParticipants
-  );
+  // No active package (or a hidden/cancelled tour) means no free seats.
+  const pkg = activePackage(club);
+  const open = !!pkg && tour.status === "active";
+  const limit = open ? Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour) : 0;
+  const regionLabels = tour.regions.map((r) => t(`region.${r}`));
 
   const details: { label: string; value: React.ReactNode }[] = [
     { label: "Ամսաթիվ", value: tour.date },
-    { label: "Մարզեր", value: tour.regions.join(", ") || "—" },
-    { label: "Տեսակ", value: TYPE_LABELS[tour.type] },
-    { label: "Բարդություն", value: DIFFICULTY_LABELS[tour.difficulty] },
+    { label: "Մարզեր", value: regionLabels.join(", ") || "—" },
+    {
+      label: "Տեղանք",
+      value: tour.terrains.map((k) => t(`terrain.${k}`)).join(", ") || "—",
+    },
+    { label: "Բարդություն", value: t(`difficulty.${tour.difficulty}`) },
     { label: "Գիշերակաց", value: tour.overnight ? "Այո" : "Ոչ" },
-    { label: "Մասնակիցների առավելագույն", value: limit },
+    { label: "Մասնակիցների առավելագույն", value: Math.min(tour.max_participants, pkg ? PACKAGES[pkg].maxPerTour : tour.max_participants) },
     {
       label: "Գին",
       value: Number(tour.price) > 0 ? formatAmd(Number(tour.price)) : "Անվճար",
@@ -124,9 +116,7 @@ export default async function TourDetailPage({
     ...(tour.meeting_time
       ? [{ label: "Հավաքի ժամ", value: tour.meeting_time.slice(0, 5) }]
       : []),
-    ...(tour.cancel_deadline_hours != null
-      ? [{ label: "Չեղարկում", value: cancelLabel(tour.cancel_deadline_hours) }]
-      : []),
+    { label: "Չեղարկում", value: `Մինչև ${CANCEL_WINDOW_HOURS} ժամ առաջ` },
   ];
 
   return (
@@ -163,8 +153,8 @@ export default async function TourDetailPage({
         {/* Main info */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-apricot">
-            {tour.regions.join(" · ")}
-            {tour.regions.length > 0 && " · "}
+            {regionLabels.join(" · ")}
+            {regionLabels.length > 0 && " · "}
             {club && (
               <Link href={`/clubs/${club.id}`} className="text-pine hover:text-apricot-dark">
                 {club.name}
@@ -175,7 +165,7 @@ export default async function TourDetailPage({
             {tour.title}
           </h1>
           <p className="mt-2 text-sm text-neutral-500">
-            {tour.date} · {DIFFICULTY_LABELS[tour.difficulty]}
+            {tour.date} · {t(`difficulty.${tour.difficulty}`)}
             {tour.overnight ? " · գիշերակացով" : ""}
           </p>
 
@@ -253,7 +243,7 @@ export default async function TourDetailPage({
             date={tour.date}
             taken={taken}
             limit={limit}
-            cancelHours={tour.cancel_deadline_hours}
+            meetingTime={tour.meeting_time}
             price={Number(tour.price) || 0}
           />
         </aside>

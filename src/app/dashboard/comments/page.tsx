@@ -79,7 +79,7 @@ export default function CommentsPage() {
           մեկնաբանությունները ցուցադրվում են միայն Advanced տարիֆում։
         </p>
         <Link
-          href="/dashboard/tariff"
+          href="/dashboard/packages"
           className="mt-4 inline-block rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark"
         >
           Փոխել տարիֆը

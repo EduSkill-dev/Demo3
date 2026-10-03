@@ -1,3 +1,50 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme tokens as "R G B" triplets, consumed by tailwind.config.ts. */
+:root {
+  --c-stone: 247 244 238;
+  --c-sand: 236 229 214;
+  --c-surface: 255 255 255;
+  --c-ink: 23 23 23;
+  --c-muted: 98 98 98;
+  --c-line: 229 229 229;
+  --c-heading: 43 61 51;
+  color-scheme: light;
+}
+
+.dark {
+  --c-stone: 18 22 20;
+  --c-sand: 34 42 37;
+  --c-surface: 27 32 29;
+  --c-ink: 232 234 230;
+  --c-muted: 160 168 162;
+  --c-line: 52 61 56;
+  --c-heading: 178 210 186;
+  color-scheme: dark;
+}
+
+/* Dark-mode bridge for components still written with fixed light-mode
+   utilities (bg-white, text-neutral-*, text-pine ...). New components use
+   the tokens directly; these rules keep older ones readable meanwhile. */
+.dark .bg-white { background-color: rgb(var(--c-surface)); }
+.dark .text-neutral-900,
+.dark .text-neutral-800,
+.dark .text-neutral-700 { color: rgb(var(--c-ink)); }
+.dark .text-neutral-600,
+.dark .text-neutral-500,
+.dark .text-neutral-400 { color: rgb(var(--c-muted)); }
+.dark .text-pine { color: rgb(var(--c-heading)); }
+.dark .border-neutral-200,
+.dark .border-neutral-300,
+.dark .border-sand { border-color: rgb(var(--c-line)); }
+.dark .bg-green-50 { background-color: rgb(20 83 45 / 0.35); }
+.dark .text-green-800,
+.dark .text-green-700 { color: rgb(134 239 172); }
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: rgb(var(--c-surface));
+  color: rgb(var(--c-ink));
+}

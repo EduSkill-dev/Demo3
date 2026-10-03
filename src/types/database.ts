@@ -2,7 +2,11 @@
 // Once the project is connected to a real Supabase instance, you can replace
 // this file by running `supabase gen types typescript` for full accuracy.
 
-export type Tariff = "start" | "advanced" | "pro";
+import type { Difficulty, PackageId, Region, Terrain } from "@/lib/catalog";
+
+export type Tariff = PackageId;
+export type { Difficulty, Region, Terrain };
+export { formatAmd } from "@/lib/catalog";
 
 export interface Profile {
   id: string; // matches auth.users.id
@@ -21,7 +25,8 @@ export interface Club {
   id: string;
   owner_id: string; // profiles.id
   name: string;
-  tariff: Tariff;
+  tariff: Tariff | null; // the package bought; see activePackage()
+  package_ends_at: string | null;
   photo_url: string | null;
   description: string | null;
   team_info: string | null;
@@ -56,26 +61,19 @@ export function parseFocusAreas(value: string | null): string[] {
     .filter(Boolean);
 }
 
-export type TourType = "mountain" | "lake" | "other";
-export type Difficulty = "easy" | "medium" | "hard" | "prof";
-
-export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  easy: "Հեշտ",
-  medium: "Միջին",
-  hard: "Բարդ",
-  prof: "Պրոֆեսիոնալ",
-};
+export type TourStatus = "active" | "hidden" | "cancelled";
 
 export interface Tour {
   id: string;
   club_id: string;
   title: string;
   description: string | null;
-  regions: string[];
+  regions: string[]; // Region keys
   date: string; // ISO date
   max_participants: number;
   photo_urls: string[];
-  type: TourType;
+  status: TourStatus;
+  terrains: string[]; // Terrain keys
   overnight: boolean;
   difficulty: Difficulty;
   popular: boolean;
@@ -83,30 +81,9 @@ export interface Tour {
   notes: string | null;
   meeting_point: string | null;
   meeting_time: string | null; // "HH:MM" from the time column
-  cancel_deadline_hours: number | null;
   price: number; // AMD; 0 = free signup, > 0 goes through the test payment sheet
   created_at: string;
 }
-
-export const TYPE_LABELS: Record<TourType, string> = {
-  mountain: "Արշավ սարերում",
-  lake: "Արշավ լճերի մոտ",
-  other: "Այլ",
-};
-
-export const ARMENIA_REGIONS = [
-  "Երևան",
-  "Արագածոտն",
-  "Արարատ",
-  "Արմավիր",
-  "Գեղարքունիք",
-  "Կոտայք",
-  "Լոռի",
-  "Շիրակ",
-  "Սյունիք",
-  "Վայոց ձոր",
-  "Տավուշ",
-] as const;
 
 // Tour joined with its club's name — what the home page query returns.
 export interface TourWithClub extends Tour {
@@ -118,6 +95,9 @@ export interface Booking {
   tour_id: string;
   user_id: string;
   status: "confirmed" | "cancelled";
+  seq: number; // k in "k/B": arrival order within the tour, never renumbered
+  read_at: string | null; // when the club opened it
+  cancelled_at: string | null;
   created_at: string;
 }
 
@@ -135,32 +115,12 @@ export interface Notification {
   id: string;
   user_id: string;
   club_id: string;
+  tour_id: string | null;
   message: string;
   read: boolean;
+  emailed_at: string | null;
   created_at: string;
 }
-
-// Placeholder price for the Advanced tier (AMD per month). No real money
-// moves in v1 — the charge runs through the mock gateway — so change this
-// number freely; it shows up on the tariff page and on receipts.
-export const ADVANCED_PRICE_AMD = 25000;
-
-// "25 000 ֏" — the way amounts are shown across cards, receipts and emails.
-export function formatAmd(amount: number): string {
-  const whole = Math.round(Number(amount) || 0);
-  return `${whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} ֏`;
-}
-
-// Tariff limits — the single source of truth referenced by app logic.
-// Keep this in sync with the check constraints in the migration.
-export const TARIFF_LIMITS: Record<
-  Tariff,
-  { maxListings: number; maxParticipants: number; showRatings: boolean }
-> = {
-  start: { maxListings: 2, maxParticipants: 5, showRatings: false },
-  advanced: { maxListings: 5, maxParticipants: 20, showRatings: true },
-  pro: { maxListings: Infinity, maxParticipants: Infinity, showRatings: true },
-};
 
 // Placeholder so `createClient<Database>()` type-checks before you generate
 // real Supabase types.

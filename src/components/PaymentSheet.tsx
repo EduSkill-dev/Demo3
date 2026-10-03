@@ -11,6 +11,7 @@ export type ChargeResponse = {
   payment_id?: string;
   booking?: { id: string };
   tariff?: string;
+  package_ends_at?: string;
   email?: string;
   error?: string;
 };

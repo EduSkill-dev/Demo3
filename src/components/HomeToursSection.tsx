@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { TourWithClub, TourType } from "@/types/database";
-import { TYPE_LABELS } from "@/types/database";
+import type { TourWithClub } from "@/types/database";
+import { TERRAINS, type Terrain } from "@/lib/catalog";
+import { useT } from "@/i18n/client";
 
 export default function HomeToursSection({
   tours,
 }: {
   tours: TourWithClub[];
 }) {
+  const tr = useT();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [regions, setRegions] = useState<string[]>([]);
-  const [types, setTypes] = useState<TourType[]>([]);
+  const [types, setTypes] = useState<Terrain[]>([]);
   const [overnightOnly, setOvernightOnly] = useState(false);
   const [clubs, setClubs] = useState<string[]>([]);
 
@@ -31,7 +33,7 @@ export default function HomeToursSection({
       (!dateFrom || t.date >= dateFrom) &&
       (!dateTo || t.date <= dateTo) &&
       (regions.length === 0 || t.regions.some((r) => regions.includes(r))) &&
-      (types.length === 0 || types.includes(t.type)) &&
+      (types.length === 0 || t.terrains.some((k) => types.includes(k as Terrain))) &&
       (!overnightOnly || t.overnight) &&
       (clubs.length === 0 || clubs.includes(t.club_name))
   );
@@ -72,7 +74,7 @@ export default function HomeToursSection({
                 )}
                 <div className="flex flex-1 flex-col p-4">
                   <p className="text-xs font-semibold uppercase text-apricot">
-                    {t.regions.join(", ")}
+                    {t.regions.map((r) => tr(`region.${r}`)).join(", ")}
                   </p>
                   <h3 className="mt-1 font-semibold">{t.title}</h3>
                   <p className="mt-1 text-sm text-neutral-500">
@@ -126,21 +128,21 @@ export default function HomeToursSection({
                 checked={regions.includes(r)}
                 onChange={() => toggle(regions, r, setRegions)}
               />
-              {r}
+              {tr(`region.${r}`)}
             </label>
           ))}
         </div>
 
         <div>
           <p className="mb-1 text-sm font-medium">Տեսակ</p>
-          {(Object.keys(TYPE_LABELS) as TourType[]).map((k) => (
+          {TERRAINS.map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={types.includes(k)}
                 onChange={() => toggle(types, k, setTypes)}
               />
-              {TYPE_LABELS[k]}
+              {tr(`terrain.${k}`)}
             </label>
           ))}
           <label className="mt-1 flex items-center gap-2 text-sm">
