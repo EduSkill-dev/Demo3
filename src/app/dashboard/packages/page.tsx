@@ -15,6 +15,7 @@ import { useIntlLocale, useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "@/components/PaymentSheet";
 import Modal from "@/components/ui/Modal";
 import ReceiptView, { type ReceiptPayment } from "@/components/ReceiptView";
+import ReceiptDownload from "@/components/ui/ReceiptDownload";
 
 type ClubRow = { id: string; name: string; tariff: PackageId | null; package_ends_at: string | null };
 type PaymentRow = ReceiptPayment & { tariff: PackageId | null };
@@ -262,7 +263,12 @@ export default function PackagesPage() {
         )}
       </Modal>
 
-      <Modal open={!!receipt} onClose={() => setReceipt(null)} title={t("receipt.title")}>
+      <Modal
+        open={!!receipt}
+        onClose={() => setReceipt(null)}
+        title={t("receipt.title")}
+        actions={receipt ? <ReceiptDownload paymentId={receipt.id} /> : null}
+      >
         {receipt && (
           <ReceiptView
             payment={receipt}

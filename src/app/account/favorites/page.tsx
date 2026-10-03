@@ -1,72 +1,30 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import FavoritesList, { type FavoriteRow } from "@/components/account/FavoritesList";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+export default async function FavoritesPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-interface Row {
-  club_id: string;
-  clubs: { id: string; name: string; photo_url: string | null } | null;
-}
+  const today = new Date().toISOString().slice(0, 10);
+  const [{ data: favs }, { data: attended }] = await Promise.all([
+    supabase.from("favorite_clubs").select("club_id, created_at, clubs(id, name, photo_url)").eq("user_id", user.id).order("created_at"),
+    supabase.from("bookings").select("tours(club_id, date)").eq("user_id", user.id).eq("status", "confirmed"),
+  ]);
 
-export default function FavoritesPage() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  async function load() {
-    const supabase = createClient();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return setLoading(false);
-    setUserId(auth.user.id);
-    const { data } = await supabase
-      .from("favorite_clubs")
-      .select("club_id, clubs(id, name, photo_url)")
-      .eq("user_id", auth.user.id);
-    setRows((data ?? []) as any as Row[]);
-    setLoading(false);
+  // How many finished hikes the person went on with each club.
+  const count = new Map<string, number>();
+  for (const b of (attended ?? []) as unknown as { tours: { club_id: string; date: string } | null }[]) {
+    if (b.tours && b.tours.date < today) count.set(b.tours.club_id, (count.get(b.tours.club_id) ?? 0) + 1);
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  type Raw = { club_id: string; clubs: { id: string; name: string; photo_url: string | null } | null };
+  const rows: FavoriteRow[] = ((favs ?? []) as unknown as Raw[])
+    .filter((f) => f.clubs)
+    .map((f) => ({ ...f.clubs!, attended: count.get(f.club_id) ?? 0 }));
 
-  async function remove(clubId: string) {
-    if (!userId) return;
-    const supabase = createClient();
-    await supabase.from("favorite_clubs").delete().eq("user_id", userId).eq("club_id", clubId);
-    setRows((cur) => cur.filter((r) => r.club_id !== clubId));
-  }
-
-  if (loading) return <p className="text-neutral-500">Բեռնվում է...</p>;
-  if (rows.length === 0)
-    return (
-      <p className="text-neutral-500">
-        Դեռ սիրված ակումբ չունես։ Ակումբի էջում կարող ես ավելացնել։
-      </p>
-    );
-
-  return (
-    <ul className="space-y-3">
-      {rows.map((r) =>
-        r.clubs ? (
-          <li
-            key={r.club_id}
-            className="flex items-center justify-between rounded-lg border border-sand bg-white p-4"
-          >
-            <Link href={`/clubs/${r.clubs.id}`} className="font-semibold text-pine hover:text-apricot-dark">
-              {r.clubs.name}
-            </Link>
-            <button
-              onClick={() => remove(r.club_id)}
-              title="Հեռացնել սիրվածներից"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 text-neutral-500 hover:border-red-400 hover:text-red-500"
-            >
-              −
-            </button>
-          </li>
-        ) : null
-      )}
-    </ul>
-  );
+  return <FavoritesList rows={rows} />;
 }

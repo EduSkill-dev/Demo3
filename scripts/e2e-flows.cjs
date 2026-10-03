@@ -591,6 +591,32 @@ async function main() {
           (anonDash.headers.get('location') || '').includes('/login?next=%2Fdashboard%2Fpackages'),
         `${wrongDash.headers.get('location')} | ${wrongAccount.headers.get('location')} | ${anonDash.headers.get('location')}`);
 
+      // ---------- Phase 4: receipts, notifications, account deletion ----------
+      const receiptOwn = await noFollow(`/receipts/${chargeOk.body.payment_id}`, indCookie);
+      const receiptOther = await noFollow(`/receipts/${chargeOk.body.payment_id}`, ind2Cookie);
+      check('HTTP receipts: the payer sees their receipt, nobody else does',
+        receiptOwn.status === 200 && receiptOther.status === 404, `own=${receiptOwn.status} other=${receiptOther.status}`);
+
+      await signIn('ind2');
+      const myNotes = (await anon.from('notifications').select('id').eq('user_id', ids.ind2)).data || [];
+      const delNote = myNotes[0] ? await anon.from('notifications').delete().eq('id', myNotes[0].id) : { error: { message: 'no notification' } };
+      const leftNote = myNotes[0] ? (await admin.from('notifications').select('id').eq('id', myNotes[0].id)).data?.length : 1;
+      check('a person can delete their own notification', !delNote.error && leftNote === 0, JSON.stringify(delNote.error));
+
+      ids.leaver = await makeUser('leaver', { role: 'individual', first_name: 'Հեռացող', last_name: 'Օգտատեր', phone: '+374 99 111111' });
+      const leaverBooking = (await admin.from('bookings').insert({ tour_id: soonTour.id, user_id: ids.leaver, status: 'confirmed' }).select('id').single()).data;
+      const leaverCookie = await cookieFor('leaver');
+      const delRes = await api('/api/delete-account', null, leaverCookie);
+      const afterDelete = (await admin.from('bookings').select('user_id, status').eq('id', leaverBooking?.id).single()).data;
+      const goneUser = (await admin.auth.admin.getUserById(ids.leaver)).data?.user;
+      check('deleting an account cancels upcoming bookings (even inside 48 h) and keeps the row',
+        delRes.status === 200 && afterDelete?.status === 'cancelled' && afterDelete?.user_id === null && !goneUser,
+        `status=${delRes.status} body=${JSON.stringify(delRes.body)} booking=${JSON.stringify(afterDelete)}`);
+      if (!goneUser) ids.leaver = null; else ids.leaver = null;
+
+      const clubDelete = await api('/api/delete-account', null, club2Cookie);
+      check('a club account cannot delete itself with one click', clubDelete.status === 403, `status=${clubDelete.status}`);
+
       check('HTTP: email no-op (RESEND_API_KEY absent from env)', !env.RESEND_API_KEY,
         env.RESEND_API_KEY ? 'API key present!' : 'no key — emails skipped');
     }

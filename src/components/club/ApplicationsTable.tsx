@@ -62,7 +62,9 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
   }
 
   const name = (r: ApplicationRow) =>
-    [r.person?.first_name, r.person?.last_name].filter(Boolean).join(" ") || r.person?.email || "—";
+    r.person
+      ? [r.person.first_name, r.person.last_name].filter(Boolean).join(" ") || r.person.email
+      : t("account.deletedUser");
 
   if (rows.length === 0) {
     return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("applications.empty")}</p>;

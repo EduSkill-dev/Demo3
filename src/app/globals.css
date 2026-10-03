@@ -48,3 +48,9 @@
   background-color: rgb(var(--c-surface));
   color: rgb(var(--c-ink));
 }
+
+/* Printing (receipts): only the page content, on white. */
+@media print {
+  header, footer { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+}
