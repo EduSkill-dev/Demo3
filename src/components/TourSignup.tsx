@@ -3,23 +3,29 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { formatAmd } from "@/types/database";
+import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
 
 type BookingRow = { id: string; status: "confirmed" | "cancelled" };
 
 // Sign-up card for a single tour: shows free seats, lets an individual
 // register/cancel, and explains why when that is not possible.
+// Registration goes through /api/bookings so the confirmation/cancellation
+// email is sent from the server; a priced tour opens the payment sheet first.
 export default function TourSignup({
   tourId,
   date,
   taken,
   limit,
   cancelHours = null,
+  price = 0,
 }: {
   tourId: string;
   date: string;
   taken: number;
   limit: number;
   cancelHours?: number | null;
+  price?: number;
 }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -28,6 +34,7 @@ export default function TourSignup({
   const [booking, setBooking] = useState<BookingRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPay, setShowPay] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,52 +74,58 @@ export default function TourSignup({
       return router.push(`/login?next=/tours/${tourId}`);
     }
 
-    let error: string | null = null;
-    if (booking?.status === "cancelled") {
-      // Re-activating the cancelled signup instead of inserting a new row.
-      const res = await supabase
-        .from("bookings")
-        .update({ status: "confirmed" })
-        .eq("id", booking.id);
-      error = res.error?.message ?? null;
-      if (!error) setBooking({ ...booking, status: "confirmed" });
-    } else {
-      const res = await supabase
-        .from("bookings")
-        .insert({ tour_id: tourId, user_id: auth.user.id, status: "confirmed" })
-        .select("id")
-        .single();
-      error = res.error?.message ?? null;
-      if (!error && res.data) setBooking({ id: (res.data as any).id, status: "confirmed" });
+    // A priced tour is paid first; the booking itself is created by the
+    // charge route once the card goes through.
+    if (price > 0) {
+      setBusy(false);
+      return setShowPay(true);
     }
 
+    const res = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tour_id: tourId }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      booking?: { id: string };
+    };
     setBusy(false);
-    if (error) setError(prettyError(error));
-    else router.refresh();
+    if (!res.ok) return setError(prettyError(data.error ?? "Չստացվեց գրանցվել։"));
+    if (data.booking?.id) setBooking({ id: data.booking.id, status: "confirmed" });
+    router.refresh();
+  }
+
+  function onPaid(data: ChargeResponse) {
+    setShowPay(false);
+    if (data.booking?.id) setBooking({ id: data.booking.id, status: "confirmed" });
+    router.refresh();
   }
 
   async function cancel() {
     if (!booking || !confirm("Չեղարկե՞լ գրանցումդ։")) return;
     setBusy(true);
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", booking.id);
+    const res = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel", booking_id: booking.id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
     setBusy(false);
-    if (error) setError(prettyError(error.message));
-    else {
-      setBooking({ ...booking, status: "cancelled" });
-      router.refresh();
-    }
+    if (!res.ok) return setError(prettyError(data.error ?? "Չստացվեց չեղարկել։"));
+    setBooking({ ...booking, status: "cancelled" });
+    router.refresh();
   }
 
   return (
     <div className="rounded-2xl border border-sand bg-white p-5">
-      <p className="text-sm text-neutral-500">
-        {full ? "Տեղերը լրացած են" : `Ազատ տեղեր՝ ${free} / ${limit}`}
-      </p>
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <p className="text-neutral-500">
+          {full ? "Տեղերը լրացած են" : `Ազատ տեղեր՝ ${free} / ${limit}`}
+        </p>
+        <p className="font-semibold text-pine">{price > 0 ? formatAmd(price) : "Անվճար"}</p>
+      </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-sand">
         <div
           className={`h-full rounded-full ${full ? "bg-red-400" : "bg-apricot"}`}
@@ -129,6 +142,15 @@ export default function TourSignup({
           <p className="text-sm text-neutral-500">
             Ակումբները չեն կարող գրանցվել արշավներին։
           </p>
+        ) : showPay ? (
+          <PaymentSheet
+            kind="booking"
+            amount={price}
+            label="Արշավի գրանցում"
+            tourId={tourId}
+            onCancel={() => setShowPay(false)}
+            onSuccess={onPaid}
+          />
         ) : confirmed ? (
           <div className="space-y-3">
             <p className="rounded-lg bg-green-50 p-3 text-sm font-semibold text-green-800">
@@ -162,7 +184,9 @@ export default function TourSignup({
                 ? "Վերականգնել գրանցումը"
                 : full
                   ? "Տեղերը լրացած են"
-                  : "Գրանցվել արշավին"}
+                  : price > 0
+                    ? `Գրանցվել ու վճարել (${formatAmd(price)})`
+                    : "Գրանցվել արշավին"}
           </button>
         )}
       </div>

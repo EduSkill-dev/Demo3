@@ -9,6 +9,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
     meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
+    price: 0,
   },
   {
     id: "d2", club_id: "c2", club_name: "Dilijan Wanders",
@@ -18,6 +19,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
     meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
+    price: 0,
   },
   {
     id: "d3", club_id: "c3", club_name: "Southern Trails",
@@ -27,6 +29,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
     meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
+    price: 0,
   },
   {
     id: "d4", club_id: "c4", club_name: "Lori Ramblers",
@@ -36,6 +39,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
     meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
+    price: 0,
   },
   {
     id: "d5", club_id: "c5", club_name: "Sevan Explorers",
@@ -45,6 +49,7 @@ export const DEMO_TOURS: TourWithClub[] = [
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
     meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
+    price: 0,
   },
   {
     id: "d6", club_id: "c6", club_name: "Vayots Explorers",
@@ -54,5 +59,6 @@ export const DEMO_TOURS: TourWithClub[] = [
     coordinator_phone: "+374 55 123456", notes: "Հարմարավետ կոշիկ, ջուր, փոքր խորտիկ։",
     meeting_point: "Կասկադ, արձանի մոտ", meeting_time: "06:00", cancel_deadline_hours: 48,
     created_at: "",
+    price: 0,
   },
 ];

@@ -84,6 +84,7 @@ export interface Tour {
   meeting_point: string | null;
   meeting_time: string | null; // "HH:MM" from the time column
   cancel_deadline_hours: number | null;
+  price: number; // AMD; 0 = free signup, > 0 goes through the test payment sheet
   created_at: string;
 }
 
@@ -137,6 +138,17 @@ export interface Notification {
   message: string;
   read: boolean;
   created_at: string;
+}
+
+// Placeholder price for the Advanced tier (AMD per month). No real money
+// moves in v1 — the charge runs through the mock gateway — so change this
+// number freely; it shows up on the tariff page and on receipts.
+export const ADVANCED_PRICE_AMD = 25000;
+
+// "25 000 ֏" — the way amounts are shown across cards, receipts and emails.
+export function formatAmd(amount: number): string {
+  const whole = Math.round(Number(amount) || 0);
+  return `${whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} ֏`;
 }
 
 // Tariff limits — the single source of truth referenced by app logic.

@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { TARIFF_LIMITS, type Tariff } from "@/types/database";
+import {
+  ADVANCED_PRICE_AMD,
+  TARIFF_LIMITS,
+  formatAmd,
+  type Tariff,
+} from "@/types/database";
+import PaymentSheet, { type ChargeResponse } from "@/components/PaymentSheet";
 
 type Plan = "start" | "advanced" | "pro";
 
@@ -14,6 +20,7 @@ const PLANS: { id: Plan; name: string; lines: string[] }[] = [
       `Մինչև ${TARIFF_LIMITS.start.maxListings} հայտարարություն`,
       `Մինչև ${TARIFF_LIMITS.start.maxParticipants} մասնակից արշավի համար`,
       "Ակումբի վարկանիշն ու մեկնաբանությունները չեն երևում",
+      "Անվճար",
     ],
   },
   {
@@ -24,6 +31,7 @@ const PLANS: { id: Plan; name: string; lines: string[] }[] = [
       `Մինչև ${TARIFF_LIMITS.advanced.maxParticipants} մասնակից արշավի համար`,
       "Վարկանիշն ու մեկնաբանությունները երևում են",
       "Մեկնաբանությունները տեսանելի են նաև վահանակում",
+      `${formatAmd(ADVANCED_PRICE_AMD)} / ամիս`,
     ],
   },
   {
@@ -39,6 +47,7 @@ export default function TariffPage() {
   const [toursCount, setToursCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [payPlan, setPayPlan] = useState<Plan | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +86,14 @@ export default function TariffPage() {
     )
       return;
 
+    // Upgrading to Advanced is the one thing that costs money — the card form
+    // opens and /api/payments/charge advances the tariff after the mock
+    // gateway approves it. Downgrading back to START is free.
+    if (plan === "advanced") {
+      setPayPlan(plan);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -91,6 +108,16 @@ export default function TariffPage() {
 
     setTariff(plan);
     setMessage(`Տարիֆը փոխվեց՝ ${target.name}։`);
+  }
+
+  function onPaid(data: ChargeResponse) {
+    setPayPlan(null);
+    if (data.tariff) setTariff(data.tariff as Tariff);
+    setMessage(
+      `Տարիֆը փոխվեց՝ Advanced${
+        data.last4 ? ` (•••• ${data.last4})` : ""
+      }։ Անդորրագիրը գալիս է էլ. փոստով։`
+    );
   }
 
   if (loading) return <p className="text-neutral-500">Բեռնվում է...</p>;
@@ -132,7 +159,11 @@ export default function TariffPage() {
                   disabled={saving}
                   className="mt-4 w-full rounded-lg bg-apricot py-2 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-50"
                 >
-                  {saving ? "..." : `Ընտրել ${p.name}`}
+                  {saving
+                    ? "..."
+                    : p.id === "advanced"
+                      ? `Գնել ${p.name} · ${formatAmd(ADVANCED_PRICE_AMD)}`
+                      : `Ընտրել ${p.name}`}
                 </button>
               )}
             </div>
@@ -140,11 +171,24 @@ export default function TariffPage() {
         })}
       </div>
 
+      {payPlan && (
+        <div className="mt-4 max-w-md">
+          <PaymentSheet
+            kind="subscription"
+            tariff={payPlan}
+            amount={ADVANCED_PRICE_AMD}
+            label="Advanced տարիֆ · ամսական բաժանորդագրություն"
+            onCancel={() => setPayPlan(null)}
+            onSuccess={onPaid}
+          />
+        </div>
+      )}
+
       {message && <p className="mt-4 text-sm text-green-700">{message}</p>}
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <p className="mt-6 text-xs text-neutral-400">
-        Վճարումը կապելիս կլինի ավելի ուշ՝ MVP-ում տարիֆի փոփոխությունը անվճար է։
+        Վճարումները թեստային են՝ իրական գումար չի գանձվում, իսկ անդորրագիրը գալիս է նաև էլ. փոստով։
       </p>
     </div>
   );

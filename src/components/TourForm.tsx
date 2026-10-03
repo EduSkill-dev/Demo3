@@ -53,6 +53,9 @@ export default function TourForm({
       ? String(initialTour.cancel_deadline_hours)
       : ""
   );
+  const [price, setPrice] = useState(
+    initialTour?.price != null ? String(initialTour.price) : "0"
+  );
   const [description, setDescription] = useState(initialTour?.description ?? "");
   const [notes, setNotes] = useState(initialTour?.notes ?? "");
 
@@ -104,6 +107,8 @@ export default function TourForm({
       return setError(`Քո տարիֆով առավելագույնը ${limitInfo.seatCap} մասնակից է։`);
     if (cancelHours && (Number(cancelHours) < 0 || Number(cancelHours) > 720))
       return setError("Չեղարկման ժամկետը լրացրու 0-ից 720 ժամի միջակայքում։");
+    if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0)
+      return setError("Գինը նշիր ճիշտ՝ 0 կամ բարձր (դրամով)։");
 
     setSaving(true);
     const supabase = createClient();
@@ -145,18 +150,31 @@ export default function TourForm({
       meeting_point: meetingPoint.trim() || null,
       meeting_time: meetingTime || null,
       cancel_deadline_hours: cancelHours ? Number(cancelHours) : null,
+      price: Number(price) || 0,
       description: description || null,
       notes: notes || null,
       photo_urls: photoUrls,
     };
 
-    const { error: dbError } =
+    const { data: created, error: dbError = null } =
       mode === "create"
-        ? await supabase.from("tours").insert(payload)
+        ? await supabase.from("tours").insert(payload).select("id").single()
         : await supabase.from("tours").update(payload).eq("id", initialTour!.id);
 
     setSaving(false);
     if (dbError) return setError(dbError.message);
+
+    // The database trigger already wrote one notification per follower; this
+    // turns them into emails — fire-and-forget so a slow mail server never
+    // blocks the club from seeing its new listing.
+    if (mode === "create" && created) {
+      fetch("/api/tours/announce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tour_id: (created as { id: string }).id }),
+      }).catch(() => {});
+    }
+
     router.push("/dashboard");
     router.refresh();
   }
@@ -260,6 +278,22 @@ export default function TourForm({
         <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} />
         Գիշերակացով
       </label>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium">Գին՝ դրամով (֏)</label>
+        <input
+          type="number"
+          min={0}
+          step="100"
+          placeholder="0"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className={input}
+        />
+        <p className="mt-1 text-xs text-neutral-400">
+          0 — անվճար գրանցում։ Բարձր գինը մասնակիցը վճարում է գրանցվելիս (թեստային քարտով)։
+        </p>
+      </div>
 
       <div>
         <label className="mb-1 block text-sm font-medium">Կոորդինատորի հեռախոսահամար *</label>

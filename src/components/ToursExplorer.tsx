@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { TourWithClub, TourType, Difficulty } from "@/types/database";
-import { DIFFICULTY_LABELS, TYPE_LABELS } from "@/types/database";
+import { DIFFICULTY_LABELS, TYPE_LABELS, formatAmd } from "@/types/database";
 import FilterDropdown from "./FilterDropdown";
 
 export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
@@ -181,6 +181,11 @@ export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
                     {t.date}
                     {t.overnight ? " · գիշերակացով" : ""} · {DIFFICULTY_LABELS[t.difficulty]}
                   </p>
+                  {Number(t.price) > 0 && (
+                    <p className="mt-1 text-sm font-semibold text-pine">
+                      {formatAmd(Number(t.price))}
+                    </p>
+                  )}
                   <Link
                     href={`/tours/${t.id}`}
                     className="mt-4 self-start rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold hover:bg-stone"

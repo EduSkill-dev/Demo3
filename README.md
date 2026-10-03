@@ -165,3 +165,22 @@ can create tours — that unblocks `/tours` showing real data.
 - `/account` ("Իմ արշավները") has a "Չեղարկել գրանցումը" button per tour. The seat
   frees up immediately (capacity counts confirmed bookings only) and the club
   sees the row dimmed as cancelled in its Applications tab.
+
+## Update 10 (payments, email, HTTP e2e)
+- Payment sheet + mock gateway (`src/lib/mockPayment.ts`): accepts test card
+  numbers (4242… succeeds, 4000…002 declines, 4000…995 insufficient, 4000…069
+  expired). No real money moves.
+- `/api/payments/charge` POST — `kind: "booking"` charges the tour's price and
+  creates a confirmed booking; `kind: "subscription"` upgrades a club's tariff.
+  Declined payments are recorded too.
+- `/api/bookings` POST — `action: "cancel"` cancels a booking; without an
+  action it books (or re-activates a previously cancelled signup).
+- `/api/tours/announce` POST — emails followers of the club that published a
+  new tour. Stamps `emailed_at` once per notification row.
+- Emails go through Resend (`src/lib/email.ts`). Set `RESEND_API_KEY` in
+  `.env.local` to actually send; without it every `sendEmail` call returns
+  `{ skipped: true }` and the app keeps working — perfect for local dev and CI.
+- `e2e-flows.cjs` now starts the Next.js dev server and exercises the three
+  API routes over HTTP with a cookie built from a real anon-key session. Checks
+  cover: free booking + cancel, paid booking (success + decline), subscription
+  upgrade, tour announce, and the email no-op path.

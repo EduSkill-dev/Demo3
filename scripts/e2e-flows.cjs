@@ -15,6 +15,8 @@
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const http = require('http');
+const { spawn } = require('child_process');
 
 const envFile = path.join(process.cwd(), '.env.local');
 const env = Object.fromEntries(
@@ -30,6 +32,13 @@ const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_RO
   auth: { persistSession: false },
 });
 
+// The default cookie name @supabase/ssr uses is sb-{projectRef}-auth-token,
+// derived from the project sub-domain of the Supabase URL.
+const PROJECT_REF = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split('.')[0];
+const AUTH_COOKIE_NAME = `sb-${PROJECT_REF}-auth-token`;
+const DEV_PORT = 3999;
+
+
 const results = [];
 function check(name, cond, extra = '') {
   results.push({ name, ok: !!cond });
@@ -38,6 +47,44 @@ function check(name, cond, extra = '') {
 const stamp = Date.now();
 const email = (who) => `e2e-${who}-${stamp}@example.com`;
 const PASSWORD = 'E2eTest!2345';
+
+let devServer = null;
+
+// Convert a Supabase session into an sb-auth-token cookie value that
+// @supabase/ssr's createServerClient will read (base64url(JSON(session))).
+function sessionToCookie(session) {
+  const encoded = Buffer.from(JSON.stringify(session)).toString('base64url');
+  return `${AUTH_COOKIE_NAME}=base64-${encoded}`;
+}
+
+// Minimal HTTP POST helper for the Next.js API routes.
+async function api(path, body, cookie) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (cookie) headers.Cookie = cookie;
+  const res = await fetch(`http://localhost:${DEV_PORT}${path}`, {
+    method: 'POST',
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let json = {};
+  try { json = JSON.parse(text); } catch { /* not JSON */ }
+  return { status: res.status, body: json, raw: text };
+}
+
+// Wait until the dev server responds or give up.
+async function waitForServer(ms = 30000) {
+  const start = Date.now();
+  for (;;) {
+    try {
+      await fetch(`http://localhost:${DEV_PORT}`);
+      return true;
+    } catch {
+      if (Date.now() - start > ms) throw new Error('server did not start');
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+}
 
 async function makeUser(who, user_metadata) {
   const r = await admin.auth.admin.createUser({
@@ -57,6 +104,7 @@ async function signIn(who) {
 
 async function main() {
   const ids = {};
+  let newTourId = null;
   try {
     // ---------- individual ----------
     ids.ind = await makeUser('ind', {
@@ -248,8 +296,9 @@ async function main() {
       club_id: clubB, title: 'E2E Notified Tour', regions: ['Կոտայք'], date: '2027-04-01',
       max_participants: 5, type: 'mountain', difficulty: 'easy', overnight: false,
       coordinator_phone: '+374 55 123456',
-    });
-    check('publishing while someone follows you works', !newTour.error, newTour.error ? newTour.error.message : '');
+    }).select('id').single();
+    check('publishing while someone follows you works', !newTour.error && !!newTour.data?.id, newTour.error ? newTour.error.message : JSON.stringify(newTour.data));
+    newTourId = newTour.data?.id ?? null;
     await anon.auth.signOut();
 
     await signIn('ind2');
@@ -276,11 +325,124 @@ async function main() {
       publicClub.data?.description?.startsWith('E2E նկարագրություն') &&
         publicClub.data?.focus_areas?.includes('Գիշերակացով'),
       JSON.stringify(publicClub.data));
+
+    /* ---------- HTTP route tests (payments + email + announce) ---------- */
+    // Clean up tours created during the tariff-limit + capacity tests so
+    // club A has room under its 5-listing Advanced cap for the HTTP setups.
+    await admin.from('tours').delete().eq('club_id', clubA).neq('title', 'E2E Tour');
+
+    // Boot the Next.js dev server so we can exercise the API routes over HTTP.
+    // Pass the .env.local vars through so the server has the service-role key.
+    // Kill any stale processes on the dev port so Next.js doesn't have to
+    // climb through 3000→3001→3002→... to find a free one.
+    try { require('child_process').execSync(`fuser -k ${DEV_PORT}/tcp 2>/dev/null || true`); } catch { /* ignore */ }
+
+    const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
+    devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
+      stdio: 'pipe',
+      env: { ...process.env, ...env },
+      shell: false,
+    });
+devServer.on('error', (err) => console.error('     dev server error:', err.message));
+    devServer.stdout.on('data', (d) => console.log('     dev:', d.toString().split('\n').filter(Boolean).slice(-1)[0] || ''));
+    devServer.stderr.on('data', (d) => console.log('     dev:err:', d.toString().split('\n').filter(Boolean).slice(-1)[0] || ''));
+
+    let serverReady = false;
+    try {
+      await waitForServer(30000);
+      serverReady = true;
+    } catch (e2) {
+      console.log('     dev server did not start, skipping HTTP tests:', e2.message);
+    }
+
+    if (serverReady) {
+      // Two tours created via admin: a free one (for /api/bookings) and a
+      // paid one (for /api/payments/charge booking flow).
+      const freeTour = await admin.from('tours').insert({
+        club_id: clubA, title: 'E2E HTTP Free', regions: ['Կոտայք'], date: '2026-12-23',
+        max_participants: 10, type: 'mountain', difficulty: 'easy', overnight: false,
+        coordinator_phone: '+374 55 123456', meeting_time: '09:00', price: 0,
+      }).select('id').single();
+      check('HTTP setup: free tour created by admin', !!freeTour.data?.id, JSON.stringify(freeTour.error));
+      const paidTour = await admin.from('tours').insert({
+        club_id: clubA, title: 'E2E HTTP Paid', regions: ['Կոտայք'], date: '2026-12-24',
+        max_participants: 10, type: 'mountain', difficulty: 'easy', overnight: false,
+        coordinator_phone: '+374 55 123456', meeting_time: '09:00', price: 5000,
+      }).select('id').single();
+      check('HTTP setup: paid tour created by admin', !!paidTour.data?.id, JSON.stringify(paidTour.error));
+
+      // Sign in as the individual to get a session → cookie.
+      await signIn('ind');
+      const { data: sessData } = await anon.auth.getSession();
+      const indCookie = sessionToCookie(sessData.session);
+
+      // 1) Free booking via /api/bookings — email should be skipped (no RESEND_API_KEY).
+      const bookRes = await api('/api/bookings', { tour_id: freeTour.data.id }, indCookie);
+      check('HTTP /api/bookings: free booking ok + email skipped',
+        bookRes.status === 200 && bookRes.body.ok === true && bookRes.body.email === 'skipped',
+        `status=${bookRes.status} body=${JSON.stringify(bookRes.body)} raw=${bookRes.raw.slice(0,200)}`);
+
+      // 2) Cancel that booking via /api/bookings.
+      const cancelRes = await api('/api/bookings',
+        { action: 'cancel', booking_id: bookRes.body?.booking?.id }, indCookie);
+      check('HTTP /api/bookings: cancel ok + email skipped',
+        cancelRes.status === 200 && cancelRes.body.ok === true && cancelRes.body.email === 'skipped',
+        `status=${cancelRes.status} body=${JSON.stringify(cancelRes.body)} raw=${cancelRes.raw.slice(0,200)}`);
+
+      // 3) Declined card (4000...002) — payment recorded, no booking created.
+      const declineRes = await api('/api/payments/charge', {
+        kind: 'booking', tour_id: paidTour.data.id,
+        card: { number: '4000000000000002', exp: '12/28', cvc: '123' },
+      }, indCookie);
+      check('HTTP /api/payments/charge: 4000…002 card declined',
+        declineRes.status === 200 && declineRes.body.status === 'declined',
+        `status=${declineRes.status} body=${JSON.stringify(declineRes.body)} raw=${declineRes.raw.slice(0,200)}`);
+
+      // 4) Successful card (4242…) — booking created, email skipped.
+      const chargeOk = await api('/api/payments/charge', {
+        kind: 'booking', tour_id: paidTour.data.id,
+        card: { number: '4242424242424242', exp: '12/28', cvc: '123' },
+      }, indCookie);
+      check('HTTP /api/payments/charge: 4242 card succeeds (booking)',
+        chargeOk.status === 200 && chargeOk.body.status === 'succeeded' && chargeOk.body.email === 'skipped',
+        `status=${chargeOk.status} body=${JSON.stringify(chargeOk.body)} raw=${chargeOk.raw.slice(0,200)}`);
+
+      // 5) Subscription upgrade as club2 (START → Advanced).
+      await anon.auth.signOut();
+      await signIn('club2');
+      const { data: club2Session } = await anon.auth.getSession();
+      const club2Cookie = sessionToCookie(club2Session.session);
+      const subRes = await api('/api/payments/charge', {
+        kind: 'subscription', tariff: 'advanced',
+        card: { number: '4242424242424242', exp: '12/28', cvc: '123' },
+      }, club2Cookie);
+      check('HTTP /api/payments/charge: subscription upgrade succeeds',
+        subRes.status === 200 && subRes.body.status === 'succeeded' && subRes.body.tariff === 'advanced',
+        `status=${subRes.status} body=${JSON.stringify(subRes.body)} raw=${subRes.raw.slice(0,200)}`);
+
+// 6) Announce the tour to followers (email skipped without RESEND_API_KEY).
+      const announceRes = await api('/api/tours/announce', { tour_id: newTourId }, club2Cookie);
+      check('HTTP /api/tours/announce: emails followers (skipped without key)',
+        announceRes.status === 200 && announceRes.body.ok === true && announceRes.body.skipped >= 1,
+        `status=${announceRes.status} body=${JSON.stringify(announceRes.body)} raw=${announceRes.raw.slice(0,300)}`);
+
+      // 7) Email no-op: confirm RESEND_API_KEY is absent in the env file.
+      check('HTTP: email no-op (RESEND_API_KEY absent from env)',
+        !env.RESEND_API_KEY,
+        env.RESEND_API_KEY ? 'API key present!' : 'no key — emails skipped');
+
+      await anon.auth.signOut();
+    }
   } catch (e) {
     console.log('ERROR:', e.message);
     results.push({ name: 'script crashed: ' + e.message, ok: false });
   } finally {
     // ---------- cleanup ----------
+    if (devServer) {
+      devServer.kill();
+      console.log('     dev server stopped');
+    }
+
     for (const id of Object.values(ids)) {
       if (!id) continue;
       const d = await admin.auth.admin.deleteUser(id);

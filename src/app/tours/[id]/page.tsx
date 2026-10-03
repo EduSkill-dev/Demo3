@@ -5,6 +5,7 @@ import {
   DIFFICULTY_LABELS,
   TYPE_LABELS,
   TARIFF_LIMITS,
+  formatAmd,
   type Club,
   type Tariff,
   type Tour,
@@ -105,6 +106,10 @@ export default async function TourDetailPage({
     { label: "Բարդություն", value: DIFFICULTY_LABELS[tour.difficulty] },
     { label: "Գիշերակաց", value: tour.overnight ? "Այո" : "Ոչ" },
     { label: "Մասնակիցների առավելագույն", value: limit },
+    {
+      label: "Գին",
+      value: Number(tour.price) > 0 ? formatAmd(Number(tour.price)) : "Անվճար",
+    },
     {
       label: "Կոորդինատոր",
       value: (
@@ -249,6 +254,7 @@ export default async function TourDetailPage({
             taken={taken}
             limit={limit}
             cancelHours={tour.cancel_deadline_hours}
+            price={Number(tour.price) || 0}
           />
         </aside>
       </div>

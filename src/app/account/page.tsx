@@ -35,14 +35,17 @@ export default function UpcomingToursPage() {
   async function cancel(bookingId: string) {
     if (!confirm("Չեղարկե՞լ գրանցումդ այս արշավին։")) return;
     setBusyId(bookingId);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", bookingId);
+    // Through the API so the club and the participant both get the
+    // cancellation email.
+    const res = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel", booking_id: bookingId }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
     setBusyId(null);
-    if (error) {
-      alert("Չստացվեց չեղարկել, փորձիր նորից։");
+    if (!res.ok) {
+      alert(data.error || "Չստացվեց չեղարկել, փորձիր նորից։");
       return;
     }
     setRows((cur) => cur.filter((r) => r.id !== bookingId));
