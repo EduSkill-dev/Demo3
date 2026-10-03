@@ -1,248 +1,114 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { PACKAGES, activePackage } from "@/lib/catalog";
+import { getLocale, getT } from "@/i18n/server";
+import { INTL_LOCALE } from "@/i18n/config";
 import type { Club, Tour } from "@/types/database";
-import { CANCEL_WINDOW_HOURS, PACKAGES, activePackage, formatAmd } from "@/lib/catalog";
-import { getT } from "@/i18n/server";
 import BackLink from "@/components/BackLink";
+import TourDetails from "@/components/tour/TourDetails";
 import TourSignup from "@/components/TourSignup";
 import RatingBox from "@/components/RatingBox";
 
 type TourWithClub = Tour & { clubs: Club | null };
 
 async function getTour(id: string): Promise<TourWithClub | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("tours")
-    .select("*, clubs(*)")
-    .eq("id", id)
-    .maybeSingle();
+  const { data } = await supabase.from("tours").select("*, clubs(*)").eq("id", id).maybeSingle();
   return (data as TourWithClub | null) ?? null;
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const tour = await getTour(params.id);
-  if (!tour) return { title: "Արշավ | Highland" };
-  return {
-    title: `${tour.title} | Highland`,
-    description: tour.description ?? `${tour.title} — արշավ Հայաստանում։`,
-  };
+  if (!tour) return { title: "Highland" };
+  return { title: `${tour.title} | Highland`, description: tour.description ?? tour.title };
 }
 
-export default async function TourDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const tour = await getTour(params.id);
-  const t = await getT();
+// The shareable page of one hike: full details, sign-up and its reviews.
+export default async function TourDetailPage({ params }: { params: { id: string } }) {
+  const [tour, t, locale] = await Promise.all([getTour(params.id), getT(), getLocale()]);
 
   if (!tour) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-20 text-center">
-        <BackLink fallback="/tours" label="Արշավներ" />
-        <h1 className="mt-8 font-serif text-2xl font-semibold text-pine">
-          Արշավը չի գտնվել
-        </h1>
-        <p className="mt-2 text-neutral-500">
-          Հնարավոր է՝ այն ջնջվել է կամ դեռ հրապարակված չէ։
-        </p>
-        <Link
-          href="/tours"
-          className="mt-6 inline-block rounded-lg bg-apricot px-5 py-3 font-semibold text-white"
-        >
-          Տեսնել բոլոր արշավները
+      <main className="mx-auto max-w-3xl px-4 py-20 text-center">
+        <h1 className="font-serif text-2xl font-semibold text-heading">{t("toursPage.empty")}</h1>
+        <Link href="/tours" className="mt-6 inline-block rounded-lg bg-apricot px-5 py-3 font-semibold text-white">
+          {t("home.allTours")}
         </Link>
       </main>
     );
   }
 
   const supabase = await createClient();
-  const { data: takenRaw } = await supabase.rpc("seats_taken", { p_tour: tour.id });
+  const [{ data: takenRaw }, { data: reviewRows }] = await Promise.all([
+    supabase.rpc("seats_taken", { p_tour: tour.id }),
+    supabase
+      .from("public_reviews")
+      .select("id, score, comment, created_at, author_deleted, author_first_name, author_last_initial")
+      .eq("tour_id", tour.id)
+      .order("created_at", { ascending: false }),
+  ]);
   const taken = typeof takenRaw === "number" ? takenRaw : 0;
 
-  const { data: ratingRows } = await supabase
-    .from("ratings")
-    .select("id, score, comment, created_at")
-    .eq("tour_id", tour.id)
-    .order("created_at", { ascending: false });
-  const tourRatings = (ratingRows ?? []) as {
+  const club = tour.clubs;
+  const pkg = activePackage(club);
+  // Closed (cap 0) when the tour is not active or the club's package lapsed.
+  const cap = pkg && tour.status === "active" ? Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour) : 0;
+  const showReviews = !!pkg && PACKAGES[pkg].showsRatings;
+  const reviews = ((reviewRows ?? []) as {
     id: string;
     score: number;
     comment: string | null;
     created_at: string;
-  }[];
-  const avgRating =
-    tourRatings.length > 0
-      ? tourRatings.reduce((a, r) => a + r.score, 0) / tourRatings.length
-      : null;
-
-  const club = tour.clubs;
-  // No active package (or a hidden/cancelled tour) means no free seats.
-  const pkg = activePackage(club);
-  const open = !!pkg && tour.status === "active";
-  const limit = open ? Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour) : 0;
-  const regionLabels = tour.regions.map((r) => t(`region.${r}`));
-
-  const details: { label: string; value: React.ReactNode }[] = [
-    { label: "Ամսաթիվ", value: tour.date },
-    { label: "Մարզեր", value: regionLabels.join(", ") || "—" },
-    {
-      label: "Տեղանք",
-      value: tour.terrains.map((k) => t(`terrain.${k}`)).join(", ") || "—",
-    },
-    { label: "Բարդություն", value: t(`difficulty.${tour.difficulty}`) },
-    { label: "Գիշերակաց", value: tour.overnight ? "Այո" : "Ոչ" },
-    { label: "Մասնակիցների առավելագույն", value: Math.min(tour.max_participants, pkg ? PACKAGES[pkg].maxPerTour : tour.max_participants) },
-    {
-      label: "Գին",
-      value: Number(tour.price) > 0 ? formatAmd(Number(tour.price)) : "Անվճար",
-    },
-    {
-      label: "Կոորդինատոր",
-      value: (
-        <a href={`tel:${tour.coordinator_phone.replace(/\s/g, "")}`} className="hover:text-apricot">
-          {tour.coordinator_phone}
-        </a>
-      ),
-    },
-    ...(tour.meeting_point
-      ? [{ label: "Հավաքի վայր", value: tour.meeting_point }]
-      : []),
-    ...(tour.meeting_time
-      ? [{ label: "Հավաքի ժամ", value: tour.meeting_time.slice(0, 5) }]
-      : []),
-    { label: "Չեղարկում", value: `Մինչև ${CANCEL_WINDOW_HOURS} ժամ առաջ` },
-  ];
+    author_deleted: boolean;
+    author_first_name: string | null;
+    author_last_initial: string | null;
+  }[]).filter((r) => r.comment?.trim());
+  const day = (iso: string) => new Date(iso).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric" });
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8">
-      <BackLink fallback="/tours" label="Արշավներ" />
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <BackLink fallback="/tours" label={t("clubPage.back")} />
+      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-10">
+          <TourDetails tour={{ ...tour, club: club ? { id: club.id, name: club.name } : null }} seats={cap ? { taken, cap } : undefined} showPageLink={false} />
 
-      {/* Cover */}
-      {tour.photo_urls?.[0] ? (
-        <img
-          src={tour.photo_urls[0]}
-          alt={tour.title}
-          className="mt-5 h-64 w-full rounded-2xl object-cover sm:h-80"
-        />
-      ) : (
-        <div className="mt-5 flex h-48 items-center justify-center rounded-2xl bg-gradient-to-br from-pine to-apricot/70 text-5xl sm:h-64">
-          🏔️
-        </div>
-      )}
-
-      {(tour.photo_urls?.length ?? 0) > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-          {tour.photo_urls.map((url, i) => (
-            <img
-              key={`${url}-${i}`}
-              src={url}
-              alt={`${tour.title} — ${i + 1}`}
-              className="h-20 w-28 shrink-0 rounded-lg object-cover"
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
-        {/* Main info */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-apricot">
-            {regionLabels.join(" · ")}
-            {regionLabels.length > 0 && " · "}
-            {club && (
-              <Link href={`/clubs/${club.id}`} className="text-pine hover:text-apricot-dark">
-                {club.name}
-              </Link>
-            )}
-          </p>
-          <h1 className="mt-2 font-serif text-3xl font-semibold text-pine">
-            {tour.title}
-          </h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            {tour.date} · {t(`difficulty.${tour.difficulty}`)}
-            {tour.overnight ? " · գիշերակացով" : ""}
-          </p>
-
-          {tour.description && (
-            <p className="mt-6 whitespace-pre-line leading-7 text-neutral-700">
-              {tour.description}
-            </p>
-          )}
-
-          <dl className="mt-8 grid gap-x-8 gap-y-3 rounded-2xl border border-sand bg-white p-5 sm:grid-cols-2">
-            {details.map((d) => (
-              <div key={d.label} className="flex justify-between gap-4 text-sm">
-                <dt className="text-neutral-500">{d.label}</dt>
-                <dd className="text-right font-medium text-neutral-800">{d.value}</dd>
-              </div>
-            ))}
-          </dl>
-
-          {tour.notes && (
-            <div className="mt-6 rounded-2xl bg-sand p-5">
-              <h2 className="font-semibold text-pine">Ինչ վերցնել</h2>
-              <p className="mt-1 whitespace-pre-line text-sm text-neutral-700">
-                {tour.notes}
-              </p>
+          <section>
+            <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
+            <div className="mt-4 rounded-xl border border-line bg-surface p-5">
+              <RatingBox target="tour" tourId={tour.id} noun={tour.title} />
             </div>
-          )}
-
-          {club && (
-            <Link
-              href={`/clubs/${club.id}`}
-              className="mt-6 inline-block text-sm font-semibold text-apricot hover:text-apricot-dark"
-            >
-              → Ակումբի մասին՝ {club.name}
-            </Link>
-          )}
-
-          {/* Ratings */}
-          <div className="mt-10 border-t border-sand pt-6">
-            <h2 className="font-serif text-lg font-semibold text-pine">
-              Գնահատականներ
-              {avgRating != null && (
-                <span className="ml-2 text-sm font-semibold text-apricot">
-                  ★ {avgRating.toFixed(1)} ({tourRatings.length})
-                </span>
-              )}
-            </h2>
-
-            <div className="mt-4 rounded-2xl border border-sand bg-white p-5">
-              <RatingBox target="tour" tourId={tour.id} noun="արշավը" />
-            </div>
-
-            {tourRatings.length === 0 ? (
-              <p className="mt-4 text-sm text-neutral-500">
-                Դեռ գնահատական չկա։ Եթե մասնակցել ես, առաջինը գնահատիր։
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {tourRatings
-                  .filter((r) => r.comment)
-                  .map((r) => (
-                    <li key={r.id} className="rounded-lg border border-sand bg-white p-4 text-sm">
-                      <span className="font-semibold text-apricot">★ {r.score}</span>
-                      <p className="mt-1 text-neutral-600">{r.comment}</p>
+            {showReviews &&
+              (reviews.length === 0 ? (
+                <p className="mt-4 text-muted">{t("clubPage.noComments")}</p>
+              ) : (
+                <ul className="mt-4 space-y-3">
+                  {reviews.map((r) => (
+                    <li key={r.id} className="rounded-xl border border-line bg-surface p-4 text-sm">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="font-semibold text-ink">
+                          {r.author_deleted
+                            ? t("account.deletedUser")
+                            : [r.author_first_name, r.author_last_initial ? `${r.author_last_initial}.` : ""].filter(Boolean).join(" ")}
+                        </span>
+                        <span className="text-xs text-muted">{day(r.created_at)}</span>
+                      </div>
+                      <p className="text-apricot">{"★".repeat(r.score)}<span className="text-line">{"★".repeat(5 - r.score)}</span></p>
+                      <p className="mt-1 whitespace-pre-line leading-6 text-ink">{r.comment}</p>
                     </li>
                   ))}
-              </ul>
-            )}
-          </div>
+                </ul>
+              ))}
+          </section>
         </div>
 
-        {/* Sign-up */}
         <aside className="h-fit lg:sticky lg:top-24">
           <TourSignup
             tourId={tour.id}
             date={tour.date}
             taken={taken}
-            limit={limit}
+            limit={cap}
             meetingTime={tour.meeting_time}
             price={Number(tour.price) || 0}
           />

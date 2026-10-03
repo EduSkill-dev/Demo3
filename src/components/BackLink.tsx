@@ -3,17 +3,28 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-// "Back" that respects where the visitor came from (browser history) and only
-// falls back to the given route when there is no history to go back to.
+// "Back". With `href` it goes exactly there (e.g. the Tours page with the
+// visitor's filters); otherwise it follows browser history and falls back
+// to `fallback` when there is none.
 export default function BackLink({
+  href,
   fallback = "/tours",
-  label = "Վերադառնալ",
+  label,
 }: {
+  href?: string | null;
   fallback?: string;
-  label?: string;
+  label: string;
 }) {
   const router = useRouter();
+  const className = "inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-apricot-dark";
 
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        ← {label}
+      </Link>
+    );
+  }
   return (
     <Link
       href={fallback}
@@ -22,7 +33,7 @@ export default function BackLink({
         if (window.history.length > 1) router.back();
         else router.push(fallback);
       }}
-      className="inline-flex items-center gap-1 text-sm font-semibold text-neutral-600 hover:text-apricot"
+      className={className}
     >
       ← {label}
     </Link>

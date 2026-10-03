@@ -1,207 +1,142 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { TourWithClub } from "@/types/database";
-import { DIFFICULTIES, TERRAINS, formatAmd, type Difficulty, type Terrain } from "@/lib/catalog";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { DIFFICULTIES, REGIONS, TERRAINS } from "@/lib/catalog";
 import { useT } from "@/i18n/client";
-import FilterDropdown from "./FilterDropdown";
+import type { PublicTour } from "@/lib/publicTours";
+import TourCard from "@/components/tour/TourCard";
+import TourQuickView from "@/components/tour/TourQuickView";
 
-export default function ToursExplorer({ tours }: { tours: TourWithClub[] }) {
-  const tr = useT();
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [regions, setRegions] = useState<string[]>([]);
-  const [clubs, setClubs] = useState<string[]>([]);
-  const [types, setTypes] = useState<Terrain[]>([]);
-  const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
-  const [overnightOnly, setOvernightOnly] = useState(false);
-  const [popularOnly, setPopularOnly] = useState(false);
-  const [openFilter, setOpenFilter] = useState<
-    "region" | "type" | "club" | "difficulty" | null
-  >(null);
+const KEYS = ["region", "terrain", "club", "difficulty", "from", "to", "overnight"] as const;
+type Key = (typeof KEYS)[number];
 
-  function toggleFilter(key: "region" | "type" | "club" | "difficulty") {
-    setOpenFilter((cur) => (cur === key ? null : key));
+const field =
+  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+
+// Filters live in the URL (?region=…&terrain=…), so the club page's "Back"
+// and the browser's own back button return to the same selection.
+export default function ToursExplorer({
+  tours,
+  clubs,
+}: {
+  tours: PublicTour[];
+  clubs: { id: string; name: string }[]; // every registered club, alphabetical
+}) {
+  const t = useT();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [open, setOpen] = useState<PublicTour | null>(null);
+
+  const get = (k: Key) => params.get(k) ?? "";
+  function set(patch: Partial<Record<Key, string>>) {
+    const next = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) next.set(k, v);
+      else next.delete(k);
+    }
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  const allRegions = useMemo(
-    () => [...new Set(tours.flatMap((t) => t.regions))].sort(),
-    [tours]
-  );
-  const allClubs = useMemo(
-    () => [...new Set(tours.map((t) => t.club_name).filter(Boolean))].sort(),
-    [tours]
-  );
+  const filtered = useMemo(() => {
+    const f = Object.fromEntries(KEYS.map((k) => [k, params.get(k) ?? ""])) as Record<Key, string>;
+    return tours.filter(
+      (x) =>
+        (!f.region || x.regions.includes(f.region)) &&
+        (!f.terrain || x.terrains.includes(f.terrain)) &&
+        (!f.club || x.club_id === f.club) &&
+        (!f.difficulty || x.difficulty === f.difficulty) &&
+        (!f.from || x.date >= f.from) &&
+        (!f.to || x.date <= f.to) &&
+        (!f.overnight || x.overnight)
+    );
+  }, [tours, params]);
 
-  const filtered = tours.filter(
-    (t) =>
-      (!dateFrom || t.date >= dateFrom) &&
-      (!dateTo || t.date <= dateTo) &&
-      (regions.length === 0 || t.regions.some((r) => regions.includes(r))) &&
-      (clubs.length === 0 || clubs.includes(t.club_name)) &&
-      (types.length === 0 || t.terrains.some((k) => types.includes(k as Terrain))) &&
-      (difficulties.length === 0 || difficulties.includes(t.difficulty)) &&
-      (!overnightOnly || t.overnight) &&
-      (!popularOnly || t.popular)
-  );
-
-  const activeCount =
-    regions.length +
-    clubs.length +
-    types.length +
-    difficulties.length +
-    (overnightOnly ? 1 : 0) +
-    (popularOnly ? 1 : 0) +
-    (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0);
-
-  function clearAll() {
-    setDateFrom("");
-    setDateTo("");
-    setRegions([]);
-    setClubs([]);
-    setTypes([]);
-    setDifficulties([]);
-    setOvernightOnly(false);
-    setPopularOnly(false);
-  }
+  const active = KEYS.some((k) => params.get(k));
+  const here = `${pathname}${params.toString() ? `?${params.toString()}` : ""}`;
 
   return (
     <div>
-      {/* Top filter bar */}
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-2 rounded-2xl border border-sand bg-white p-3">
-        <FilterDropdown
-          label="Մարզ"
-          options={allRegions}
-          labels={Object.fromEntries(allRegions.map((r) => [r, tr(`region.${r}`)]))}
-          selected={regions}
-          onChange={setRegions}
-          isOpen={openFilter === "region"}
-          onToggle={() => toggleFilter("region")}
-        />
-        <FilterDropdown
-          label="Տեղանք"
-          options={[...TERRAINS]}
-          labels={Object.fromEntries(TERRAINS.map((k) => [k, tr(`terrain.${k}`)])) as Record<Terrain, string>}
-          selected={types}
-          onChange={setTypes}
-          isOpen={openFilter === "type"}
-          onToggle={() => toggleFilter("type")}
-        />
-        <FilterDropdown
-          label="Ակումբ"
-          options={allClubs}
-          selected={clubs}
-          onChange={setClubs}
-          isOpen={openFilter === "club"}
-          onToggle={() => toggleFilter("club")}
-        />
-        <FilterDropdown
-          label="Բարդություն"
-          options={[...DIFFICULTIES]}
-          labels={Object.fromEntries(DIFFICULTIES.map((k) => [k, tr(`difficulty.${k}`)])) as Record<Difficulty, string>}
-          selected={difficulties}
-          onChange={setDifficulties}
-          isOpen={openFilter === "difficulty"}
-          onToggle={() => toggleFilter("difficulty")}
-        />
-
-        <div className="flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-[130px] outline-none"
-          />
-          <span className="text-neutral-400">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-[130px] outline-none"
-          />
-        </div>
-
-        <label className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-          <input type="checkbox" checked={overnightOnly} onChange={(e) => setOvernightOnly(e.target.checked)} />
-          Գիշերակացով
-        </label>
-        <label className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-          <input type="checkbox" checked={popularOnly} onChange={(e) => setPopularOnly(e.target.checked)} />
-          Ամենաշատ այցելած
-        </label>
-
-        {activeCount > 0 && (
-          <button onClick={clearAll} className="rounded-lg px-3 py-2 text-sm font-semibold text-apricot">
-            Մաքրել ({activeCount})
-          </button>
-        )}
-      </div>
-
-      {/* Grid */}
-      <div className="mt-8">
-        {filtered.length === 0 ? (
-          <p className="text-center text-neutral-500">Ընտրված պայմաններով արշավ չի գտնվել։</p>
-        ) : (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((t) => (
-              <article key={t.id} className="flex flex-col overflow-hidden rounded-xl border border-sand bg-white">
-                {t.photo_urls?.[0] ? (
-                  <img src={t.photo_urls[0]} alt="" className="h-32 w-full object-cover" />
-                ) : (
-                  <div className="h-32 bg-gradient-to-br from-pine to-apricot/70" />
-                )}
-                <div className="flex flex-1 flex-col p-4">
-                  <div className="flex flex-wrap items-center gap-1 text-xs font-semibold uppercase">
-                    {t.regions.map((r, i) => (
-                      <span key={r}>
-                        {i > 0 && <span className="text-neutral-300">, </span>}
-                        <button
-                          onClick={() => {
-                            setRegions([r]);
-                            setOpenFilter(null);
-                          }}
-                          className="text-apricot underline-offset-2 hover:underline"
-                        >
-                          {tr(`region.${r}`)}
-                        </button>
-                      </span>
-                    ))}
-                    <span className="text-neutral-300">·</span>
-                    <button
-                      onClick={() => {
-                        setClubs([t.club_name]);
-                        setOpenFilter(null);
-                      }}
-                      className="text-pine underline-offset-2 hover:underline"
-                    >
-                      {t.club_name}
-                    </button>
-                  </div>
-                  <h3 className="mt-2 font-semibold">{t.title}</h3>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    {t.date}
-                    {t.overnight ? " · գիշերակացով" : ""} · {tr(`difficulty.${t.difficulty}`)}
-                  </p>
-                  {Number(t.price) > 0 && (
-                    <p className="mt-1 text-sm font-semibold text-pine">
-                      {formatAmd(Number(t.price))}
-                    </p>
-                  )}
-                  <Link
-                    href={`/tours/${t.id}`}
-                    className="mt-4 self-start rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold hover:bg-stone"
-                  >
-                    Տեսնել ավելին
-                  </Link>
-                </div>
-              </article>
-            ))}
+      <div className="rounded-2xl border border-line bg-surface p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-xs font-semibold text-muted">
+            {t("toursPage.region")}
+            <select value={get("region")} onChange={(e) => set({ region: e.target.value })} className={`${field} mt-1`}>
+              <option value="">{t("toursPage.any")}</option>
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>{t(`region.${r}`)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-muted">
+            {t("toursPage.terrain")}
+            <select value={get("terrain")} onChange={(e) => set({ terrain: e.target.value })} className={`${field} mt-1`}>
+              <option value="">{t("toursPage.any")}</option>
+              {TERRAINS.map((k) => (
+                <option key={k} value={k}>{t(`terrain.${k}`)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-muted">
+            {t("toursPage.club")}
+            <select value={get("club")} onChange={(e) => set({ club: e.target.value })} className={`${field} mt-1`}>
+              <option value="">{t("toursPage.any")}</option>
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-muted">
+            {t("toursPage.difficulty")}
+            <select value={get("difficulty")} onChange={(e) => set({ difficulty: e.target.value })} className={`${field} mt-1`}>
+              <option value="">{t("toursPage.any")}</option>
+              {DIFFICULTIES.map((k) => (
+                <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-muted">
+            {t("toursPage.from")}
+            <input type="date" value={get("from")} onChange={(e) => set({ from: e.target.value })} className={`${field} mt-1`} />
+          </label>
+          <label className="text-xs font-semibold text-muted">
+            {t("toursPage.to")}
+            <input type="date" value={get("to")} min={get("from") || undefined} onChange={(e) => set({ to: e.target.value })} className={`${field} mt-1`} />
+          </label>
+          <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-ink">
+            <input type="checkbox" checked={!!get("overnight")} onChange={(e) => set({ overnight: e.target.checked ? "1" : "" })} className="accent-apricot" />
+            🌙 {t("toursPage.overnightOnly")}
+          </label>
+          <div className="flex items-end justify-between gap-3 pb-1 text-sm">
+            <span className="text-muted">{t("toursPage.results", { count: filtered.length })}</span>
+            {active && (
+              <button type="button" onClick={() => router.replace(pathname, { scroll: false })} className="font-semibold text-apricot hover:text-apricot-dark">
+                {t("toursPage.clear")}
+              </button>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
+      {filtered.length === 0 ? (
+        <p className="mt-10 text-center text-muted">{t("toursPage.empty")}</p>
+      ) : (
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((tour) => (
+            <TourCard
+              key={tour.id}
+              tour={tour}
+              backHref={here}
+              onRegion={(region) => set({ region })}
+              onOpen={() => setOpen(tour)}
+            />
+          ))}
+        </div>
+      )}
+
+      <TourQuickView tour={open} onClose={() => setOpen(null)} />
     </div>
   );
 }

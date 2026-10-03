@@ -44,22 +44,26 @@ export default function RatingBox({
       if (profile?.role === "club") return setEligibility("club");
 
       let attended = false;
+      const today = new Date().toISOString().slice(0, 10);
       if (target === "tour" && tourId) {
+        // Only after the hike has happened (the database checks this too).
         const { data } = await supabase
           .from("bookings")
-          .select("id")
+          .select("id, tours!inner(date)")
           .eq("tour_id", tourId)
           .eq("user_id", auth.user.id)
           .eq("status", "confirmed")
+          .lte("tours.date", today)
           .limit(1);
         attended = (data ?? []).length > 0;
       } else if (target === "club" && clubId) {
         const { data } = await supabase
           .from("bookings")
-          .select("id, tours!inner(club_id)")
+          .select("id, tours!inner(club_id, date)")
           .eq("user_id", auth.user.id)
           .eq("status", "confirmed")
           .eq("tours.club_id", clubId)
+          .lte("tours.date", today)
           .limit(1);
         attended = (data ?? []).length > 0;
       }
