@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/i18n/client";
 
 type Eligibility = "loading" | "anon" | "club" | "no" | "yes";
 
@@ -12,7 +13,7 @@ export default function RatingBox({
   target,
   tourId,
   clubId,
-  noun = "արշավը",
+  noun = "",
 }: {
   target: "tour" | "club";
   tourId?: string;
@@ -20,6 +21,7 @@ export default function RatingBox({
   noun?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [eligibility, setEligibility] = useState<Eligibility>("loading");
   const [userId, setUserId] = useState<string | null>(null);
   const [existing, setExisting] = useState<{ id: string; score: number; comment: string | null } | null>(null);
@@ -88,7 +90,7 @@ export default function RatingBox({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!userId || score < 1) return setError("Ընտրիր գնահատական՝ 1-ից 5։");
+    if (!userId || score < 1) return setError(t("rating.pickScore"));
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -108,33 +110,29 @@ export default function RatingBox({
 
     setSaving(false);
     if (dbError) {
-      if (dbError.code === "23505") setError("Արդեն գնահատել ես այս " + noun + "։");
-      else if (dbError.code === "42501")
-        setError("Գնահատել կարող ես միայն այն արշավին մասնակցելուց հետո։");
+      if (dbError.code === "23505") setError(t("rating.already"));
+      else if (dbError.code === "42501") setError(t("rating.onlyAfter"));
       else setError(dbError.message);
       return;
     }
-    setMessage("Շնորհակալություն, գնահատականդ պահպանվեց։");
+    setMessage(t("rating.saved"));
     setExisting((cur) => (cur ? { ...cur, score, comment: comment.trim() || null } : cur));
     router.refresh();
   }
 
   if (eligibility === "loading")
-    return <p className="text-sm text-neutral-500">Բեռնվում է...</p>;
+    return <p className="text-sm text-muted">{t("common.loading")}</p>;
   if (eligibility === "anon" || eligibility === "club") return null;
 
   if (eligibility === "no")
     return (
-      <p className="text-sm text-neutral-500">
-        Գնահատական ու մեկնաբանություն կարող ես թողնել միայն{" "}
-        {target === "tour" ? "այս արշավին" : "այս ակումբի արշավին"} մասնակցելուց հետո։
-      </p>
+      <p className="text-sm text-muted">{target === "tour" ? t("rating.onlyAfter") : t("rating.onlyAfterClub")}</p>
     );
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <p className="font-semibold text-pine">
-        {existing ? "Քո գնահատականը" : `Գնահատիր ${noun}`}
+      <p className="font-semibold text-heading">
+        {existing ? t("rating.yours") : t("rating.rate", { name: noun })}
       </p>
 
       <div className="flex items-center gap-1">
@@ -143,15 +141,15 @@ export default function RatingBox({
             key={n}
             type="button"
             onClick={() => setScore(n)}
-            aria-label={`${n} աստղ`}
+            aria-label={t("rating.stars", { count: n })}
             className={`text-2xl leading-none transition ${
-              n <= score ? "text-apricot" : "text-neutral-300 hover:text-apricot/50"
+              n <= score ? "text-apricot" : "text-line hover:text-apricot/50"
             }`}
           >
             ★
           </button>
         ))}
-        {score > 0 && <span className="ml-2 text-sm text-neutral-500">{score}/5</span>}
+        {score > 0 && <span className="ml-2 text-sm text-muted">{score}/5</span>}
       </div>
 
       <textarea
@@ -159,8 +157,8 @@ export default function RatingBox({
         onChange={(e) => setComment(e.target.value)}
         rows={3}
         maxLength={600}
-        placeholder="Ի՞նչ քեզ դուր եկավ կամ որ բանը կբարելավեիր (ոչ պարտադիր)..."
-        className="w-full rounded-lg border border-neutral-300 p-3 text-sm"
+        placeholder={t("rating.placeholder")}
+        className="w-full rounded-lg border border-line bg-surface p-3 text-sm text-ink placeholder:text-muted"
       />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -171,7 +169,7 @@ export default function RatingBox({
         disabled={saving || score < 1}
         className="rounded-lg bg-apricot px-5 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {saving ? "Պահպանվում է..." : existing ? "Թարմացնել գնահատականը" : "Ուղարկել գնահատականը"}
+        {saving ? t("rating.saving") : existing ? t("rating.update") : t("rating.send")}
       </button>
     </form>
   );

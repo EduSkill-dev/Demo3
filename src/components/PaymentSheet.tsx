@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { formatAmd } from "@/types/database";
+import { formatAmd } from "@/lib/catalog";
+import { serverErrorMessage } from "@/lib/serverErrors";
+import { useT } from "@/i18n/client";
 
 // Shape returned by POST /api/payments/charge (success and decline alike).
 export type ChargeResponse = {
@@ -39,6 +41,7 @@ export default function PaymentSheet({
   onCancel?: () => void;
   onSuccess: (data: ChargeResponse) => void;
 }) {
+  const t = useT();
   const [number, setNumber] = useState("");
   const [exp, setExp] = useState("");
   const [cvc, setCvc] = useState("");
@@ -63,35 +66,35 @@ export default function PaymentSheet({
       const data = (await res.json().catch(() => ({}))) as ChargeResponse;
       if (!res.ok) {
         setBusy(false);
-        return setError(data.error || "Չստացվեց վճարումը։ Փորձիր նորից։");
+        return setError(data.error ? serverErrorMessage(t, data.error) : t("payment.failed"));
       }
       if (data.status === "declined") {
         setBusy(false);
-        return setError(data.message || "Վճարումը մերժվեց։");
+        return setError(data.message ? serverErrorMessage(t, data.message) : t("payment.declined"));
       }
       onSuccess(data);
     } catch {
       setBusy(false);
-      setError("Սերվերին կապվել չստացվեց։ Փորձիր նորից։");
+      setError(t("errors.network"));
     }
   }
 
-  const input = "w-full rounded-lg border border-neutral-300 p-2.5 text-sm";
+  const input = "w-full rounded-lg border border-line bg-surface p-2.5 text-sm text-ink placeholder:text-muted";
 
   return (
-    <form onSubmit={pay} className="rounded-2xl border border-sand bg-white p-5">
+    <form onSubmit={pay} className="rounded-2xl border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-2">
-        <b className="text-sm text-pine">Թեստային վճարում</b>
+        <b className="text-sm text-heading">{t("payment.title")}</b>
         <span className="font-semibold text-apricot-dark">{formatAmd(amount)}</span>
       </div>
-      <p className="mt-1 text-xs text-neutral-400">{label}</p>
+      <p className="mt-1 text-xs text-muted">{label}</p>
 
       <div className="mt-3 space-y-2">
         <input
           required
           inputMode="numeric"
           autoComplete="cc-number"
-          placeholder="Քարտի համար"
+          placeholder={t("payment.cardNumber")}
           value={number}
           onChange={(e) =>
             setNumber(
@@ -109,7 +112,7 @@ export default function PaymentSheet({
             required
             inputMode="numeric"
             autoComplete="cc-exp"
-            placeholder="Ժամկետ՝ 12/28"
+            placeholder={t("payment.expiry")}
             value={exp}
             onChange={(e) => {
               const d = e.target.value.replace(/\D/g, "").slice(0, 4);
@@ -129,10 +132,8 @@ export default function PaymentSheet({
         </div>
       </div>
 
-      <p className="mt-3 rounded-lg bg-stone p-2.5 text-xs leading-5 text-neutral-500">
-        Թեստային քարտեր՝ <b>4242 4242 4242 4242</b> — հաջող,
-        <b> 4000 0000 0000 0002</b> — մերժում,
-        <b> 4000 0000 0000 9995</b> — անբավարար միջոց։ Իրական գումար չի գանձվում։
+      <p className="mt-3 rounded-lg bg-sand/60 p-2.5 text-xs leading-5 text-muted">
+        {t("payment.testCards", { ok: "4242 4242 4242 4242", declined: "4000 0000 0000 0002", funds: "4000 0000 0000 9995" })}
       </p>
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -143,9 +144,9 @@ export default function PaymentSheet({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="flex-1 rounded-lg border border-neutral-300 py-2.5 text-sm font-semibold text-neutral-600 hover:border-red-300 hover:text-red-600 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-line py-2.5 text-sm font-semibold text-ink hover:border-red-300 hover:text-red-600 disabled:opacity-50"
           >
-            Չեղարկել
+            {t("common.cancel")}
           </button>
         )}
         <button
@@ -153,7 +154,7 @@ export default function PaymentSheet({
           disabled={busy}
           className="flex-1 rounded-lg bg-apricot py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-50"
         >
-          {busy ? "Մշակվում է..." : submitLabel || `Վճարել ${formatAmd(amount)}`}
+          {busy ? t("payment.processing") : submitLabel || t("payment.pay", { amount: formatAmd(amount) })}
         </button>
       </div>
     </form>

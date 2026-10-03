@@ -614,6 +614,14 @@ async function main() {
         `status=${delRes.status} body=${JSON.stringify(delRes.body)} booking=${JSON.stringify(afterDelete)}`);
       if (!goneUser) ids.leaver = null; else ids.leaver = null;
 
+      // Removed some other way (dashboard / admin API): the seat is freed too.
+      const ghost = await makeUser('ghost', { role: 'individual', first_name: 'Ուրվական' });
+      const ghostBooking = (await admin.from('bookings').insert({ tour_id: soonTour.id, user_id: ghost, status: 'confirmed' }).select('id').single()).data;
+      await admin.auth.admin.deleteUser(ghost);
+      const ghostRow = (await admin.from('bookings').select('status, user_id').eq('id', ghostBooking?.id).single()).data;
+      check('an account deleted outside the app frees its seat', ghostRow?.status === 'cancelled' && ghostRow?.user_id === null,
+        JSON.stringify(ghostRow));
+
       const clubDelete = await api('/api/delete-account', null, club2Cookie);
       check('a club account cannot delete itself with one click', clubDelete.status === 403, `status=${clubDelete.status}`);
 

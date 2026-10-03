@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CANCEL_WINDOW_HOURS, canCancelBooking } from "@/lib/catalog";
+import { serverErrorMessage } from "@/lib/serverErrors";
 import { useIntlLocale, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
 import TourDetails, { type TourForDetails } from "@/components/tour/TourDetails";
@@ -32,7 +33,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     setBusy(null);
-    if (!res.ok) return setMessage({ ok: false, text: data.error ?? t("common.error") });
+    if (!res.ok) return setMessage({ ok: false, text: serverErrorMessage(t, data.error) });
     setMessage({ ok: true, text: t("account.cancelledOk") });
     router.refresh();
   }

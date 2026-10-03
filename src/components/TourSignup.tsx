@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { CANCEL_WINDOW_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
+import { serverErrorMessage } from "@/lib/serverErrors";
+import { useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
 
 type BookingRow = { id: string; status: "confirmed" | "cancelled" };
 
-// Sign-up card for a single tour: shows free seats, lets an individual
-// register/cancel, and explains why when that is not possible.
-// Registration goes through /api/bookings so the confirmation/cancellation
-// email is sent from the server; a priced tour opens the payment sheet first.
+// Sign-up card for a single hike: free places, then register / pay / cancel
+// with the reason when that is not possible. Registration goes through
+// /api/bookings (or /api/payments/charge for a paid hike) so the server
+// writes the booking and sends the emails.
 export default function TourSignup({
   tourId,
   date,
@@ -27,6 +29,7 @@ export default function TourSignup({
   meetingTime?: string | null;
   price?: number;
 }) {
+  const t = useT();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -42,18 +45,11 @@ export default function TourSignup({
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return setReady(true);
       setSignedIn(true);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", auth.user.id)
-        .single();
-      setRole(profile?.role ?? null);
-      const { data: row } = await supabase
-        .from("bookings")
-        .select("id, status")
-        .eq("tour_id", tourId)
-        .eq("user_id", auth.user.id)
-        .maybeSingle();
+      const [{ data: profile }, { data: row }] = await Promise.all([
+        supabase.from("profiles").select("role").eq("id", auth.user.id).single(),
+        supabase.from("bookings").select("id, status").eq("tour_id", tourId).eq("user_id", auth.user.id).maybeSingle(),
+      ]);
+      setRole((profile as { role?: string } | null)?.role ?? null);
       setBooking((row as BookingRow) ?? null);
       setReady(true);
     })();
@@ -63,37 +59,24 @@ export default function TourSignup({
   const confirmed = booking?.status === "confirmed";
   const free = Math.max(0, limit - taken);
   const full = free <= 0;
-  const closed = limit <= 0; // hidden/cancelled tour or the club's package lapsed
+  const closed = limit <= 0; // hidden/cancelled hike or the club's package lapsed
   const cancellable = canCancelBooking(date, meetingTime);
 
   async function book() {
-    setBusy(true);
     setError(null);
-    const supabase = createClient();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) {
-      setBusy(false);
-      return router.push(`/login?next=/tours/${tourId}`);
-    }
+    if (!signedIn) return router.push(`/login?next=/tours/${tourId}`);
+    // A paid hike is paid first; the charge route then creates the booking.
+    if (price > 0) return setShowPay(true);
 
-    // A priced tour is paid first; the booking itself is created by the
-    // charge route once the card goes through.
-    if (price > 0) {
-      setBusy(false);
-      return setShowPay(true);
-    }
-
+    setBusy(true);
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tour_id: tourId }),
     });
-    const data = (await res.json().catch(() => ({}))) as {
-      error?: string;
-      booking?: { id: string };
-    };
+    const data = (await res.json().catch(() => ({}))) as { error?: string; booking?: { id: string } };
     setBusy(false);
-    if (!res.ok) return setError(prettyError(data.error ?? "Չստացվեց գրանցվել։"));
+    if (!res.ok) return setError(serverErrorMessage(t, data.error));
     if (data.booking?.id) setBooking({ id: data.booking.id, status: "confirmed" });
     router.refresh();
   }
@@ -105,7 +88,7 @@ export default function TourSignup({
   }
 
   async function cancel() {
-    if (!booking || !confirm("Չեղարկե՞լ գրանցումդ։")) return;
+    if (!booking || !confirm(t("signup.confirmCancel"))) return;
     setBusy(true);
     setError(null);
     const res = await fetch("/api/bookings", {
@@ -115,18 +98,23 @@ export default function TourSignup({
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     setBusy(false);
-    if (!res.ok) return setError(prettyError(data.error ?? "Չստացվեց չեղարկել։"));
+    if (!res.ok) return setError(serverErrorMessage(t, data.error));
     setBooking({ ...booking, status: "cancelled" });
     router.refresh();
   }
 
+  const primary =
+    "w-full rounded-lg bg-apricot py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:bg-apricot/50";
+
   return (
-    <div className="rounded-2xl border border-sand bg-white p-5">
+    <div className="rounded-2xl border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-2 text-sm">
-        <p className="text-neutral-500">
-          {closed ? "Գրանցումը փակ է" : full ? "Տեղերը սպառված են" : `Ազատ տեղեր՝ ${free} / ${limit}`}
+        <p className="text-muted">
+          {closed ? t("signup.closed") : full ? t("signup.full") : t("signup.seatsLeft", { free, cap: limit })}
         </p>
-        <p className="font-semibold text-pine">{price > 0 ? formatAmd(price) : "Անվճար"}</p>
+        <p className="font-semibold text-heading">
+          {price > 0 ? t("common.perPerson", { price: formatAmd(price) }) : t("common.free")}
+        </p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-sand">
         <div
@@ -137,85 +125,62 @@ export default function TourSignup({
 
       <div className="mt-4">
         {!ready ? (
-          <p className="text-sm text-neutral-500">Բեռնվում է...</p>
+          <p className="text-sm text-muted">{t("common.loading")}</p>
         ) : isPast ? (
-          <p className="text-sm text-neutral-500">Այս արշավն արդեն տեղի է ունեցել։</p>
+          <p className="text-sm text-muted">{t("signup.past")}</p>
         ) : role === "club" ? (
-          <p className="text-sm text-neutral-500">
-            Ակումբները չեն կարող գրանցվել արշավներին։
-          </p>
+          <p className="text-sm text-muted">{t("signup.clubsCannot")}</p>
         ) : showPay ? (
           <PaymentSheet
             kind="booking"
             amount={price}
-            label="Արշավի գրանցում"
+            label={t("signup.paymentLabel")}
             tourId={tourId}
             onCancel={() => setShowPay(false)}
             onSuccess={onPaid}
           />
         ) : confirmed ? (
           <div className="space-y-3">
-            <p className="rounded-lg bg-green-50 p-3 text-sm font-semibold text-green-800">
-              ✓ Գրանցված ես այս արշավին
-            </p>
+            <p className="rounded-lg bg-green-50 p-3 text-sm font-semibold text-green-800">{t("signup.booked")}</p>
             <button
+              type="button"
               onClick={cancel}
               disabled={busy || !cancellable}
-              title={cancellable ? undefined : `Չեղարկել հնարավոր է միայն ${CANCEL_WINDOW_HOURS} ժամ առաջ`}
-              className="w-full rounded-lg border border-neutral-300 py-2.5 text-sm font-semibold text-neutral-600 hover:border-red-300 hover:text-red-600 disabled:opacity-50"
+              className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? "..." : "Չեղարկել գրանցումը"}
+              {busy ? "..." : t("signup.cancelBooking")}
             </button>
           </div>
         ) : !signedIn ? (
-          <button
-            onClick={book}
-            className="w-full rounded-lg bg-apricot py-3 font-semibold text-white hover:bg-apricot-dark"
-          >
-            Մուտք գործելով գրանցվել
+          <button type="button" onClick={book} disabled={closed} className={primary}>
+            {t("signup.loginToBook")}
           </button>
         ) : (
-          <button
-            onClick={book}
-            disabled={busy || full || closed}
-            className="w-full rounded-lg bg-apricot py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:bg-apricot/50"
-            title={full ? "Տեղերը լրացած են" : undefined}
-          >
+          <button type="button" onClick={book} disabled={busy || full || closed} className={primary}>
             {busy
-              ? "Գրանցվում է..."
+              ? t("signup.booking")
               : closed
-                ? "Գրանցումը փակ է"
+                ? t("signup.closed")
                 : full
-                  ? "Տեղերը սպառված են"
+                  ? t("signup.full")
                   : booking?.status === "cancelled"
-                  ? "Գրանցվել կրկին"
-                  : price > 0
-                    ? `Գրանցվել ու վճարել (${formatAmd(price)})`
-                    : "Գրանցվել արշավին"}
+                    ? t("signup.bookAgain")
+                    : price > 0
+                      ? t("signup.bookAndPay", { price: formatAmd(price) })
+                      : t("signup.book")}
           </button>
         )}
       </div>
 
       {confirmed && !isPast && (
-        <p className="mt-3 text-xs text-neutral-400">
+        <p className="mt-3 text-xs text-muted">
           {cancellable
-            ? `Չեղարկել կարող եք մինչև արշավից ${CANCEL_WINDOW_HOURS} ժամ առաջ, որպեսզի տեղը կարողանա զբաղեցնել ուրիշը։`
-            : `Արշավին մնացել է ${CANCEL_WINDOW_HOURS} ժամից պակաս. գրանցումն այլևս չի չեղարկվում։`}
+            ? t("signup.cancelHint", { hours: CANCEL_WINDOW_HOURS })
+            : t("signup.tooLateHint", { hours: CANCEL_WINDOW_HOURS })}
         </p>
       )}
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
     </div>
   );
-}
-
-// Turns the English Postgres/GoTrue messages into something readable.
-function prettyError(message: string) {
-  if (message.includes("duplicate key") || message.includes("unique"))
-    return "Արդեն գրանցված ես այս արշավին։";
-  if (message.includes("Տեղերը լրացած") || message.includes("capacity"))
-    return "Տեղերը հենց նոր լրացան, փորձիր ավելի ուշ։";
-  if (message.includes("handle_new_user") || message.includes("row-level security"))
-    return "Չստացվեց գրանցվել։ Փորձիր նորից։";
-  return message;
 }

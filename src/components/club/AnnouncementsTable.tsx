@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { serverErrorMessage } from "@/lib/serverErrors";
 import { useIntlLocale, useT } from "@/i18n/client";
 import CountBadge from "@/components/ui/CountBadge";
 import type { TourStatus } from "@/types/database";
@@ -38,7 +39,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
     setError(null);
     const { error: err } = await action();
     setBusy(null);
-    if (err) return setError(err.message);
+    if (err) return setError(serverErrorMessage(t, err.message));
     router.refresh();
   }
 

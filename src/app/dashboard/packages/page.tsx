@@ -11,6 +11,7 @@ import {
   formatAmd,
   type PackageId,
 } from "@/lib/catalog";
+import { serverErrorMessage } from "@/lib/serverErrors";
 import { useIntlLocale, useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "@/components/PaymentSheet";
 import Modal from "@/components/ui/Modal";
@@ -86,7 +87,7 @@ export default function PackagesPage() {
     });
     const data = (await res.json().catch(() => ({}))) as ChargeResponse;
     setBusy(false);
-    if (!res.ok || data.status !== "succeeded") return setError(data.error ?? t("common.error"));
+    if (!res.ok || data.status !== "succeeded") return setError(serverErrorMessage(t, data.error));
     done(id, data.package_ends_at);
   }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Tour } from "@/types/database";
 import { DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
+import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
 
 const MAX_PHOTOS = 5;
@@ -123,7 +124,7 @@ export default function TourForm({
         : await supabase.from("tours").update(payload).eq("id", initialTour!.id);
 
     setSaving(false);
-    if (dbError) return setError(dbError.message);
+    if (dbError) return setError(serverErrorMessage(t, dbError.message));
 
     // The database trigger already wrote one notification per follower; this
     // turns them into emails — fire-and-forget so a slow mail server never
