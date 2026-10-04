@@ -19,15 +19,19 @@ export default function TourSignup({
   date,
   taken,
   limit,
+  total,
   meetingTime = null,
   price = 0,
+  bare = false,
 }: {
   tourId: string;
   date: string;
   taken: number;
-  limit: number;
+  limit: number; // seats the platform accepts (the club's package)
+  total?: number; // the hike's own size, set by the club — display only
   meetingTime?: string | null;
   price?: number;
+  bare?: boolean; // no card frame (inside a modal footer)
 }) {
   const t = useT();
   const router = useRouter();
@@ -107,10 +111,10 @@ export default function TourSignup({
     "w-full rounded-lg bg-apricot py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:bg-apricot/50";
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5">
+    <div className={bare ? "" : "rounded-2xl border border-line bg-surface p-5"}>
       <div className="flex items-center justify-between gap-2 text-sm">
         <p className="text-muted">
-          {closed ? t("signup.closed") : full ? t("signup.full") : t("signup.seatsLeft", { free, cap: limit })}
+          {closed ? t("signup.closed") : full ? t("signup.full") : t("signup.seatsLeft", { free, cap: Math.max(total ?? limit, limit) })}
         </p>
         <p className="font-semibold text-heading">
           {price > 0 ? t("common.perPerson", { price: formatAmd(price) }) : t("common.free")}
@@ -129,7 +133,12 @@ export default function TourSignup({
         ) : isPast ? (
           <p className="text-sm text-muted">{t("signup.past")}</p>
         ) : role === "club" ? (
-          <p className="text-sm text-muted">{t("signup.clubsCannot")}</p>
+          <div className="space-y-2">
+            <button type="button" disabled className={primary}>
+              {t("signup.book")}
+            </button>
+            <p className="text-xs text-muted">{t("signup.clubsCannot")}</p>
+          </div>
         ) : showPay ? (
           <PaymentSheet
             kind="booking"

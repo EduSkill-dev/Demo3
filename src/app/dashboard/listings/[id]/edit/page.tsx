@@ -19,13 +19,11 @@ export default async function EditTourPage({ params }: { params: { id: string } 
   if (!data) notFound();
 
   const t = await getT();
-  // Without an active package the current capacity can still be kept.
   const tour = data as Tour;
-  const seatCap = Math.max(mine.limits.maxPerTour, mine.limits.pkg ? 0 : tour.max_participants);
   return (
     <div>
       <h2 className="mb-6 font-serif text-xl font-semibold text-heading">{t("announcements.editTitle")}</h2>
-      <TourForm mode="edit" clubId={mine.club.id} initialTour={tour} seatCap={seatCap} />
+      <TourForm mode="edit" clubId={mine.club.id} initialTour={tour} seatCap={mine.limits.maxPerTour} />
     </div>
   );
 }

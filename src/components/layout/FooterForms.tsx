@@ -6,6 +6,11 @@ import { useT } from "@/i18n/client";
 const field =
   "w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-apricot focus:outline-none";
 
+// The signed-in person's verified contact details (null for visitors).
+export type FooterViewer = { email: string; phone: string | null };
+
+const locked = "cursor-not-allowed opacity-70";
+
 // Hidden from people, visible to bots that fill in every input.
 const Honeypot = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
   <input
@@ -29,9 +34,9 @@ async function post(url: string, body: object): Promise<boolean> {
   return !!res?.ok;
 }
 
-export function NewsletterForm() {
+export function NewsletterForm({ viewer }: { viewer: FooterViewer | null }) {
   const t = useT();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(viewer?.email ?? "");
   const [website, setWebsite] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent" | "error">("idle");
 
@@ -46,7 +51,7 @@ export function NewsletterForm() {
       <h2 className="font-serif text-lg font-semibold text-white">{t("footer.newsletterTitle")}</h2>
       <p className="mt-1 text-sm text-white/70">{t("footer.newsletterText")}</p>
       {state === "sent" ? (
-        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">✉️ {t("footer.subscribed")}</p>
+        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">{viewer ? `✓ ${t("footer.subscribedDirect")}` : `✉️ ${t("footer.subscribed")}`}</p>
       ) : (
         <form onSubmit={submit} className="relative mt-4 flex flex-col gap-2 sm:flex-row">
           <Honeypot value={website} onChange={setWebsite} />
@@ -57,8 +62,9 @@ export function NewsletterForm() {
             type="email"
             placeholder={t("auth.email")}
             value={email}
+            readOnly={!!viewer}
             onChange={(e) => setEmail(e.target.value)}
-            className={field}
+            className={`${field} ${viewer ? locked : ""}`}
           />
           <button
             type="submit"
@@ -74,11 +80,11 @@ export function NewsletterForm() {
   );
 }
 
-export function SuggestionForm() {
+export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
   const t = useT();
   const [message, setMessage] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(viewer?.email ?? "");
+  const [phone, setPhone] = useState(viewer?.phone ?? "");
   const [website, setWebsite] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent" | "error">("idle");
   const [needReply, setNeedReply] = useState(false);
@@ -96,7 +102,7 @@ export function SuggestionForm() {
       <h2 className="font-serif text-lg font-semibold text-white">{t("footer.suggestTitle")}</h2>
       <p className="mt-1 text-sm text-white/70">{t("footer.suggestText")}</p>
       {state === "sent" ? (
-        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">✓ {t("footer.sent")}</p>
+        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">✓ {t(viewer ? "footer.sentDirect" : "footer.sent")}</p>
       ) : (
         <form onSubmit={submit} className="relative mt-4 space-y-2">
           <Honeypot value={website} onChange={setWebsite} />
@@ -112,10 +118,10 @@ export function SuggestionForm() {
             className={field}
           />
           <div className="grid gap-2 sm:grid-cols-2">
-            <input type="email" aria-label={t("auth.email")} placeholder={t("auth.email")} value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
-            <input type="tel" aria-label={t("auth.phone")} placeholder={t("auth.phone")} value={phone} onChange={(e) => setPhone(e.target.value)} className={field} />
+            <input type="email" aria-label={t("auth.email")} placeholder={t("auth.email")} value={email} readOnly={!!viewer} onChange={(e) => setEmail(e.target.value)} className={`${field} ${viewer ? locked : ""}`} />
+            <input type="tel" aria-label={t("auth.phone")} placeholder={t("auth.phone")} value={phone} readOnly={!!viewer?.phone} onChange={(e) => setPhone(e.target.value)} className={`${field} ${viewer?.phone ? locked : ""}`} />
           </div>
-          <p className={`text-xs ${needReply ? "font-semibold text-red-300" : "text-white/60"}`}>{t("footer.emailOrPhone")}</p>
+          {!viewer && <p className={`text-xs ${needReply ? "font-semibold text-red-300" : "text-white/60"}`}>{t("footer.emailOrPhone")}</p>}
           <button
             type="submit"
             disabled={state === "busy"}

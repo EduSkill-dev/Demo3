@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { Tour } from "@/types/database";
 import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
@@ -12,6 +13,8 @@ export type TourForDetails = Pick<
 > & { club?: { id: string; name: string } | null };
 
 // The full announcement — used inside modals ("View", "See more").
+// `seats.cap` is what the platform accepts under the club's package; the
+// total shown next to it is the hike's own size, set by the club.
 export default function TourDetails({
   tour,
   seats,
@@ -24,6 +27,9 @@ export default function TourDetails({
   const t = useT();
   const fmt = useFormatDate();
   const date = fmt(tour.date, "weekdayLong");
+  const photos = tour.photo_urls ?? [];
+  const [shown, setShown] = useState(0);
+  const photo = photos[Math.min(shown, photos.length - 1)];
 
   const rows: [string, React.ReactNode][] = [
     [t("tour.date"), date],
@@ -36,7 +42,7 @@ export default function TourDetails({
       seats
         ? seats.taken >= seats.cap
           ? t("tour.full")
-          : t("tour.seatsLeft", { free: seats.cap - seats.taken, cap: seats.cap })
+          : t("tour.seatsLeft", { free: seats.cap - seats.taken, cap: Math.max(tour.max_participants, seats.cap) })
         : t("common.upTo", { count: tour.max_participants }),
     ],
     [t("tour.price"), Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(tour.price) }) : t("common.free")],
@@ -53,13 +59,27 @@ export default function TourDetails({
 
   return (
     <div className="space-y-5 text-sm">
-      {tour.photo_urls?.[0] ? (
+      {photo ? (
         <div className="space-y-2">
-          <img src={tour.photo_urls[0]} alt={tour.title} className="h-56 w-full rounded-xl object-cover" />
-          {tour.photo_urls.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {tour.photo_urls.slice(1).map((u, i) => (
-                <img key={`${u}-${i}`} src={u} alt="" className="h-16 w-24 shrink-0 rounded-lg object-cover" />
+          {/* The whole photo, fitted inside the frame — never cropped or stretched. */}
+          <div className="h-64 overflow-hidden rounded-xl bg-sand sm:h-96">
+            <img src={photo} alt={tour.title} className="h-full w-full object-contain" />
+          </div>
+          {photos.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto p-0.5">
+              {photos.map((u, i) => (
+                <button
+                  key={`${u}-${i}`}
+                  type="button"
+                  onClick={() => setShown(i)}
+                  aria-label={t("tour.photo", { n: i + 1 })}
+                  aria-current={u === photo}
+                  className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg ring-2 ${
+                    u === photo ? "ring-apricot" : "ring-transparent opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img src={u} alt="" className="h-full w-full object-cover" />
+                </button>
               ))}
             </div>
           )}

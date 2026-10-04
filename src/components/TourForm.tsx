@@ -16,8 +16,9 @@ const input =
 const label = "mb-1 block text-sm font-medium text-ink";
 const hint = "mt-1 text-xs text-muted";
 
-// Create / edit a listing. The page passes in the package's seat cap; the
-// listing cap and every other rule are enforced again by the database.
+// Create / edit a listing. The club sets the hike's total size itself (it may
+// also take people elsewhere); `seatCap` is how many of those the platform
+// accepts under the package, shown as a hint. The database enforces the rules.
 export default function TourForm({
   mode,
   clubId,
@@ -40,7 +41,7 @@ export default function TourForm({
   const [difficulty, setDifficulty] = useState<Difficulty>(initialTour?.difficulty ?? "medium");
   const [overnight, setOvernight] = useState(initialTour?.overnight ?? false);
   const [maxParticipants, setMaxParticipants] = useState(
-    String(initialTour?.max_participants ?? seatCap)
+    String(initialTour?.max_participants ?? (seatCap || ""))
   );
   const [price, setPrice] = useState(initialTour?.price != null ? String(initialTour.price) : "0");
   const [coordinatorPhone, setCoordinatorPhone] = useState(initialTour?.coordinator_phone ?? "");
@@ -71,7 +72,7 @@ export default function TourForm({
     if (regions.length === 0) return setError(t("tourForm.errRegion"));
     if (terrains.length === 0) return setError(t("tourForm.errTerrain"));
     if (mode === "create" && date < today) return setError(t("tourForm.errDate"));
-    if (Number(maxParticipants) > seatCap) return setError(t("tourForm.errCapacity", { max: seatCap }));
+    if (!Number.isInteger(Number(maxParticipants)) || Number(maxParticipants) < 1) return setError(t("tourForm.errCapacity"));
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError(t("tourForm.errPrice"));
 
     setSaving(true);
@@ -180,8 +181,8 @@ export default function TourForm({
         </div>
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
-          <input id="cap" required type="number" min={1} max={seatCap} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
-          <p className={hint}>{t("tourForm.capacityHint", { max: seatCap })}</p>
+          <input id="cap" required type="number" min={1} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
+          {seatCap > 0 && <p className={hint}>{t("tourForm.capacityHint", { max: seatCap })}</p>}
         </div>
         <div>
           <label htmlFor="difficulty" className={label}>{t("tourForm.difficulty")}</label>

@@ -17,7 +17,7 @@ export default function ClubCard({
     <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
       <Link href={`/clubs/${club.id}`}>
         {club.photo_url ? (
-          <img src={club.photo_url} alt={club.name} className="h-44 w-full object-cover" />
+          <img src={club.photo_url} alt={club.name} className="h-44 w-full bg-sand object-contain" />
         ) : (
           <div className="flex h-44 items-center justify-center bg-gradient-to-br from-pine to-apricot/70 text-4xl">🏔️</div>
         )}
@@ -34,10 +34,9 @@ export default function ClubCard({
         )}
         {club.focus?.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {club.focus.slice(0, 3).map((f) => (
+            {club.focus.map((f) => (
               <span key={f} className="rounded-full bg-sand px-2.5 py-0.5 text-xs text-ink">{t(`focus.${f}`)}</span>
             ))}
-            {club.focus.length > 3 && <span className="px-1 text-xs text-muted">+{club.focus.length - 3}</span>}
           </div>
         )}
         <p className="mt-auto pt-4 text-sm font-medium text-muted">{t("clubsPage.upcoming", { count: upcoming })}</p>

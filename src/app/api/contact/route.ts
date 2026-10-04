@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { contactInboxEmail, emailStatus, sendEmail } from "@/lib/email";
 
 // The footer's suggestion form. Stored for the (future) admin dashboard and
@@ -14,7 +15,11 @@ export async function POST(req: Request) {
   if (body.website) return NextResponse.json({ ok: true }); // honeypot
 
   const message = (body.message ?? "").trim().slice(0, 4000);
-  const email = (body.email ?? "").trim().slice(0, 254) || null;
+  // Signed in: reply to the account's own address, whatever the form sent.
+  const {
+    data: { user },
+  } = await (await createClient()).auth.getUser();
+  const email = (user?.email ?? body.email ?? "").trim().slice(0, 254) || null;
   const phone = (body.phone ?? "").trim().slice(0, 40) || null;
   if (!message) return NextResponse.json({ error: "empty_message" }, { status: 400 });
   if (!email && !phone) return NextResponse.json({ error: "no_reply_to" }, { status: 400 });

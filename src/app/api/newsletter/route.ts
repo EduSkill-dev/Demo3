@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { emailStatus, newsletterConfirmEmail, sendEmail } from "@/lib/email";
 import { getLocale } from "@/i18n/server";
 
@@ -8,6 +9,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Double opt-in: store the address unconfirmed and email a confirmation
 // link. The answer is the same whether or not the address was already on
 // the list, so the form cannot be used to probe who subscribed.
+//
+// A signed-in person subscribing their own account address has already
+// proved they own it, so that one is confirmed straight away, with no email.
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { email?: string; website?: string };
   if (body.website) return NextResponse.json({ ok: true }); // honeypot: bots fill every field
@@ -29,6 +33,19 @@ export async function POST(req: Request) {
   if (row && row.confirmed_at && !row.unsubscribed_at) return NextResponse.json({ ok: true });
 
   const locale = await getLocale();
+
+  const {
+    data: { user },
+  } = await (await createClient()).auth.getUser();
+  if (user?.email_confirmed_at && user.email?.toLowerCase() === email) {
+    const confirmed = { confirmed_at: new Date().toISOString(), unsubscribed_at: null, locale };
+    const { error } = row
+      ? await admin.from("newsletter_subscribers").update(confirmed).eq("id", row.id)
+      : await admin.from("newsletter_subscribers").insert({ email, ...confirmed });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true, confirmed: true });
+  }
+
   if (row) {
     const { data } = await admin
       .from("newsletter_subscribers")

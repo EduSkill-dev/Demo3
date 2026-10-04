@@ -65,7 +65,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
       <div className="flex flex-wrap items-center gap-5">
         <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-line bg-sand">
           {photo ? (
-            <img src={photo} alt={club.name} className="h-full w-full object-cover" />
+            <img src={photo} alt={club.name} className="h-full w-full object-contain" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-3xl">🏔️</div>
           )}

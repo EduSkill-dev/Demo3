@@ -62,6 +62,7 @@ export default function TourCard({
         </div>
 
         <p className="mt-1 text-sm">
+          <span className="text-muted">{t("tour.organizer")} </span>
           <Link href={clubHref} className="font-semibold text-heading hover:text-apricot-dark">
             {tour.club.name}
           </Link>
@@ -79,7 +80,7 @@ export default function TourCard({
           {tour.overnight && <span className="ml-2 text-muted">🌙 {t("common.overnight")}</span>}
         </p>
         <p className="mt-1 text-sm text-muted">
-          {t(`difficulty.${tour.difficulty}`)} · {t("common.upTo", { count: tour.cap })}
+          {t(`difficulty.${tour.difficulty}`)} · {t("common.upTo", { count: tour.max_participants })}
         </p>
 
         <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">

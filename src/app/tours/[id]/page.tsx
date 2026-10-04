@@ -108,6 +108,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
             date={tour.date}
             taken={taken}
             limit={cap}
+            total={tour.max_participants}
             meetingTime={tour.meeting_time}
             price={Number(tour.price) || 0}
           />

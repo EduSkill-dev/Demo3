@@ -10,6 +10,7 @@ export default function Modal({
   onClose,
   title,
   actions,
+  footer,
   children,
   size = "md",
 }: {
@@ -17,6 +18,7 @@ export default function Modal({
   onClose: () => void;
   title: string;
   actions?: React.ReactNode; // extra buttons next to the close X (e.g. Download)
+  footer?: React.ReactNode; // stays visible under the scrolling content
   children: React.ReactNode;
   size?: "md" | "lg";
 }) {
@@ -71,7 +73,8 @@ export default function Modal({
             </button>
           </div>
         </header>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer && <footer className="max-h-[60vh] shrink-0 overflow-y-auto border-t border-line px-5 py-3">{footer}</footer>}
       </div>
     </div>
   );

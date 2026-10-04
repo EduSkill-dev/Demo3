@@ -82,7 +82,7 @@ export default async function ClubDetailPage({
       <section className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center">
         <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-line bg-sand">
           {club.photo_url ? (
-            <img src={club.photo_url} alt={club.name} className="h-full w-full object-cover" />
+            <img src={club.photo_url} alt={club.name} className="h-full w-full object-contain" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-4xl">🏔️</div>
           )}
