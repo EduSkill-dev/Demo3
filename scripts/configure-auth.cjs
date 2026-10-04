@@ -8,6 +8,7 @@
  *
  *   node scripts/configure-auth.cjs            # apply
  *   node scripts/configure-auth.cjs --smtp     # also send auth mail through Resend
+ *   node scripts/configure-auth.cjs --gmail    # …or through a Gmail account (testing)
  *   node scripts/configure-auth.cjs --dry-run  # print what would change
  *
  * Reads SUPABASE_ACCESS_TOKEN and NEXT_PUBLIC_SUPABASE_URL (and optionally
@@ -95,13 +96,35 @@ function smtpFromResend() {
   };
 }
 
+// `--gmail` is the stop-gap for testing before a domain exists: auth mail is
+// sent from a Gmail account through an app password (Google account →
+// Security → 2-Step Verification → App passwords). Gmail allows ~500/day.
+function smtpFromGmail() {
+  if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
+    throw new Error('--gmail needs GMAIL_USER and GMAIL_APP_PASSWORD in .env.local');
+  }
+  return {
+    smtp_host: 'smtp.gmail.com',
+    smtp_port: '465',
+    smtp_user: env.GMAIL_USER.trim(),
+    smtp_pass: env.GMAIL_APP_PASSWORD.replace(/\s/g, ''),
+    smtp_admin_email: env.GMAIL_USER.trim(),
+    smtp_sender_name: 'Highland',
+    rate_limit_email_sent: 60,
+  };
+}
+
 async function main() {
   if (!env.SUPABASE_ACCESS_TOKEN) throw new Error('SUPABASE_ACCESS_TOKEN is missing in .env.local');
   const api = `https://api.supabase.com/v1/projects/${ref}/config/auth`;
   const headers = { Authorization: `Bearer ${env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' };
 
   const current = await (await fetch(api, { headers })).json();
-  const smtp = process.argv.includes('--smtp') ? smtpFromResend() : {};
+  const smtp = process.argv.includes('--smtp')
+    ? smtpFromResend()
+    : process.argv.includes('--gmail')
+      ? smtpFromGmail()
+      : {};
   const hasSmtp = !!(smtp.smtp_host || current.smtp_host);
   const config = { ...base, ...smtp, ...(hasSmtp ? templates : {}) };
 
