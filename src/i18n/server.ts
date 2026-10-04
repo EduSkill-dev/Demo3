@@ -8,6 +8,7 @@ import {
   type Theme,
 } from "./config";
 import { makeT, type TFunction } from "./translate";
+import { formatDate, type DateStyle } from "./dates";
 
 // Server components / route handlers: read the visitor's choices from cookies.
 export async function getLocale(): Promise<Locale> {
@@ -21,4 +22,9 @@ export async function getTheme(): Promise<Theme> {
 
 export async function getT(): Promise<TFunction> {
   return makeT(await getLocale());
+}
+
+export async function getFormatDate(): Promise<(value: string | Date, style?: DateStyle) => string> {
+  const locale = await getLocale();
+  return (value, style = "long") => formatDate(value, locale, style);
 }

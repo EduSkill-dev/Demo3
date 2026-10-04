@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicTours } from "@/lib/publicTours";
 import { PACKAGES, activePackage } from "@/lib/catalog";
-import { getLocale, getT } from "@/i18n/server";
-import { INTL_LOCALE } from "@/i18n/config";
+import { getFormatDate, getT } from "@/i18n/server";
 import type { Club, ClubGuide } from "@/types/database";
 import BackLink from "@/components/BackLink";
 import FavoriteToggle from "@/components/FavoriteToggle";
@@ -46,8 +45,7 @@ export default async function ClubDetailPage({
   const club = await getClub(params.id);
   if (!club) notFound();
 
-  const [t, locale] = await Promise.all([getT(), getLocale()]);
-  const intl = INTL_LOCALE[locale];
+  const [t, fmt] = await Promise.all([getT(), getFormatDate()]);
   const supabase = await createClient();
   const {
     data: { user },
@@ -75,7 +73,7 @@ export default async function ClubDetailPage({
 
   // Only same-site paths are honoured as "Back" targets.
   const back = searchParams.back && searchParams.back.startsWith("/") && !searchParams.back.startsWith("//") ? searchParams.back : null;
-  const day = (iso: string) => new Date(iso).toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+  const day = (iso: string) => fmt(iso, "long");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

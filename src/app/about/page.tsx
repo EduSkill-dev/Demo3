@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getLocale, getT } from "@/i18n/server";
-import { INTL_LOCALE } from "@/i18n/config";
+import { formatNumber } from "@/i18n/dates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -14,7 +14,7 @@ export default async function AboutPage() {
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_about_stats");
   const counts = Array.isArray(data) ? data[0] : null;
-  const fmt = (v: number | null | undefined) => (v == null ? "—" : new Intl.NumberFormat(INTL_LOCALE[locale]).format(v));
+  const fmt = (v: number | null | undefined) => (v == null ? "—" : formatNumber(v, locale));
 
   const stats = [
     { value: fmt(counts?.clubs_count), label: t("about.statClubs") },

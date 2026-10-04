@@ -12,7 +12,7 @@ import {
   type PackageId,
 } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "@/components/PaymentSheet";
 import Modal from "@/components/ui/Modal";
 import ReceiptView, { type ReceiptPayment } from "@/components/ReceiptView";
@@ -23,7 +23,7 @@ type PaymentRow = ReceiptPayment & { tariff: PackageId | null };
 
 export default function PackagesPage() {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmt = useFormatDate();
   const [club, setClub] = useState<ClubRow | null>(null);
   const [email, setEmail] = useState("");
   const [history, setHistory] = useState<PaymentRow[]>([]);
@@ -34,8 +34,7 @@ export default function PackagesPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const day = (iso: string | Date) =>
-    new Date(iso).toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+  const day = (iso: string | Date) => fmt(iso, "long");
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -103,7 +102,7 @@ export default function PackagesPage() {
       <div className="rounded-xl border border-line bg-surface p-4 text-sm">
         {active && endsAt ? (
           <p className="text-ink">
-            <b>{t("packagesPage.current", { name: PACKAGES[active].name })}</b>{" "}
+            <b>{t("packagesPage.current", { name: PACKAGES[active].name })}</b>,{" "}
             <span className="text-muted">{t("packagesPage.until", { date: day(endsAt) })}</span>
           </p>
         ) : (
@@ -202,20 +201,34 @@ export default function PackagesPage() {
           <p className="mt-2 text-sm text-muted">{t("packagesPage.historyEmpty")}</p>
         ) : (
           <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface">
-            <table className="w-full min-w-[480px] text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase text-muted">
-                  <th className="px-4 py-2.5">{t("packagesPage.colDate")}</th>
+                  <th className="px-4 py-2.5">{t("packagesPage.colStart")}</th>
+                  <th className="px-4 py-2.5">{t("packagesPage.colEnd")}</th>
                   <th className="px-4 py-2.5">{t("packagesPage.colPackage")}</th>
                   <th className="px-4 py-2.5">{t("packagesPage.colAmount")}</th>
                   <th className="px-4 py-2.5 text-right">{t("packagesPage.colReceipt")}</th>
                 </tr>
               </thead>
               <tbody>
-                {history.map((h) => (
+                {history.map((h) => {
+                  // The row whose period is running now, for the package in force.
+                  const live =
+                    !!active && h.tariff === active && !!h.period_start && !!h.period_end &&
+                    new Date(h.period_start).getTime() <= Date.now() && Date.now() < new Date(h.period_end).getTime();
+                  return (
                   <tr key={h.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-2.5">{day(h.created_at)}</td>
-                    <td className="px-4 py-2.5">{h.tariff ? PACKAGES[h.tariff].name : "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5">{day(h.period_start ?? h.created_at)}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5">{h.period_end ? day(h.period_end) : "—"}</td>
+                    <td className="px-4 py-2.5">
+                      {h.tariff ? PACKAGES[h.tariff].name : "—"}
+                      {live && (
+                        <span className="ml-2 rounded-full bg-green-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {t("packagesPage.active")}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5">
                       {Number(h.amount) > 0 ? formatAmd(h.amount) : t("common.free")}
                     </td>
@@ -228,7 +241,8 @@ export default function PackagesPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

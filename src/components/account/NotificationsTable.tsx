@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
 
 export type NotificationRow = {
@@ -21,7 +21,7 @@ export type NotificationRow = {
 // Date · From (a club or the platform) · Subject · View / Delete.
 export default function NotificationsTable({ rows }: { rows: NotificationRow[] }) {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmt = useFormatDate();
   const router = useRouter();
   const [list, setList] = useState(rows);
   const [open, setOpen] = useState<NotificationRow | null>(null);
@@ -70,8 +70,7 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
   }
 
   const unread = list.filter((n) => !n.read).map((n) => n.id);
-  const when = (iso: string) =>
-    new Date(iso).toLocaleString(intl, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const when = (iso: string) => fmt(iso, "dateTime");
 
   return (
     <div className="space-y-3">

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Tour } from "@/types/database";
 import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 
 export type TourForDetails = Pick<
   Tour,
@@ -22,13 +22,8 @@ export default function TourDetails({
   showPageLink?: boolean;
 }) {
   const t = useT();
-  const intl = useIntlLocale();
-  const date = new Date(`${tour.date}T00:00:00`).toLocaleDateString(intl, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const fmt = useFormatDate();
+  const date = fmt(tour.date, "weekdayLong");
 
   const rows: [string, React.ReactNode][] = [
     [t("tour.date"), date],

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CANCEL_WINDOW_HOURS, canCancelBooking } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
 import TourDetails, { type TourForDetails } from "@/components/tour/TourDetails";
 import type { TourStatus } from "@/types/database";
@@ -16,7 +16,7 @@ export type MyTourRow = { bookingId: string; tour: TourForDetails & { status: To
 // View (full announcement) and Cancel (only while more than 48 h remain).
 export default function MyTours({ rows }: { rows: MyTourRow[] }) {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmt = useFormatDate();
   const router = useRouter();
   const [open, setOpen] = useState<MyTourRow | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
     );
   }
 
-  const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(intl, { day: "numeric", month: "short", year: "numeric" });
+  const day = (d: string) => fmt(d, "short");
 
   return (
     <>

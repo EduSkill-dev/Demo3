@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { serverErrorMessage } from "@/lib/serverErrors";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import CountBadge from "@/components/ui/CountBadge";
 import type { TourStatus } from "@/types/database";
 
@@ -26,7 +26,7 @@ export type ListingRow = {
 // rather than deleted, so they hear about it.
 export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmt = useFormatDate();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
     }
   }
 
-  const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(intl, { day: "numeric", month: "short", year: "numeric" });
+  const day = (d: string) => fmt(d, "short");
 
   const table = (list: ListingRow[], withActions: boolean) => (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">

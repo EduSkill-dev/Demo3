@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
 
 export type ApplicationRow = {
@@ -39,18 +39,12 @@ function ageFrom(birth: string | null, legacyAge: number | null): number | null 
 // Newest first; unread rows in bold. Opening one marks it read.
 export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmtDate = useFormatDate();
   const router = useRouter();
   const [open, setOpen] = useState<ApplicationRow | null>(null);
   const [read, setRead] = useState<Set<string>>(new Set());
 
-  const fmt = (iso: string, withTime = false) =>
-    new Date(iso).toLocaleString(intl, {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-    });
+  const fmt = (iso: string, withTime = false) => fmtDate(iso, withTime ? "dateTime" : "short");
 
   async function view(row: ApplicationRow) {
     setOpen(row);
@@ -80,7 +74,7 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
         [t("auth.email"), p?.email ? <a href={`mailto:${p.email}`} className="text-apricot hover:underline">{p.email}</a> : "—"],
         [t("auth.phone"), p?.phone ? <a href={`tel:${p.phone.replace(/\s/g, "")}`} className="text-apricot hover:underline">{p.phone}</a> : "—"],
         [t("applications.tour"), open.tourTitle],
-        [t("applications.tourDate"), fmt(`${open.tourDate}T00:00:00`)],
+        [t("applications.tourDate"), fmt(open.tourDate)],
         [t("applications.applied"), fmt(open.createdAt, true)],
         [
           t("applications.status"),

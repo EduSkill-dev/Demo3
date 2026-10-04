@@ -1,6 +1,6 @@
 "use client";
 
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import { formatAmd } from "@/lib/catalog";
 
 export type ReceiptPayment = {
@@ -25,9 +25,8 @@ export default function ReceiptView({
   payer: string;
 }) {
   const t = useT();
-  const intl = useIntlLocale();
-  const day = (iso: string) =>
-    new Date(iso).toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+  const fmt = useFormatDate();
+  const day = (iso: string) => fmt(iso, "long");
 
   const rows: [string, string][] = [
     [t("receipt.number"), payment.id.slice(0, 8).toUpperCase()],

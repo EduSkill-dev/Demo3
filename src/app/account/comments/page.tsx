@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getLocale, getT } from "@/i18n/server";
-import { INTL_LOCALE } from "@/i18n/config";
+import { getFormatDate, getT } from "@/i18n/server";
 
 type Raw = {
   id: string;
@@ -21,8 +20,7 @@ export default async function MyCommentsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const [t, locale] = await Promise.all([getT(), getLocale()]);
-  const intl = INTL_LOCALE[locale];
+  const [t, fmt] = await Promise.all([getT(), getFormatDate()]);
 
   const { data } = await supabase
     .from("ratings")
@@ -36,7 +34,7 @@ export default async function MyCommentsPage() {
     return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("account.commentsEmpty")}</p>;
   }
 
-  const day = (iso: string) => new Date(iso).toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+  const day = (iso: string) => fmt(iso, "long");
 
   return (
     <ul className="space-y-3">
@@ -62,7 +60,7 @@ export default async function MyCommentsPage() {
                 <>
                   {" > "}
                   <Link href={`/tours/${r.tours.id}`} className="hover:text-apricot-dark">{r.tours.title}</Link>{" "}
-                  ({day(`${r.tours.date}T00:00:00`)})
+                  ({day(r.tours.date)})
                 </>
               )}
             </p>

@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PACKAGES, activePackage } from "@/lib/catalog";
-import { getLocale, getT } from "@/i18n/server";
-import { INTL_LOCALE } from "@/i18n/config";
+import { getFormatDate, getT } from "@/i18n/server";
 import type { Club, Tour } from "@/types/database";
 import BackLink from "@/components/BackLink";
 import TourDetails from "@/components/tour/TourDetails";
@@ -27,7 +26,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
 // The shareable page of one hike: full details, sign-up and its reviews.
 export default async function TourDetailPage({ params }: { params: { id: string } }) {
-  const [tour, t, locale] = await Promise.all([getTour(params.id), getT(), getLocale()]);
+  const [tour, t, fmt] = await Promise.all([getTour(params.id), getT(), getFormatDate()]);
 
   if (!tour) {
     return (
@@ -65,7 +64,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
     author_first_name: string | null;
     author_last_initial: string | null;
   }[]).filter((r) => r.comment?.trim());
-  const day = (iso: string) => new Date(iso).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric" });
+  const day = (iso: string) => fmt(iso, "long");
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">

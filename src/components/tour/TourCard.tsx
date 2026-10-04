@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatAmd } from "@/lib/catalog";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import type { PublicTour } from "@/lib/publicTours";
 
 // One hike on the Tours page / home page:
@@ -20,9 +20,9 @@ export default function TourCard({
   onOpen: () => void;
 }) {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmt = useFormatDate();
   const full = tour.taken >= tour.cap;
-  const date = new Date(`${tour.date}T00:00:00`).toLocaleDateString(intl, { weekday: "short", day: "numeric", month: "long" });
+  const date = fmt(tour.date, "weekday");
   const clubHref = `/clubs/${tour.club.id}${backHref ? `?back=${encodeURIComponent(backHref)}` : ""}`;
 
   return (

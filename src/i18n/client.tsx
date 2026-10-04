@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { DEFAULT_LOCALE, INTL_LOCALE, type Locale } from "./config";
+import { DEFAULT_LOCALE, type Locale } from "./config";
+import { formatDate, type DateStyle } from "./dates";
 import { makeT, type TFunction } from "./translate";
 
 const LocaleContext = createContext<Locale>(DEFAULT_LOCALE);
@@ -21,6 +22,8 @@ export function useT(): TFunction {
   return useMemo(() => makeT(locale), [locale]);
 }
 
-export function useIntlLocale(): string {
-  return INTL_LOCALE[useLocale()];
+// fmt(value, style) in the visitor's language; see ./dates for the styles.
+export function useFormatDate(): (value: string | Date, style?: DateStyle) => string {
+  const locale = useLocale();
+  return useMemo(() => (value: string | Date, style: DateStyle = "long") => formatDate(value, locale, style), [locale]);
 }

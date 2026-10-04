@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useIntlLocale, useT } from "@/i18n/client";
+import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
 import TourDetails, { type TourForDetails } from "@/components/tour/TourDetails";
 import ReceiptView, { type ReceiptPayment } from "@/components/ReceiptView";
@@ -12,14 +12,14 @@ export type HistoryRow = { bookingId: string; tour: TourForDetails; receipt: Rec
 // Finished hikes: name, date, receipt, region, View.
 export default function HistoryTable({ rows, payer }: { rows: HistoryRow[]; payer: string }) {
   const t = useT();
-  const intl = useIntlLocale();
+  const fmt = useFormatDate();
   const [tour, setTour] = useState<HistoryRow | null>(null);
   const [receipt, setReceipt] = useState<HistoryRow | null>(null);
 
   if (rows.length === 0) {
     return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("account.historyEmpty")}</p>;
   }
-  const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(intl, { day: "numeric", month: "short", year: "numeric" });
+  const day = (d: string) => fmt(d, "short");
 
   return (
     <>
