@@ -265,6 +265,25 @@ export function newsletterConfirmEmail(input: { to: string; confirmUrl: string; 
   };
 }
 
+// To a visitor: prove the address before the suggestion is delivered.
+export function contactConfirmEmail(input: { to: string; message: string; confirmUrl: string }) {
+  const html = layout(
+    "Հաստատեք Ձեր նամակը",
+    `<p>Highland-ի կայքից այս էլ. հասցեով ուղարկվել է հետևյալ նամակը։ Սեղմեք ստորև կոճակը, որպեսզի այն հասնի մեզ։</p>
+    <p style="white-space:pre-line;background:${BRAND.stone};border-radius:9px;padding:12px">${esc(input.message)}</p>
+    ${button(input.confirmUrl, "Հաստատել և ուղարկել")}
+    <p style="font-size:13px;color:#7a736a">Եթե Դուք չեք գրել այս նամակը, պարզապես անտեսեք այն՝ առանց հաստատման այն մեզ չի հասնի։</p>`
+  );
+  return {
+    to: input.to,
+    subject: "Highland — հաստատեք Ձեր նամակը",
+    html,
+    text: `Հաստատեք Ձեր նամակը՝ ${input.confirmUrl}
+
+${input.message}`,
+  };
+}
+
 export function contactInboxEmail(input: { to: string; message: string; email: string | null; phone: string | null }) {
   const rows = [
     input.email ? row("Էլ. հասցե", esc(input.email)) : "",

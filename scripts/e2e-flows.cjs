@@ -559,10 +559,15 @@ async function main() {
       check('HTTP newsletter: the unsubscribe link works', !!unsubRow?.unsubscribed_at, JSON.stringify(unsubRow));
       await admin.from('newsletter_subscribers').delete().eq('email', subEmail);
 
-      const noReply = await api('/api/contact', { message: 'E2E առաջարկ' });
-      const withPhone = await api('/api/contact', { message: `E2E առաջարկ ${stamp}`, phone: '+374 99 000000' });
-      check('HTTP suggestions: email or phone is required', noReply.status === 400 && withPhone.status === 200,
-        `without=${noReply.status} with=${withPhone.status}`);
+      const phoneOnly = await api('/api/contact', { message: 'E2E առաջարկ', phone: '+374 99 000000' });
+      const withEmail = await api('/api/contact', { message: `E2E առաջարկ ${stamp}`, email: `e2e-msg-${stamp}@example.com` });
+      const msgRow = (await admin.from('contact_messages').select('token, confirmed_at').eq('message', `E2E առաջարկ ${stamp}`).single()).data;
+      check('HTTP suggestions: an email is required and the message waits for confirmation',
+        phoneOnly.status === 400 && withEmail.status === 200 && msgRow && !msgRow.confirmed_at,
+        `phoneOnly=${phoneOnly.status} withEmail=${withEmail.status} row=${JSON.stringify(msgRow)}`);
+      await page(`/contact/confirm?token=${msgRow?.token}`);
+      const msgConfirmed = (await admin.from('contact_messages').select('confirmed_at').eq('message', `E2E առաջարկ ${stamp}`).single()).data;
+      check('HTTP suggestions: the emailed link delivers the message', !!msgConfirmed?.confirmed_at, JSON.stringify(msgConfirmed));
       await admin.from('contact_messages').delete().eq('message', `E2E առաջարկ ${stamp}`);
 
       const noFollow = (route, cookie) => fetch(`http://localhost:${DEV_PORT}${route}`, { redirect: 'manual', headers: cookie ? { Cookie: cookie } : {} });

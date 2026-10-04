@@ -87,12 +87,9 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
   const [phone, setPhone] = useState(viewer?.phone ?? "");
   const [website, setWebsite] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent" | "error">("idle");
-  const [needReply, setNeedReply] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() && !phone.trim()) return setNeedReply(true);
-    setNeedReply(false);
     setState("busy");
     setState((await post("/api/contact", { message, email, phone, website })) ? "sent" : "error");
   }
@@ -102,7 +99,7 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
       <h2 className="font-serif text-lg font-semibold text-white">{t("footer.suggestTitle")}</h2>
       <p className="mt-1 text-sm text-white/70">{t("footer.suggestText")}</p>
       {state === "sent" ? (
-        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">✓ {t(viewer ? "footer.sentDirect" : "footer.sent")}</p>
+        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">{viewer ? `✓ ${t("footer.sentDirect")}` : `✉️ ${t("footer.sent")}`}</p>
       ) : (
         <form onSubmit={submit} className="relative mt-4 space-y-2">
           <Honeypot value={website} onChange={setWebsite} />
@@ -118,10 +115,10 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
             className={field}
           />
           <div className="grid gap-2 sm:grid-cols-2">
-            <input type="email" aria-label={t("auth.email")} placeholder={t("auth.email")} value={email} readOnly={!!viewer} onChange={(e) => setEmail(e.target.value)} className={`${field} ${viewer ? locked : ""}`} />
-            <input type="tel" aria-label={t("auth.phone")} placeholder={t("auth.phone")} value={phone} readOnly={!!viewer?.phone} onChange={(e) => setPhone(e.target.value)} className={`${field} ${viewer?.phone ? locked : ""}`} />
+            <input type="email" required aria-label={t("auth.email")} placeholder={t("auth.email")} value={email} readOnly={!!viewer} onChange={(e) => setEmail(e.target.value)} className={`${field} ${viewer ? locked : ""}`} />
+            <input type="tel" aria-label={t("auth.phone")} placeholder={t("footer.phoneOptional")} value={phone} readOnly={!!viewer?.phone} onChange={(e) => setPhone(e.target.value)} className={`${field} ${viewer?.phone ? locked : ""}`} />
           </div>
-          {!viewer && <p className={`text-xs ${needReply ? "font-semibold text-red-300" : "text-white/60"}`}>{t("footer.emailOrPhone")}</p>}
+          {!viewer && <p className="text-xs text-white/60">{t("footer.confirmNote")}</p>}
           <button
             type="submit"
             disabled={state === "busy"}
