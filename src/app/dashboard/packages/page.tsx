@@ -136,9 +136,7 @@ export default function PackagesPage() {
           return (
             <div
               key={id}
-              className={`relative flex flex-col rounded-2xl border bg-surface p-5 ${
-                isActive ? "border-green-600 ring-1 ring-green-600" : "border-line"
-              }`}
+              className="relative flex flex-col rounded-2xl border border-line bg-surface p-5"
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-serif text-xl font-semibold text-heading">{p.name}</h3>
