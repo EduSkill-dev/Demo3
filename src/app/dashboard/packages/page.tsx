@@ -137,11 +137,7 @@ export default function PackagesPage() {
             <div
               key={id}
               className={`relative flex flex-col rounded-2xl border bg-surface p-5 ${
-                isActive
-                  ? "border-green-600 ring-1 ring-green-600"
-                  : recommended
-                    ? "border-apricot ring-1 ring-apricot"
-                    : "border-line"
+                isActive ? "border-green-600 ring-1 ring-green-600" : "border-line"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -186,11 +182,7 @@ export default function PackagesPage() {
                     onClick={() => buy(id)}
                     disabled={busy || lower}
                     title={lower ? t("packagesPage.afterExpiry") : undefined}
-                    className={`w-full rounded-lg py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                      recommended
-                        ? "bg-apricot text-white hover:bg-apricot-dark"
-                        : "border border-line text-ink hover:border-apricot hover:text-apricot-dark"
-                    }`}
+                    className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink transition hover:border-apricot hover:text-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t("packagesPage.choose", { name: p.name })}
                   </button>
