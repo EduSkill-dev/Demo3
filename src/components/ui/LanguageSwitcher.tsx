@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { LOCALES, LOCALE_COOKIE, type Locale } from "@/i18n/config";
 import { useLocale, useT } from "@/i18n/client";
 
-const SHORT: Record<Locale, string> = { hy: "ՀՅ", ru: "RU", en: "EN" };
+const SHORT: Record<Locale, string> = { hy: "Հայ", ru: "Рус", en: "Eng" };
 
 // Writes the language cookie and re-renders the server components in place.
 export default function LanguageSwitcher() {
@@ -30,8 +30,8 @@ export default function LanguageSwitcher() {
         className="cursor-pointer appearance-none rounded-lg border border-line bg-surface py-1.5 pl-2.5 pr-7 text-xs font-semibold text-ink disabled:opacity-60"
       >
         {LOCALES.map((l) => (
-          <option key={l} value={l}>
-            {SHORT[l]} · {t(`language.${l}`)}
+          <option key={l} value={l} title={t(`language.${l}`)}>
+            {SHORT[l]}
           </option>
         ))}
       </select>

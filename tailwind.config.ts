@@ -32,15 +32,18 @@ const config: Config = {
         sans: ["var(--font-inter)", "ui-sans-serif", "sans-serif"],
       },
       keyframes: {
+        // Rhythm of the classic "made with love" heart; scales evenly.
         heartbeat: {
-          "0%, 100%": { transform: "scale(1)" },
-          "15%": { transform: "scale(1.25)" },
-          "30%": { transform: "scale(1)" },
-          "45%": { transform: "scale(1.18)" },
+          "0%": { transform: "scale(0.8)" },
+          "5%": { transform: "scale(0.9)" },
+          "10%": { transform: "scale(0.8)" },
+          "15%": { transform: "scale(1)" },
+          "50%": { transform: "scale(0.8)" },
+          "100%": { transform: "scale(0.8)" },
         },
       },
       animation: {
-        heartbeat: "heartbeat 1.3s ease-in-out infinite",
+        heartbeat: "heartbeat 1.5s infinite",
       },
     },
   },
