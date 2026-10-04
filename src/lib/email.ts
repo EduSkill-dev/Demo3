@@ -1,11 +1,15 @@
-// Server-only email sending through Resend's REST API (no SDK dependency).
+// Server-only email sending: Resend's REST API when RESEND_API_KEY is set,
+// otherwise Gmail SMTP when GMAIL_USER + GMAIL_APP_PASSWORD are.
 //
-//   RESEND_API_KEY   required to actually send — see README
+//   RESEND_API_KEY   preferred (needs a verified domain) — see README
 //   EMAIL_FROM       optional, defaults to Resend's test sender
+//   GMAIL_USER / GMAIL_APP_PASSWORD   fallback sender (about 500 emails a day)
+//   CONTACT_INBOX    where site messages go; defaults to GMAIL_USER
+//   EMAIL_DISABLED   set to turn sending off (the e2e suite does)
 //
-// Without a key every call is a no-op that reports `skipped`, so the app
-// keeps working before the credentials exist. Never import this from a
-// "use client" file.
+// With neither configured every call is a no-op that reports `skipped`, so
+// the app keeps working before the credentials exist. Never import this from
+// a "use client" file.
 
 import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
 import { makeT } from "@/i18n/translate";
@@ -58,6 +62,13 @@ function esc(value: string): string {
 
 const BASE_URL = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+// Where messages for the site owner land.
+export const ownerInbox = () => process.env.CONTACT_INBOX || process.env.GMAIL_USER || "";
+
+// Demo and test accounts have addresses nobody reads; mailing them only
+// produces bounces.
+const UNDELIVERABLE = /@(.+\.)?(example\.(com|org|net)|[^@]+\.test)$/i;
+
 export function emailStatus(result: SendResult): "sent" | "skipped" | "failed" {
   if (result.ok) return "sent";
   return result.skipped ? "skipped" : "failed";
@@ -68,13 +79,38 @@ export async function sendEmail(input: {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 }): Promise<SendResult> {
   if (typeof window !== "undefined") {
     return { ok: false, skipped: false, error: "sendEmail must run on the server" };
   }
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return { ok: false, skipped: true, reason: "RESEND_API_KEY not set" };
+  if (process.env.EMAIL_DISABLED) return { ok: false, skipped: true, reason: "EMAIL_DISABLED is set" };
   if (!input.to) return { ok: false, skipped: true, reason: "no recipient" };
+  if (UNDELIVERABLE.test(input.to)) return { ok: false, skipped: true, reason: "test address" };
+
+  const key = process.env.RESEND_API_KEY;
+  const gmailUser = process.env.GMAIL_USER?.trim();
+  const gmailPass = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, "");
+  if (!key && !(gmailUser && gmailPass)) {
+    return { ok: false, skipped: true, reason: "no RESEND_API_KEY or Gmail credentials" };
+  }
+
+  if (!key) {
+    try {
+      const { createTransport } = await import("nodemailer");
+      const info = await createTransport({ service: "gmail", auth: { user: gmailUser, pass: gmailPass } }).sendMail({
+        from: `Highland <${gmailUser}>`,
+        to: input.to,
+        replyTo: input.replyTo,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+      });
+      return { ok: true, id: info.messageId ?? null };
+    } catch (e) {
+      return { ok: false, skipped: false, error: (e as Error).message };
+    }
+  }
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -86,6 +122,7 @@ export async function sendEmail(input: {
       body: JSON.stringify({
         from: process.env.EMAIL_FROM || "Highland <onboarding@resend.dev>",
         to: [input.to],
+        ...(input.replyTo ? { reply_to: input.replyTo } : {}),
         subject: input.subject,
         html: input.html,
         text: input.text,
@@ -239,11 +276,23 @@ export function contactInboxEmail(input: { to: string; message: string; email: s
   );
   return {
     to: input.to,
+    replyTo: input.email ?? undefined,
     subject: "Highland — նոր առաջարկ",
     html,
     text: `${input.message}
 
 ${input.email ?? ""} ${input.phone ?? ""}`,
+  };
+}
+
+// To the site owner: somebody confirmed a newsletter subscription.
+export function newSubscriberEmail(input: { to: string; email: string }) {
+  return {
+    to: input.to,
+    replyTo: input.email,
+    subject: "Highland — նոր բաժանորդ",
+    html: layout("Նոր բաժանորդագրություն", `<p>Նորություններին բաժանորդագրվեց՝ <strong>${esc(input.email)}</strong></p>`),
+    text: `Նոր բաժանորդագրություն՝ ${input.email}`,
   };
 }
 

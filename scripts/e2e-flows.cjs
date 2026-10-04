@@ -452,7 +452,7 @@ async function main() {
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
       stdio: 'pipe',
-      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', NEXT_DIST_DIR: '.next-e2e' },
+      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
       shell: false,
     });
     devServer.on('error', (err) => console.error('     dev server error:', err.message));

@@ -177,9 +177,12 @@ can create tours — that unblocks `/tours` showing real data.
   action it books (or re-activates a previously cancelled signup).
 - `/api/tours/announce` POST — emails followers of the club that published a
   new tour. Stamps `emailed_at` once per notification row.
-- Emails go through Resend (`src/lib/email.ts`). Set `RESEND_API_KEY` in
-  `.env.local` to actually send; without it every `sendEmail` call returns
-  `{ skipped: true }` and the app keeps working — perfect for local dev and CI.
+- Emails go through Resend (`src/lib/email.ts`) when `RESEND_API_KEY` is set,
+  otherwise through Gmail SMTP when `GMAIL_USER` + `GMAIL_APP_PASSWORD` are.
+  With neither (or with `EMAIL_DISABLED` set, as the e2e suite does) every
+  `sendEmail` call returns `{ skipped: true }` and the app keeps working.
+  Site messages and new-subscriber notices go to `CONTACT_INBOX`, else to
+  `GMAIL_USER`.
 - `e2e-flows.cjs` now starts the Next.js dev server and exercises the three
   API routes over HTTP with a cookie built from a real anon-key session. Checks
   cover: free booking + cancel, paid booking (success + decline), subscription

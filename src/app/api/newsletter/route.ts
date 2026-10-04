@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { emailStatus, newsletterConfirmEmail, sendEmail } from "@/lib/email";
+import { emailStatus, newSubscriberEmail, newsletterConfirmEmail, ownerInbox, sendEmail } from "@/lib/email";
 import { getLocale } from "@/i18n/server";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,6 +43,7 @@ export async function POST(req: Request) {
       ? await admin.from("newsletter_subscribers").update(confirmed).eq("id", row.id)
       : await admin.from("newsletter_subscribers").insert({ email, ...confirmed });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await sendEmail(newSubscriberEmail({ to: ownerInbox(), email }));
     return NextResponse.json({ ok: true, confirmed: true });
   }
 

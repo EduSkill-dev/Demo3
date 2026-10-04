@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { newSubscriberEmail, ownerInbox, sendEmail } from "@/lib/email";
 import { getT } from "@/i18n/server";
 import AuthCard from "@/components/auth/AuthCard";
 
@@ -24,12 +25,20 @@ export default async function NewsletterActionPage({
       params.action === "confirm"
         ? { confirmed_at: new Date().toISOString(), unsubscribed_at: null }
         : { unsubscribed_at: new Date().toISOString() };
-    const { data } = await createAdminClient()
+    const admin = createAdminClient();
+    const { data: before } = await admin
       .from("newsletter_subscribers")
-      .update(patch)
+      .select("email, confirmed_at, unsubscribed_at")
       .eq("token", token)
-      .select("id");
+      .maybeSingle();
+    const { data } = await admin.from("newsletter_subscribers").update(patch).eq("token", token).select("id");
     ok = (data ?? []).length > 0;
+
+    // The owner hears about a subscription once — not on every reload of the link.
+    const was = before as { email: string; confirmed_at: string | null; unsubscribed_at: string | null } | null;
+    if (ok && params.action === "confirm" && was && (!was.confirmed_at || was.unsubscribed_at)) {
+      await sendEmail(newSubscriberEmail({ to: ownerInbox(), email: was.email }));
+    }
   }
 
   const [title, text] = !ok
