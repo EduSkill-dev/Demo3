@@ -114,10 +114,34 @@ export default async function ClubDetailPage({
             </section>
           )}
 
+          {(guides ?? []).length > 0 && (
+            <section>
+              <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.guides")}</h2>
+              <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {((guides ?? []) as ClubGuide[]).map((g) => (
+                  <li key={g.id} className="flex flex-col items-center rounded-2xl border border-line bg-surface p-5 text-center shadow-sm">
+                    <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-sand bg-sand">
+                      {g.photo_url ? (
+                        <img src={g.photo_url} alt={[g.first_name, g.last_name].filter(Boolean).join(" ")} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-3xl">🧭</div>
+                      )}
+                    </div>
+                    <p className="mt-3 font-serif text-lg font-semibold text-heading">
+                      {[g.first_name, g.last_name].filter(Boolean).join(" ")}
+                    </p>
+                    {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-apricot">{g.role}</p>}
+                    {g.bio && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted">{g.bio}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.upcomingTours")}</h2>
             <div className="mt-4">
-              {tours.length === 0 ? <p className="text-muted">{t("clubPage.noTours")}</p> : <TourGrid tours={tours} />}
+              {tours.length === 0 ? <p className="text-muted">{t("clubPage.noTours")}</p> : <TourGrid tours={tours} columns="sm:grid-cols-2" />}
             </div>
           </section>
 
@@ -185,24 +209,6 @@ export default async function ClubDetailPage({
                   <span key={f} className="rounded-full bg-sand px-3 py-1 text-sm text-ink">{t(`focus.${f}`)}</span>
                 ))}
               </div>
-            </section>
-          )}
-          {(guides ?? []).length > 0 && (
-            <section>
-              <h2 className="font-serif text-lg font-semibold text-heading">{t("clubPage.guides")}</h2>
-              <ul className="mt-3 space-y-3">
-                {((guides ?? []) as ClubGuide[]).map((g) => (
-                  <li key={g.id} className="flex gap-3 rounded-xl border border-line bg-surface p-3">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-sand">
-                      {g.photo_url ? <img src={g.photo_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xl">🧭</div>}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-ink">{[g.first_name, g.last_name].filter(Boolean).join(" ")}</p>
-                      {g.bio && <p className="mt-0.5 text-sm text-muted">{g.bio}</p>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
             </section>
           )}
         </aside>

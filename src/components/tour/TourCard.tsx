@@ -82,7 +82,7 @@ export default function TourCard({
           {t(`difficulty.${tour.difficulty}`)} · {t("common.upTo", { count: tour.cap })}
         </p>
 
-        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">
           <p className="whitespace-nowrap font-semibold text-ink">
             {Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(tour.price) }) : t("common.free")}
           </p>

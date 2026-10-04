@@ -8,12 +8,20 @@ import TourQuickView from "./TourQuickView";
 
 // A plain grid of hike cards with the "See more" modal (home, club pages).
 // Clicking a region opens the Tours page filtered by it.
-export default function TourGrid({ tours, backHref }: { tours: PublicTour[]; backHref?: string }) {
+export default function TourGrid({
+  tours,
+  backHref,
+  columns = "sm:grid-cols-2 lg:grid-cols-3",
+}: {
+  tours: PublicTour[];
+  backHref?: string;
+  columns?: string; // narrower containers (club page) pass "sm:grid-cols-2"
+}) {
   const router = useRouter();
   const [open, setOpen] = useState<PublicTour | null>(null);
   return (
     <>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={`grid gap-6 ${columns}`}>
         {tours.map((tour) => (
           <TourCard
             key={tour.id}

@@ -10,10 +10,11 @@ import type { ClubGuide } from "@/types/database";
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
 
-type Draft = { id: string | null; name: string; bio: string; photo: string | null; file: File | null };
-const empty: Draft = { id: null, name: "", bio: "", photo: null, file: null };
+type Draft = { id: string | null; name: string; role: string; bio: string; photo: string | null; file: File | null };
+const empty: Draft = { id: null, name: "", role: "", bio: "", photo: null, file: null };
+const ROLE_KEYS = ["clubData.roleGuide", "clubData.roleInstructor", "clubData.roleMountainGuide", "clubData.roleCoordinator"] as const;
 
-// Guides: photo, name and a short bio each — add, edit, remove.
+// Guides: photo, name, position and a short bio each — add, edit, remove.
 export default function GuidesEditor({ clubId, initial }: { clubId: string; initial: ClubGuide[] }) {
   const t = useT();
   const router = useRouter();
@@ -39,7 +40,14 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
       }
       photo = up.url;
     }
-    const row = { club_id: clubId, first_name: draft.name.trim(), last_name: "", bio: draft.bio.trim() || null, photo_url: photo };
+    const row = {
+      club_id: clubId,
+      first_name: draft.name.trim(),
+      last_name: "",
+      role: draft.role.trim() || null,
+      bio: draft.bio.trim() || null,
+      photo_url: photo,
+    };
     const supabase = createClient();
     const res = draft.id
       ? await supabase.from("club_guides").update(row).eq("id", draft.id).select().single()
@@ -85,7 +93,14 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
           </label>
           <div className="space-y-3">
             <input required aria-label={t("clubData.guideName")} placeholder={t("clubData.guideName")} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={input} />
-            <textarea rows={3} aria-label={t("clubData.guideBio")} placeholder={t("clubData.guideBio")} value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} className={input} />
+            {/* Free text with suggestions: clubs name positions their own way. */}
+            <input list="guide-roles" aria-label={t("clubData.guideRole")} placeholder={`${t("clubData.guideRole")} — ${t("clubData.guideRoleHint")}`} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className={input} />
+            <datalist id="guide-roles">
+              {ROLE_KEYS.map((k) => (
+                <option key={k} value={t(k)} />
+              ))}
+            </datalist>
+            <textarea rows={3} aria-label={t("clubData.guideBio")} placeholder={t("clubData.guideBioHint")} value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} className={input} />
             <div className="flex gap-2">
               <button type="submit" disabled={busy} className="rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-50">
                 {busy ? "..." : t("clubData.saveGuide")}
@@ -110,9 +125,10 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-ink">{fullName(g)}</p>
-                {g.bio && <p className="mt-0.5 line-clamp-3 text-sm text-muted">{g.bio}</p>}
+                {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-apricot">{g.role}</p>}
+                {g.bio && <p className="mt-1 line-clamp-3 text-sm text-muted">{g.bio}</p>}
                 <div className="mt-2 flex gap-3 text-sm font-semibold">
-                  <button type="button" onClick={() => setDraft({ id: g.id, name: fullName(g), bio: g.bio ?? "", photo: g.photo_url, file: null })} className="text-apricot hover:text-apricot-dark">
+                  <button type="button" onClick={() => setDraft({ id: g.id, name: fullName(g), role: g.role ?? "", bio: g.bio ?? "", photo: g.photo_url, file: null })} className="text-apricot hover:text-apricot-dark">
                     {t("common.edit")}
                   </button>
                   <button type="button" onClick={() => remove(g)} className="text-red-600 hover:text-red-700">

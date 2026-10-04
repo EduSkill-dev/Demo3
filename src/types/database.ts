@@ -40,6 +40,7 @@ export interface ClubGuide {
   club_id: string;
   first_name: string; // the guide's full name
   last_name: string | null; // legacy, unused
+  role: string | null; // e.g. hiking guide, instructor
   bio: string | null;
   photo_url: string | null;
   created_at: string;
