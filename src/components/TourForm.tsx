@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/storage";
 import type { Tour } from "@/types/database";
 import { DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
 
 const MAX_PHOTOS = 5;
-const BUCKET = "club-assets";
 
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
@@ -80,22 +80,13 @@ export default function TourForm({
     // Upload the new photos first, keeping the ones already stored.
     const photoUrls = [...savedPhotos];
     if (newFiles.length > 0) {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
-        setSaving(false);
-        return setError(t("common.error"));
-      }
       for (const file of newFiles) {
-        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-        const path = `tours/${auth.user.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, file, { contentType: file.type || "image/jpeg" });
-        if (uploadError) {
+        const up = await uploadImage("tours", file);
+        if ("error" in up) {
           setSaving(false);
-          return setError(t("clubData.uploadFailed", { message: uploadError.message }));
+          return setError(t("clubData.uploadFailed", { message: up.error }));
         }
-        photoUrls.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl);
+        photoUrls.push(up.url);
       }
       setNewFiles([]);
     }
