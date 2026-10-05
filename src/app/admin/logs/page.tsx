@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdmin } from "@/lib/admin";
-import { ACTION_LABELS, ROLE_LABELS } from "@/lib/adminLabels";
-import { adminGhost, adminInput } from "@/components/admin/adminApi";
+import { ACTION_LABELS, PERM_LABELS, ROLE_LABELS, type AdminPerm } from "@/lib/adminLabels";
+import { adminGhost, adminInlineInput } from "@/components/admin/adminApi";
 
 const PAGE_SIZE = 50;
 
@@ -34,7 +34,7 @@ function details(e: Entry): string {
   const parts: string[] = [];
   if (e.target_label) parts.push(e.target_label);
   if (Array.isArray(m.fields)) parts.push(`դաշտեր՝ ${(m.fields as string[]).join(", ")}`);
-  if (Array.isArray(m.perms)) parts.push(`թույլտվություններ՝ ${(m.perms as string[]).join(", ") || "չկան"}`);
+  if (Array.isArray(m.perms)) parts.push(`թույլտվություններ՝ ${(m.perms as AdminPerm[]).map((k) => PERM_LABELS[k] ?? k).join(", ") || "չկան"}`);
   if (m.amount != null) parts.push(`${m.amount} ֏${m.kind === "subscription" ? ` · փաթեթ ${m.tariff ?? ""}` : ""}`);
   if (m.score != null) parts.push(`${m.score}/5`);
   if (m.via) parts.push("երկրորդ հասցեով");
@@ -86,19 +86,19 @@ export default async function AdminLogsPage({
       <h2 className="font-serif text-xl font-semibold text-heading">Լոգեր ({count ?? 0})</h2>
 
       <form className="mt-4 flex flex-wrap items-end gap-2">
-        <select name="role" defaultValue={role} aria-label="Օգտվողի տեսակ" className={`${adminInput} w-44`}>
+        <select name="role" defaultValue={role} aria-label="Օգտվողի տեսակ" className={`${adminInlineInput} w-44`}>
           <option value="">Բոլոր օգտվողները</option>
           {roles.map((r) => (
             <option key={r} value={r}>{ROLE_LABELS[r]}</option>
           ))}
         </select>
-        <select name="action" defaultValue={action} aria-label="Գործողություն" className={`${adminInput} w-64`}>
+        <select name="action" defaultValue={action} aria-label="Գործողություն" className={`${adminInlineInput} w-64 max-w-full`}>
           <option value="">Բոլոր գործողությունները</option>
           {actions.map(([key, label]) => (
             <option key={key} value={key}>{label}</option>
           ))}
         </select>
-        <input type="search" name="q" defaultValue={q} placeholder="Անուն, էլ. հասցե, IP" aria-label="Փնտրել" className={`${adminInput} w-56`} />
+        <input type="search" name="q" defaultValue={q} placeholder="Անուն, էլ. հասցե, IP" aria-label="Փնտրել" className={`${adminInlineInput} w-56`} />
         <button type="submit" className={adminGhost}>Զտել</button>
       </form>
 

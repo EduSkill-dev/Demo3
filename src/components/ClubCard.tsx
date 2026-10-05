@@ -17,7 +17,9 @@ export default function ClubCard({
     <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
       <Link href={`/clubs/${club.id}`}>
         {club.photo_url ? (
-          <img src={club.photo_url} alt={club.name} className="h-44 w-full bg-sand object-contain" />
+          <div className="flex h-44 items-center justify-center bg-sand">
+            <img src={club.photo_url} alt={club.name} className="max-h-full max-w-full object-contain" />
+          </div>
         ) : (
           <div className="flex h-44 items-center justify-center bg-gradient-to-br from-pine to-apricot/70 text-4xl">🏔️</div>
         )}

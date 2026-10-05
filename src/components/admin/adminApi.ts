@@ -15,8 +15,10 @@ export async function adminAction<T = Record<string, unknown>>(
   return { data: json, error: null };
 }
 
-export const adminInput =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+// A field in a row of filters: the caller gives it a width.
+export const adminInlineInput =
+  "rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+export const adminInput = `w-full ${adminInlineInput}`;
 export const adminButton =
   "rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50";
 export const adminGhost =
