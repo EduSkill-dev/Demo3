@@ -5,6 +5,7 @@ import { PACKAGES, activePackage } from "@/lib/catalog";
 export type PublicClubInfo = {
   id: string;
   name: string;
+  cancel_hours: number;
   // Present only when the club's package shows ratings to the public.
   rating: { average: number; count: number } | null;
 };
@@ -23,7 +24,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
   const today = new Date().toISOString().slice(0, 10);
   let query = supabase
     .from("tours")
-    .select("*, clubs(id, name, tariff, package_ends_at, applications_blocked)")
+    .select("*, clubs(id, name, tariff, package_ends_at, applications_blocked, cancel_hours)")
     .eq("status", "active")
     .eq("admin_hidden", false)
     .gte("date", today)
@@ -32,7 +33,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
   const { data } = await query;
 
   type Row = Tour & {
-    clubs: { id: string; name: string; tariff: string | null; package_ends_at: string | null; applications_blocked: boolean } | null;
+    clubs: { id: string; name: string; tariff: string | null; package_ends_at: string | null; applications_blocked: boolean; cancel_hours: number } | null;
   };
   const rows = ((data ?? []) as Row[]).filter((t) => t.clubs && activePackage(t.clubs));
   if (rows.length === 0) return [];
@@ -54,6 +55,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
       club: {
         id: clubs!.id,
         name: clubs!.name,
+        cancel_hours: clubs!.cancel_hours,
         rating: PACKAGES[pkg].showsRatings && r ? { average: Number(r.average), count: r.count } : null,
       },
       taken: taken.get(tour.id) ?? 0,

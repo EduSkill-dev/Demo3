@@ -1,5 +1,6 @@
 "use client";
 
+import { CANCEL_HOUR_OPTIONS, DEFAULT_CANCEL_HOURS } from "@/lib/catalog";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
   const [about, setAbout] = useState(club.description ?? "");
   const [phone, setPhone] = useState(club.phone ?? "");
   const [focus, setFocus] = useState<string[]>(club.focus ?? []);
+  const [cancelHours, setCancelHours] = useState(club.cancel_hours ?? DEFAULT_CANCEL_HOURS);
   const [busy, setBusy] = useState<"photo" | "info" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     setBusy("info");
     const { error: err } = await createClient()
       .from("clubs")
-      .update({ description: about.trim() || null, phone: phone.trim() || null, focus })
+      .update({ description: about.trim() || null, phone: phone.trim() || null, focus, cancel_hours: cancelHours })
       .eq("id", club.id);
     setBusy(null);
     if (err) return setError(err.message);
@@ -107,6 +109,15 @@ export default function ClubProfileForm({ club }: { club: Club }) {
         <div className="max-w-xs">
           <label htmlFor="phone" className="mb-1 block text-sm font-medium text-ink">{t("clubData.phone")}</label>
           <input id="phone" type="tel" placeholder="+374 XX XXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} className={input} />
+        </div>
+        <div>
+          <label htmlFor="cancel-hours" className="mb-1 block text-sm font-medium text-ink">{t("clubData.cancelHours")}</label>
+          <select id="cancel-hours" value={cancelHours} onChange={(e) => setCancelHours(Number(e.target.value))} className={input}>
+            {CANCEL_HOUR_OPTIONS.map((h) => (
+              <option key={h} value={h}>{t("clubData.cancelHoursOption", { hours: h })}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted">{t("clubData.cancelHoursHint")}</p>
         </div>
         <fieldset>
           <legend className="mb-1 block text-sm font-medium text-ink">{t("clubData.focus")}</legend>

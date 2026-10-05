@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CANCEL_WINDOW_HOURS, canCancelBooking } from "@/lib/catalog";
+import { canCancelBooking, cancelHoursOf } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
@@ -13,7 +13,7 @@ import type { TourStatus } from "@/types/database";
 export type MyTourRow = { bookingId: string; tour: TourForDetails & { status: TourStatus } };
 
 // Upcoming hikes: name, date, region, overnight, coordinator phone, then
-// View (full announcement) and Cancel (only while more than 48 h remain).
+// View (full announcement) and Cancel (only inside the club's cancel window).
 export default function MyTours({ rows }: { rows: MyTourRow[] }) {
   const t = useT();
   const fmt = useFormatDate();
@@ -71,7 +71,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
           <tbody>
             {rows.map((r) => {
               const cancelled = r.tour.status === "cancelled";
-              const can = !cancelled && canCancelBooking(r.tour.date, r.tour.meeting_time);
+              const can = !cancelled && canCancelBooking(r.tour.date, r.tour.meeting_time, cancelHoursOf(r.tour.club));
               return (
                 <tr key={r.bookingId} className="border-b border-line last:border-0 text-ink">
                   <td className="px-4 py-3">
@@ -99,7 +99,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
                           type="button"
                           onClick={() => cancel(r)}
                           disabled={!can || busy === r.bookingId}
-                          title={can ? undefined : t("account.cancelTooLate", { hours: CANCEL_WINDOW_HOURS })}
+                          title={can ? undefined : t("account.cancelTooLate", { hours: cancelHoursOf(r.tour.club) })}
                           className="text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:text-muted disabled:opacity-60"
                         >
                           {busy === r.bookingId ? "..." : t("common.cancel")}
@@ -113,7 +113,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-muted">{t("account.cancelTooLate", { hours: CANCEL_WINDOW_HOURS })}</p>
+      <p className="text-xs text-muted">{t("account.cancelNote")}</p>
 
       <Modal open={!!open} onClose={() => setOpen(null)} title={open?.tour.title ?? ""} size="lg">
         {open && <TourDetails tour={open.tour} />}

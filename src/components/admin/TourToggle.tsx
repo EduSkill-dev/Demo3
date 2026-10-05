@@ -13,7 +13,7 @@ export default function TourToggle({ tourId, hidden, title }: { tourId: string; 
   async function toggle() {
     const question = hidden
       ? `Բացե՞լ «${title}» հայտարարությունը։ Այն նորից կերևա հարթակում։`
-      : `Փակե՞լ «${title}» հայտարարությունը։ Այն չի երևա հարթակում, և նոր գրանցումներ չեն ընդունվի։`;
+      : `Փակե՞լ «${title}» հայտարարությունը։ Այն չի երևա հարթակում, և նոր ամրագրումներ չեն ընդունվի։`;
     if (!confirm(question)) return;
     setBusy(true);
     setError(null);

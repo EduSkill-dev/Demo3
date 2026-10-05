@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { CANCEL_WINDOW_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
+import { DEFAULT_CANCEL_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
@@ -23,6 +23,7 @@ export default function TourSignup({
   limit,
   total,
   meetingTime = null,
+  cancelHours = DEFAULT_CANCEL_HOURS,
   price = 0,
   bare = false,
 }: {
@@ -33,6 +34,7 @@ export default function TourSignup({
   limit: number; // seats the platform accepts (the club's package)
   total?: number; // the hike's own size, set by the club — display only
   meetingTime?: string | null;
+  cancelHours?: number; // the club's cancel window
   price?: number;
   bare?: boolean; // no card frame (inside a modal footer)
 }) {
@@ -73,7 +75,7 @@ export default function TourSignup({
   const free = Math.max(0, limit - taken);
   const full = free <= 0;
   const closed = limit <= 0; // hidden/cancelled hike or the club's package lapsed
-  const cancellable = canCancelBooking(date, meetingTime);
+  const cancellable = canCancelBooking(date, meetingTime, cancelHours);
 
   async function book() {
     setError(null);
@@ -197,8 +199,8 @@ export default function TourSignup({
       {confirmed && !isPast && (
         <p className="mt-3 text-xs text-muted">
           {cancellable
-            ? t("signup.cancelHint", { hours: CANCEL_WINDOW_HOURS })
-            : t("signup.tooLateHint", { hours: CANCEL_WINDOW_HOURS })}
+            ? t("signup.cancelHint", { hours: cancelHours })
+            : t("signup.tooLateHint", { hours: cancelHours })}
         </p>
       )}
 

@@ -72,7 +72,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
       <BackLink fallback="/tours" label={t("clubPage.back")} />
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="space-y-10">
-          <TourDetails tour={{ ...tour, club: club ? { id: club.id, name: club.name } : null }} seats={cap ? { taken, cap } : undefined} showPageLink={false} />
+          <TourDetails tour={{ ...tour, club: club ? { id: club.id, name: club.name, cancel_hours: club.cancel_hours } : null }} seats={cap ? { taken, cap } : undefined} showPageLink={false} />
 
           <section>
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
@@ -107,6 +107,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
           <TourSignup
             tourId={tour.id}
             clubId={tour.club_id}
+            cancelHours={club?.cancel_hours}
             date={tour.date}
             taken={taken}
             limit={cap}

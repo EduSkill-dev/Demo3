@@ -87,7 +87,11 @@ export function isTerrain(value: string): value is Terrain {
 }
 
 // A booking can be cancelled only while more than this many hours remain.
-export const CANCEL_WINDOW_HOURS = 48;
+// Each club picks one of the options; 48 is the default.
+export const CANCEL_HOUR_OPTIONS = [24, 36, 48, 60] as const;
+export const DEFAULT_CANCEL_HOURS = 48;
+export const cancelHoursOf = (club: { cancel_hours?: number | null } | null | undefined): number =>
+  club?.cancel_hours ?? DEFAULT_CANCEL_HOURS;
 
 // Armenia is UTC+4 all year (no daylight saving), matching the DB's
 // tour_starts_at(date, meeting_time) in Asia/Yerevan.
@@ -96,8 +100,13 @@ export function tourStartsAt(date: string, meetingTime?: string | null): Date {
   return new Date(`${date}T${time}:00+04:00`);
 }
 
-export function canCancelBooking(date: string, meetingTime?: string | null, now: number = Date.now()): boolean {
-  return tourStartsAt(date, meetingTime).getTime() - now > CANCEL_WINDOW_HOURS * 3600 * 1000;
+export function canCancelBooking(
+  date: string,
+  meetingTime: string | null | undefined,
+  hours: number = DEFAULT_CANCEL_HOURS,
+  now: number = Date.now()
+): boolean {
+  return tourStartsAt(date, meetingTime).getTime() - now > hours * 3600 * 1000;
 }
 
 // "25 000 ֏" — the way amounts are shown across cards, receipts and emails.

@@ -25,7 +25,7 @@ type TourRow = {
   price: number | string;
   meeting_point: string | null;
   meeting_time: string | null;
-  clubs: { name: string } | null;
+  clubs: { name: string; cancel_hours: number } | null;
 };
 
 // The single place money-like things happen. Today it runs the mock gateway
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     // and an already-confirmed signup must never reach the gateway.
     const { data: tourRow } = await supabase
       .from("tours")
-      .select("id, title, date, price, meeting_point, meeting_time, clubs(name)")
+      .select("id, title, date, price, meeting_point, meeting_time, clubs(name, cancel_hours)")
       .eq("id", body.tour_id)
       .maybeSingle();
 
@@ -268,6 +268,7 @@ export async function POST(req: Request) {
         tourTitle: t.title,
         date: t.date,
         clubName: t.clubs?.name ?? "—",
+      cancelHours: t.clubs?.cancel_hours,
         meetingPoint: t.meeting_point,
         meetingTime: t.meeting_time,
       })

@@ -17,7 +17,7 @@ type TourRow = {
   meeting_point: string | null;
   meeting_time: string | null;
   price: number | string | null;
-  clubs: { name: string } | null;
+  clubs: { name: string; cancel_hours: number } | null;
 };
 
 // Bookings go through the server so the confirmation email is sent from a
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, tours(title, date, clubs(name))")
+      .select("id, tours(title, date, clubs(name, cancel_hours))")
       .eq("id", body.booking_id)
       .single();
 
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     const tour = booking.tours as unknown as {
       title: string;
       date: string;
-      clubs: { name: string } | null;
+      clubs: { name: string; cancel_hours: number } | null;
     } | null;
 
     let email: string = "skipped";
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
 
   const { data: tourRow } = await supabase
     .from("tours")
-    .select("id, title, date, meeting_point, meeting_time, price, clubs(name)")
+    .select("id, title, date, meeting_point, meeting_time, price, clubs(name, cancel_hours)")
     .eq("id", body.tour_id)
     .maybeSingle();
 
@@ -205,6 +205,7 @@ export async function POST(req: Request) {
       tourTitle: tour.title,
       date: tour.date,
       clubName: tour.clubs?.name ?? "—",
+      cancelHours: tour.clubs?.cancel_hours,
       meetingPoint: tour.meeting_point,
       meetingTime: tour.meeting_time,
     })

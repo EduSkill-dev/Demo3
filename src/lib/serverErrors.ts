@@ -16,7 +16,7 @@ const KNOWN: [string, MessageKey][] = [
   ["ժամանակավորապես փակ", "errors.bookingClosed"],
   ["Ակումբները չեն կարող գրանցվել", "errors.clubsCannotBook"],
   ["հաստատեք Ձեր էլ. հասցեն", "errors.confirmEmail"],
-  ["48 ժամ", "errors.cancel48"],
+  ["Չեղարկել հնարավոր է միայն", "errors.cancel48"],
   ["ընտրեք փաթեթ", "errors.needPackage"],
   ["փաթեթի սահմանաչափին", "errors.listingLimit"],
   ["ջնջելու փոխարեն չեղարկեք", "errors.bookedTourDelete"],

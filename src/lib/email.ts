@@ -11,7 +11,7 @@
 // the app keeps working before the credentials exist. Never import this from
 // a "use client" file.
 
-import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
+import { DEFAULT_CANCEL_HOURS, formatAmd } from "@/lib/catalog";
 import { makeT } from "@/i18n/translate";
 
 // Emails are Armenian for now; region keys are turned into labels here.
@@ -150,6 +150,7 @@ export function bookingConfirmationEmail(input: {
   clubName: string;
   meetingPoint: string | null;
   meetingTime: string | null;
+  cancelHours?: number;
 }) {
   const rows = [
     row("Արշավ", input.tourTitle),
@@ -157,19 +158,19 @@ export function bookingConfirmationEmail(input: {
     row("Ակումբ", input.clubName),
     input.meetingPoint ? row("Հավաքի վայր", input.meetingPoint) : "",
     input.meetingTime ? row("Հավաքի ժամ", input.meetingTime.slice(0, 5)) : "",
-    row("Չեղարկում", `մինչև ${CANCEL_WINDOW_HOURS} ժամ առաջ`),
+    row("Չեղարկում", `մինչև ${input.cancelHours ?? DEFAULT_CANCEL_HOURS} ժամ առաջ`),
   ].join("");
 
   const html = layout(
-    "Գրանցումդ հաստատված է",
-    `<p>Բարև ${input.firstName ?? ""}, դու գրանցվել ես արշավին։</p>${table(rows)}
+    "Ամրագրումդ հաստատված է",
+    `<p>Բարև ${input.firstName ?? ""}, դու ամրագրել ես արշավը։</p>${table(rows)}
      ${button(`${BASE_URL()}/tours`, "Տեսնել արշավները")}`
   );
   return {
     to: input.to,
-    subject: `Գրանցումդ հաստատված է՝ ${input.tourTitle}`,
+    subject: `Ամրագրումդ հաստատված է՝ ${input.tourTitle}`,
     html,
-    text: `Գրանցումդ հաստատված է։ ${input.tourTitle} · ${input.date} · ${input.clubName}`,
+    text: `Ամրագրումդ հաստատված է։ ${input.tourTitle} · ${input.date} · ${input.clubName}`,
   };
 }
 
@@ -180,16 +181,16 @@ export function bookingCancelledEmail(input: {
   clubName: string;
 }) {
   const html = layout(
-    "Գրանցումդ չեղարկվեց",
-    `<p>Քո գրանցումը «${input.tourTitle}» արշավին չեղարկվել է։</p>
+    "Ամրագրումդ չեղարկվեց",
+    `<p>«${input.tourTitle}» արշավի քո ամրագրումը չեղարկվել է։</p>
      ${table([row("Ամսաթիվ", input.date), row("Ակումբ", input.clubName)].join(""))}
      ${button(`${BASE_URL()}/tours`, "Գտնել նոր արշավ")}`
   );
   return {
     to: input.to,
-    subject: `Գրանցումը չեղարկվեց՝ ${input.tourTitle}`,
+    subject: `Ամրագրումը չեղարկվեց՝ ${input.tourTitle}`,
     html,
-    text: `Գրանցումդ չեղարկվեց՝ ${input.tourTitle} (${input.date})`,
+    text: `Ամրագրումդ չեղարկվեց՝ ${input.tourTitle} (${input.date})`,
   };
 }
 
@@ -230,7 +231,7 @@ export function paymentReceiptEmail(input: {
     `<p>${ok ? "Շնորհակալություն։" : "Վճարումը մերժվել է թեստային գործիքով։"}</p>
      ${table(
        [
-         row("Տեսակ", input.kind === "subscription" ? "Ակումբի բաժանորդագրություն" : "Արշավի գրանցում"),
+         row("Տեսակ", input.kind === "subscription" ? "Ակումբի բաժանորդագրություն" : "Արշավի ամրագրում"),
          row("Առարկա", input.label),
          row("Գումար", formatAmd(input.amount)),
          row("Քարտ", input.cardLast4 ? `•••• ${input.cardLast4}` : "—"),
@@ -341,8 +342,8 @@ export function clubCancellationEmail(input: {
   email: string;
 }) {
   const html = layout(
-    "Մասնակիցը չեղարկեց գրանցումը",
-    `<p>«${esc(input.tourTitle)}» արշավի մասնակիցը չեղարկել է գրանցումը։ Տեղն ազատվել է։
+    "Մասնակիցը չեղարկեց ամրագրումը",
+    `<p>«${esc(input.tourTitle)}» արշավի մասնակիցը չեղարկել է ամրագրումը։ Տեղն ազատվել է։
      Եթե նա վճարել է, կապվեք նրա հետ գումարը վերադարձնելու համար։</p>
      ${table(
        [
@@ -358,7 +359,7 @@ export function clubCancellationEmail(input: {
     to: input.to,
     subject: `Չեղարկում՝ ${input.tourTitle}`,
     html,
-    text: `${input.participant} չեղարկեց գրանցումը՝ ${input.tourTitle} (${input.date})`,
+    text: `${input.participant} չեղարկեց ամրագրումը՝ ${input.tourTitle} (${input.date})`,
   };
 }
 

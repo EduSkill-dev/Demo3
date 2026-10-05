@@ -29,7 +29,7 @@ export const ROLE_LABELS: Record<string, string> = {
 export const ACCOUNT_LIMITS = {
   post: { role: "club", label: "Նոր հայտարարություններ", short: "Հրապարակում" },
   receive: { role: "club", label: "Նոր հայտերի ընդունում", short: "Հայտեր" },
-  book: { role: "individual", label: "Գրանցում արշավներին", short: "Գրանցում" },
+  book: { role: "individual", label: "Արշավների ամրագրում", short: "Ամրագրում" },
 } as const;
 export type AccountLimit = keyof typeof ACCOUNT_LIMITS;
 
@@ -46,8 +46,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "tour.cancelled": "Չեղարկեց արշավը",
   "tour.hidden": "Թաքցրեց հայտարարությունը",
   "tour.shown": "Վերադարձրեց հայտարարությունը",
-  "booking.created": "Գրանցվեց արշավին",
-  "booking.cancelled": "Չեղարկեց գրանցումը",
+  "booking.created": "Ամրագրեց արշավ",
+  "booking.cancelled": "Չեղարկեց ամրագրումը",
   "review.created": "Թողեց գնահատական",
   "payment.made": "Կատարեց վճարում",
   "admin.account_frozen": "Սառեցրեց հաշիվը",
@@ -76,7 +76,7 @@ export const TEXT_SECTIONS: { title: string; sections: [string, string][] }[] = 
       ["about", "Մեր մասին"],
       ["toursPage", "Արշավներ"],
       ["tour", "Արշավի էջ"],
-      ["signup", "Արշավի գրանցում"],
+      ["signup", "Արշավի ամրագրում"],
       ["clubsPage", "Ակումբներ"],
       ["clubPage", "Ակումբի էջ"],
       ["faq", "Հաճախ տրվող հարցեր"],

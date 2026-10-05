@@ -34,6 +34,7 @@ export interface Club {
   description: string | null;
   phone: string | null;
   focus: string[]; // ClubFocus keys
+  cancel_hours: number; // how long before a hike a booking can still be cancelled (24/36/48/60)
   posting_blocked: boolean; // an admin switched off adding listings
   applications_blocked: boolean; // an admin switched off new sign-ups
   created_at: string;

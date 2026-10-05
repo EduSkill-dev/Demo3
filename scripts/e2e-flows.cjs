@@ -709,6 +709,22 @@ async function main() {
         closeTour.status === 200 && closedSeen.length === 0 && stillClosed === true && openTour.status === 200 && openSeen.length === 1,
         `close=${closeTour.status} seen=${closedSeen.length} clubUndo=${JSON.stringify(clubUndo.data)} still=${stillClosed} open=${openTour.status} seen=${openSeen.length}`);
 
+      // Each club sets its own cancel window (24 / 36 / 48 / 60 hours). Noon two
+      // days ahead is always 32-56 hours away: inside a 60 h window, outside a 24 h one.
+      const midTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Day After', date: future(2), meeting_time: '12:00' })).select('id').single()).data;
+      const midBooking = (await admin.from('bookings').insert({ tour_id: midTour.id, user_id: ids.ind, status: 'confirmed' }).select('id').single()).data;
+      await signIn('club');
+      const badHours = await anon.from('clubs').update({ cancel_hours: 30 }).eq('id', clubA).select('cancel_hours');
+      const set60 = await anon.from('clubs').update({ cancel_hours: 60 }).eq('id', clubA).select('cancel_hours');
+      const late60 = await api('/api/bookings', { action: 'cancel', booking_id: midBooking.id }, indCookie);
+      const set24 = await anon.from('clubs').update({ cancel_hours: 24 }).eq('id', clubA).select('cancel_hours');
+      const ok24 = await api('/api/bookings', { action: 'cancel', booking_id: midBooking.id }, indCookie);
+      await admin.from('clubs').update({ cancel_hours: 48 }).eq('id', clubA);
+      await admin.from('tours').delete().eq('id', midTour.id);
+      check('a club sets its own cancel window: 60 h refuses what 24 h allows',
+        !!badHours.error && set60.data?.[0]?.cancel_hours === 60 && late60.status >= 400 && set24.data?.[0]?.cancel_hours === 24 && ok24.status === 200,
+        `bad=${badHours.error ? 'refused' : 'ALLOWED'} 60h=${late60.status} ${JSON.stringify(late60.body)} 24h=${ok24.status} ${JSON.stringify(ok24.body)}`);
+
       // Single functions forced off: the account works, that one thing does not.
       const noPost = await act({ action: 'account.setLimit', userId: ids.club, limit: 'post', blocked: true }, superCookie);
       const noReceive = await act({ action: 'account.setLimit', userId: ids.club, limit: 'receive', blocked: true }, superCookie);

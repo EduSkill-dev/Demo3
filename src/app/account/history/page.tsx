@@ -15,7 +15,7 @@ export default async function HistoryPage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const [{ data: bookings }, { data: payments }, { data: profile }] = await Promise.all([
-    supabase.from("bookings").select("id, tours(*, clubs(id, name))").eq("user_id", user.id).eq("status", "confirmed"),
+    supabase.from("bookings").select("id, tours(*, clubs(id, name, cancel_hours))").eq("user_id", user.id).eq("status", "confirmed"),
     supabase
       .from("payments")
       .select("id, tour_id, created_at, amount, currency, card_last4, period_start, period_end")

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Tour } from "@/types/database";
-import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
+import { cancelHoursOf, formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import FramedPhoto from "@/components/ui/FramedPhoto";
 
@@ -11,7 +11,7 @@ export type TourForDetails = Pick<
   Tour,
   | "id" | "title" | "description" | "regions" | "terrains" | "date" | "max_participants" | "photo_urls"
   | "overnight" | "difficulty" | "coordinator_phone" | "notes" | "meeting_point" | "meeting_time" | "price"
-> & { club?: { id: string; name: string } | null };
+> & { club?: { id: string; name: string; cancel_hours?: number | null } | null };
 
 // The full announcement — used inside modals ("View", "See more").
 // `seats.cap` is what the platform accepts under the club's package; the
@@ -57,7 +57,7 @@ export default function TourDetails({
         {tour.coordinator_phone}
       </a>,
     ],
-    [t("tour.cancellation"), t("tour.cancellationText", { hours: CANCEL_WINDOW_HOURS })],
+    [t("tour.cancellation"), t("tour.cancellationText", { hours: cancelHoursOf(tour.club) })],
   ];
 
   return (
