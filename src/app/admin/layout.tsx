@@ -36,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <DashboardShell title={me.isSuper ? "Սուպեր ադմինի վահանակ" : "Ադմինի վահանակ"} items={items}>
+    <DashboardShell wide title={me.isSuper ? "Սուպեր ադմինի վահանակ" : "Ադմինի վահանակ"} items={items}>
       {children}
     </DashboardShell>
   );

@@ -103,7 +103,7 @@ export default async function AdminLogsPage({
       </form>
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[52rem] text-left text-sm">
+        <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">Երբ</th>
@@ -122,11 +122,11 @@ export default async function AdminLogsPage({
             {entries.map((e) => (
               <tr key={e.id} className="border-b border-line align-top last:border-0">
                 <td className="whitespace-nowrap px-4 py-2.5 text-muted">{stamp.format(new Date(e.at))}</td>
-                <td className="px-4 py-2.5">
-                  <span className="block break-all text-ink">{e.actor_label || "—"}</span>
+                <td className="whitespace-nowrap px-4 py-2.5">
+                  <span className="block text-ink">{e.actor_label || "—"}</span>
                   <span className="text-xs text-muted">{ROLE_LABELS[e.actor_role ?? ""] ?? "—"}</span>
                 </td>
-                <td className="px-4 py-2.5 font-medium text-ink">{ACTION_LABELS[e.action] ?? e.action}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 font-medium text-ink">{ACTION_LABELS[e.action] ?? e.action}</td>
                 <td className="break-words px-4 py-2.5 text-muted">{details(e)}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-muted">{e.ip ?? "—"}</td>
               </tr>

@@ -5,8 +5,8 @@ import { clientIp, logActivity } from "@/lib/admin";
 
 // Sign-in goes through the server so that
 //   * every successful sign-in is logged with its IP address,
-//   * an admin can use either of the two addresses tied to the account
-//     (same password), and
+//   * the super admin can use either of the two addresses tied to the
+//     account (same password), and
 //   * a blocked account is turned away even before its ban is noticed.
 // The session cookie is set by the server client.
 export async function POST(req: Request) {
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   let result = await supabase.auth.signInWithPassword({ email, password });
   let via: "primary" | "alt" = "primary";
 
-  // Not an account address: it may be an admin's second one.
+  // Not an account address: it may be the super admin's second one.
   if (result.error?.code === "invalid_credentials") {
     const { data: alias } = await admin.from("admins").select("user_id").eq("alt_email", email).maybeSingle();
     const aliasId = (alias as { user_id: string } | null)?.user_id;

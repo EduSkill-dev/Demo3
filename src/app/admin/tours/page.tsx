@@ -40,7 +40,7 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
         <SearchBox placeholder="Փնտրել ըստ անվան կամ ակումբի" />
       </div>
       <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[40rem] text-left text-sm">
+        <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">Արշավ</th>
@@ -61,9 +61,9 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
                 <td className="px-4 py-3">
                   <Link href={`/tours/${r.id}`} className="font-medium text-ink hover:text-apricot-dark">{r.title}</Link>
                 </td>
-                <td className="px-4 py-3 text-muted">{r.clubs?.name ?? "—"}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-muted">{r.clubs?.name ?? "—"}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-muted">{fmt(r.date, "short")}</td>
-                <td className="px-4 py-3">
+                <td className="whitespace-nowrap px-4 py-3">
                   {r.admin_hidden ? (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
                       Փակված է ադմինի կողմից

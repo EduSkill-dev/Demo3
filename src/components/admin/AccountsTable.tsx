@@ -1,5 +1,5 @@
 import { STATUS_LABELS, type AccountLimit, type AccountStatus } from "@/lib/adminLabels";
-import AccountActions from "./AccountActions";
+import AccountActions, { LimitSwitches } from "./AccountActions";
 import SearchBox from "./SearchBox";
 
 export type AccountRow = {
@@ -19,7 +19,12 @@ const BADGE: Record<AccountStatus, string> = {
   blocked: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
 };
 
-// The individuals list and the clubs list are the same table.
+const th = "whitespace-nowrap px-2 py-2.5 font-semibold first:pl-3 last:pr-3";
+const td = "whitespace-nowrap px-2 py-2 first:pl-3 last:pr-3";
+
+// The individuals list and the clubs list are the same table. Nothing wraps:
+// the name sits over the contact details, everything else is one line, and a
+// narrow screen scrolls the table sideways.
 export default function AccountsTable({
   title,
   nameHeader,
@@ -40,15 +45,15 @@ export default function AccountsTable({
         <SearchBox placeholder="Փնտրել ըստ անվան, էլ. հասցեի, հեռախոսի" />
       </div>
       <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[46rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
+        <table className="w-full text-left text-[13px]">
+          <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
             <tr>
-              <th className="px-4 py-3">{nameHeader}</th>
-              <th className="px-4 py-3">Կապ</th>
-              {extraHeader && <th className="px-4 py-3">{extraHeader}</th>}
-              <th className="px-4 py-3">Գրանցվել է</th>
-              <th className="px-4 py-3">Կարգավիճակ</th>
-              <th className="px-4 py-3" />
+              <th className={th}>{nameHeader}</th>
+              {extraHeader && <th className={th}>{extraHeader}</th>}
+              <th className={th}>Գրանցվել է</th>
+              <th className={th}>Կարգավիճակ</th>
+              <th className={th}>Ֆունկցիաներ</th>
+              <th className={`${th} text-right`}>Գործողություններ</th>
             </tr>
           </thead>
           <tbody>
@@ -58,25 +63,36 @@ export default function AccountsTable({
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.userId} className="border-b border-line align-top last:border-0">
-                <td className="px-4 py-3 font-medium text-ink">{r.name || "—"}</td>
-                <td className="px-4 py-3 text-muted">
-                  <span className="block break-all">{r.email}</span>
-                  {r.phone && <span className="block">{r.phone}</span>}
+              <tr key={r.userId} className="border-b border-line last:border-0">
+                <td className={td}>
+                  {/* A fixed width, so long names and addresses are cut with "…" (full text on hover). */}
+                  <div className="w-[13rem] 2xl:w-[20rem]">
+                    <span className="block truncate font-medium text-ink" title={r.name}>{r.name || "—"}</span>
+                    <span className="block truncate text-xs text-muted" title={`${r.email}${r.phone ? ` · ${r.phone}` : ""}`}>
+                      {r.email}
+                      {r.phone ? ` · ${r.phone}` : ""}
+                    </span>
+                  </div>
                 </td>
-                {extraHeader && <td className="px-4 py-3 text-muted">{r.extra ?? "—"}</td>}
-                <td className="whitespace-nowrap px-4 py-3 text-muted">{r.joined}</td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
+                {extraHeader && <td className={`${td} text-muted`}>{r.extra ?? "—"}</td>}
+                <td className={`${td} text-muted`}>{r.joined}</td>
+                <td className={td}>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
                 </td>
-                <td className="px-4 py-3">
-                  <AccountActions userId={r.userId} status={r.status} label={r.name || r.email} limits={r.limits} />
+                <td className={td}>
+                  <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
+                </td>
+                <td className={td}>
+                  <AccountActions userId={r.userId} status={r.status} label={r.name || r.email} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <p className="mt-2 text-xs text-muted">
+        Ֆունկցիաներ՝ կանաչը միացված է, կարմիրը՝ անջատված։ Սեղմեք՝ փոխելու համար։
+      </p>
     </div>
   );
 }

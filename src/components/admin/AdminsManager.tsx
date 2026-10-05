@@ -8,7 +8,6 @@ import { adminAction, adminButton, adminDanger, adminGhost, adminInput } from ".
 export type AdminRow = {
   userId: string;
   email: string;
-  altEmail: string | null;
   perms: AdminPerm[];
   mustChangePassword: boolean;
   createdAt: string;
@@ -71,7 +70,6 @@ function AdminItem({ row, onPassword }: { row: AdminRow; onPassword: (email: str
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-all font-semibold text-ink">{row.email}</p>
-          <p className="break-all text-sm text-muted">Երկրորդ հասցե՝ {row.altEmail ?? "—"}</p>
           {row.mustChangePassword && (
             <p className="mt-1 text-xs font-semibold text-apricot-dark dark:text-apricot">Դեռ չի փոխել մեկանգամյա գաղտնաբառը</p>
           )}
@@ -111,7 +109,6 @@ function AdminItem({ row, onPassword }: { row: AdminRow; onPassword: (email: str
 export default function AdminsManager({ rows }: { rows: AdminRow[] }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [altEmail, setAltEmail] = useState("");
   const [perms, setPerms] = useState<AdminPerm[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,12 +118,11 @@ export default function AdminsManager({ rows }: { rows: AdminRow[] }) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await adminAction<{ password: string }>({ action: "admin.create", email, altEmail, perms });
+    const res = await adminAction<{ password: string }>({ action: "admin.create", email, perms });
     setBusy(false);
     if (res.error !== null) return setError(res.error);
     setShown({ email: email.trim(), password: res.data.password });
     setEmail("");
-    setAltEmail("");
     setPerms([]);
     router.refresh();
   }
@@ -137,17 +133,10 @@ export default function AdminsManager({ rows }: { rows: AdminRow[] }) {
 
       <form onSubmit={create} className="max-w-xl space-y-4 rounded-xl border border-line bg-surface p-5">
         <h3 className="font-serif text-lg font-semibold text-heading">Նոր ադմին</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label htmlFor="admin-email" className="mb-1 block text-sm font-medium text-ink">Հարթակի էլ. հասցե</label>
-            <input id="admin-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={adminInput} />
-          </div>
-          <div>
-            <label htmlFor="admin-alt" className="mb-1 block text-sm font-medium text-ink">Երկրորդ էլ. հասցե</label>
-            <input id="admin-alt" type="email" required value={altEmail} onChange={(e) => setAltEmail(e.target.value)} className={adminInput} />
-          </div>
+        <div>
+          <label htmlFor="admin-email" className="mb-1 block text-sm font-medium text-ink">Հարթակի էլ. հասցե</label>
+          <input id="admin-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={adminInput} />
         </div>
-        <p className="text-xs text-muted">Ադմինը կարող է մուտք գործել երկու հասցեներից ցանկացածով՝ նույն գաղտնաբառով։</p>
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-ink">Թույլտվություններ</legend>
           <PermBoxes value={perms} onChange={setPerms} idPrefix="new" />

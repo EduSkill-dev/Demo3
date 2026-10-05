@@ -207,13 +207,11 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   async "admin.create"(ctx, body) {
     if (!ctx.me.isSuper) return fail(FORBIDDEN, 403);
     const email = str(body.email).toLowerCase();
-    const altEmail = str(body.altEmail).toLowerCase();
-    if (!EMAIL_RE.test(email) || !EMAIL_RE.test(altEmail)) return fail("Նշեք երկու ճիշտ էլ. հասցե։");
-    if (email === altEmail) return fail("Երկու հասցեները պետք է տարբեր լինեն։");
+    if (!EMAIL_RE.test(email)) return fail("Նշեք ճիշտ էլ. հասցե։");
 
-    const { data: taken } = await ctx.db.from("profiles").select("id").in("email", [email, altEmail]).limit(1);
-    const { data: aliasTaken } = await ctx.db.from("admins").select("user_id").in("alt_email", [email, altEmail]).limit(1);
-    if ((taken ?? []).length || (aliasTaken ?? []).length) return fail("Այս հասցեներից մեկն արդեն զբաղված է։");
+    const { data: taken } = await ctx.db.from("profiles").select("id").eq("email", email).limit(1);
+    const { data: aliasTaken } = await ctx.db.from("admins").select("user_id").eq("alt_email", email).limit(1);
+    if ((taken ?? []).length || (aliasTaken ?? []).length) return fail("Այս հասցեն արդեն զբաղված է։");
 
     const password = oneTimePassword();
     const { data: created, error } = await ctx.db.auth.admin.createUser({ email, password, email_confirm: true });
@@ -226,7 +224,6 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       : await ctx.db.from("admins").insert({
           user_id: id,
           perms: cleanPerms(body.perms),
-          alt_email: altEmail,
           must_change_password: true,
           created_by: ctx.me.userId,
         });
@@ -242,7 +239,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       action: "admin.admin_created",
       targetType: "admin",
       targetId: id,
-      targetLabel: `${email} / ${altEmail}`,
+      targetLabel: email,
       meta: { perms: cleanPerms(body.perms) },
       ip: ctx.ip,
     });

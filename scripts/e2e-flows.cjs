@@ -660,7 +660,7 @@ async function main() {
       const outsider = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'frozen' }, indCookie);
       check('admin: an ordinary account cannot call the admin API', outsider.status === 401, `status=${outsider.status}`);
 
-      const made = await act({ action: 'admin.create', email: email('adm'), altEmail: email('admalt'), perms: ['individuals'] }, superCookie);
+      const made = await act({ action: 'admin.create', email: email('adm'), perms: ['individuals'] }, superCookie);
       ids.adm = (await admin.from('profiles').select('id').eq('email', email('adm')).maybeSingle()).data?.id;
       check('admin: the super admin creates an admin with a one-time password',
         made.status === 200 && typeof made.body.password === 'string' && !!ids.adm, `status=${made.status} body=${JSON.stringify(made.body).replace(/"password":"[^"]*"/, '"password":"…"')}`);
@@ -671,12 +671,12 @@ async function main() {
       check('admin: the one-time password opens nothing until it is replaced',
         admFirst.status === 200 && early.status === 403 && changed.status === 200,
         `login=${admFirst.status} early=${early.status} change=${changed.status} ${JSON.stringify(changed.body)}`);
-      const admCookie = (await loginCookie(email('admalt'), 'E2e-admin-pass-1')).cookie;
+      const admCookie = (await loginCookie(email('adm'), 'E2e-admin-pass-1')).cookie;
 
       const overClub = await act({ action: 'account.setStatus', userId: ids.club2, status: 'frozen' }, admCookie);
       const overTour = await act({ action: 'tour.setHidden', tourId, hidden: true }, admCookie);
       const overText = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'home.heroTitle', value: 'x' }] }, admCookie);
-      const overAdmin = await act({ action: 'admin.create', email: email('adm2'), altEmail: email('adm2alt'), perms: [] }, admCookie);
+      const overAdmin = await act({ action: 'admin.create', email: email('adm2'), perms: [] }, admCookie);
       check('admin: a regular admin can do only what was ticked',
         overClub.status === 403 && overTour.status === 403 && overText.status === 403 && overAdmin.status === 403,
         `club=${overClub.status} tour=${overTour.status} text=${overText.status} admin=${overAdmin.status}`);

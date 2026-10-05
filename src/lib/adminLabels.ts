@@ -27,9 +27,9 @@ export const ROLE_LABELS: Record<string, string> = {
 
 // Single functions an admin can force off for one account.
 export const ACCOUNT_LIMITS = {
-  post: { role: "club", label: "Նոր հայտարարություններ" },
-  receive: { role: "club", label: "Նոր հայտերի ընդունում" },
-  book: { role: "individual", label: "Գրանցում արշավներին" },
+  post: { role: "club", label: "Նոր հայտարարություններ", short: "Հրապարակում" },
+  receive: { role: "club", label: "Նոր հայտերի ընդունում", short: "Հայտեր" },
+  book: { role: "individual", label: "Գրանցում արշավներին", short: "Գրանցում" },
 } as const;
 export type AccountLimit = keyof typeof ACCOUNT_LIMITS;
 

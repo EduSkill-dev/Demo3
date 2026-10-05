@@ -2,8 +2,9 @@
 --
 --   * admins: who administers the platform. One super admin (created by
 --     scripts/create-super-admin.cjs) creates the others and ticks what each
---     may manage: individuals / clubs / tours / pages. Each admin has a second
---     login address (alt_email) and starts with a one-time password.
+--     may manage: individuals / clubs / tours / pages. The super admin has a
+--     second login address (alt_email); everyone starts with a one-time
+--     password.
 --   * profiles.status: active / frozen (signed in, read-only) / blocked
 --     (cannot sign in). Only the server changes it.
 --   * tours.admin_hidden: an admin took the listing off the site; the club

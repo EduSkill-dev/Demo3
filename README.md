@@ -252,9 +252,9 @@ Run every file in `supabase/migrations/` in name order with
 - **Super admin** — created once with
   `node scripts/create-super-admin.cjs <email> <second-email>`; the script
   prints a one-time password that must be replaced at the first sign-in.
-- **Admins** — created by the super admin at `/admin/admins`, each with two
-  sign-in addresses (same password), a one-time password and ticked
-  permissions: individuals, clubs, tours, pages.
+- **Admins** — created by the super admin at `/admin/admins`, each with one
+  address, a one-time password and ticked permissions: individuals, clubs,
+  tours, pages. Only the super admin has a second sign-in address.
 - **Site texts** — `/admin/pages` stores replacements for the dictionaries in
   `site_texts`; `makeT` lays them over the built-in texts.
 - **Accounts** — freeze (signed in, read-only), block (cannot sign in) or
