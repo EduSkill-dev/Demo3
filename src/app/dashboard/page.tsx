@@ -43,7 +43,7 @@ export default async function AnnouncementsPage() {
     };
   });
 
-  const canAdd = limits.used < limits.maxListings;
+  const canAdd = limits.used < limits.maxListings && !club.posting_blocked;
 
   return (
     <div className="space-y-5">
@@ -55,7 +55,17 @@ export default async function AnnouncementsPage() {
           </Link>
         </div>
       )}
-      {limits.pkg && !canAdd && (
+      {club.posting_blocked && (
+        <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+          {t("announcements.postingBlocked")}
+        </p>
+      )}
+      {club.applications_blocked && (
+        <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+          {t("announcements.applicationsBlocked")}
+        </p>
+      )}
+      {limits.pkg && limits.used >= limits.maxListings && (
         <div className="rounded-xl border border-apricot/40 bg-apricot/10 p-4 text-sm text-ink">
           {t("announcements.atLimit", { name: PACKAGES[limits.pkg].name, max: limits.maxListings })}{" "}
           <Link href="/dashboard/packages" className="font-semibold text-apricot-dark underline dark:text-apricot">

@@ -40,7 +40,9 @@ export default function TourDetails({
     [
       t("tour.capacity"),
       seats
-        ? seats.taken >= seats.cap
+        ? seats.cap <= 0
+          ? t("signup.closed")
+          : seats.taken >= seats.cap
           ? t("tour.full")
           : t("tour.seatsLeft", { free: seats.cap - seats.taken, cap: Math.max(tour.max_participants, seats.cap) })
         : t("common.upTo", { count: tour.max_participants }),

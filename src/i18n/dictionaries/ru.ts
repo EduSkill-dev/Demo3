@@ -234,6 +234,8 @@ const ru: DeepPartial<Dictionary> = {
     corporate: "Корпоративные мероприятия",
   },
   announcements: {
+    postingBlocked: "Добавление новых объявлений отключено администратором.",
+    applicationsBlocked: "Приём новых заявок на ваши походы отключён администратором.",
     adminHidden: "Закрыто администратором",
     counter: "Объявления: {used}/{max}",
     new: "+ Новое объявление",
@@ -466,6 +468,8 @@ const ru: DeepPartial<Dictionary> = {
     onTour: "поход: {title}",
   },
   errors: {
+    bookingDisabled: "Запись на походы отключена администратором.",
+    postingDisabled: "Добавление новых объявлений отключено администратором.",
     frozen: "Ваш аккаунт заморожен: действия временно недоступны.",
     alreadyBooked: "Вы уже записаны на этот поход.",
     seatsGone: "Мест больше нет.",

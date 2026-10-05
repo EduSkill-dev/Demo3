@@ -21,6 +21,7 @@ export default function TourCard({
 }) {
   const t = useT();
   const fmt = useFormatDate();
+  const closed = tour.cap <= 0;
   const full = tour.taken >= tour.cap;
   const date = fmt(tour.date, "weekday");
   const clubHref = `/clubs/${tour.club.id}${backHref ? `?back=${encodeURIComponent(backHref)}` : ""}`;
@@ -35,7 +36,7 @@ export default function TourCard({
         )}
         {full && (
           <span className="absolute left-3 top-3 rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white">
-            {t("toursPage.full")}
+            {closed ? t("signup.closed") : t("toursPage.full")}
           </span>
         )}
       </button>

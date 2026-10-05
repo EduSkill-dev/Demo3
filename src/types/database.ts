@@ -12,6 +12,7 @@ export interface Profile {
   id: string; // matches auth.users.id
   role: "individual" | "club" | "admin";
   status: "active" | "frozen" | "blocked"; // set by admins only
+  booking_blocked: boolean; // an admin switched off signing up for hikes
   first_name: string | null;
   last_name: string | null;
   age: number | null; // legacy; birth_date replaces it
@@ -33,6 +34,8 @@ export interface Club {
   description: string | null;
   phone: string | null;
   focus: string[]; // ClubFocus keys
+  posting_blocked: boolean; // an admin switched off adding listings
+  applications_blocked: boolean; // an admin switched off new sign-ups
   created_at: string;
 }
 

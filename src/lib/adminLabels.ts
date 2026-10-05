@@ -25,6 +25,14 @@ export const ROLE_LABELS: Record<string, string> = {
   super: "Սուպեր ադմին",
 };
 
+// Single functions an admin can force off for one account.
+export const ACCOUNT_LIMITS = {
+  post: { role: "club", label: "Նոր հայտարարություններ" },
+  receive: { role: "club", label: "Նոր հայտերի ընդունում" },
+  book: { role: "individual", label: "Գրանցում արշավներին" },
+} as const;
+export type AccountLimit = keyof typeof ACCOUNT_LIMITS;
+
 // activity_log.action → what the log page shows.
 export const ACTION_LABELS: Record<string, string> = {
   "auth.login": "Մուտք գործեց",
@@ -46,6 +54,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.account_blocked": "Արգելափակեց հաշիվը",
   "admin.account_activated": "Ակտիվացրեց հաշիվը",
   "admin.account_deleted": "Ջնջեց հաշիվը",
+  "admin.limit_on": "Անջատեց հաշվի ֆունկցիան",
+  "admin.limit_off": "Վերադարձրեց հաշվի ֆունկցիան",
   "admin.tour_closed": "Փակեց հայտարարությունը",
   "admin.tour_opened": "Բացեց հայտարարությունը",
   "admin.text_saved": "Խմբագրեց կայքի տեքստը",

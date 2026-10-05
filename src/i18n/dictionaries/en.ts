@@ -234,6 +234,8 @@ const en: DeepPartial<Dictionary> = {
     corporate: "Corporate events",
   },
   announcements: {
+    postingBlocked: "Adding new listings has been switched off by an administrator.",
+    applicationsBlocked: "New sign-ups for your hikes have been switched off by an administrator.",
     adminHidden: "Closed by an administrator",
     counter: "Listings: {used}/{max}",
     new: "+ New listing",
@@ -466,6 +468,8 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    bookingDisabled: "Signing up for hikes has been switched off by an administrator.",
+    postingDisabled: "Adding new listings has been switched off by an administrator.",
     frozen: "Your account is frozen: actions are temporarily unavailable.",
     alreadyBooked: "You are already signed up for this hike.",
     seatsGone: "No places left.",

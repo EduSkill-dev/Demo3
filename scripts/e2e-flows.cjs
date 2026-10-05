@@ -709,6 +709,32 @@ async function main() {
         closeTour.status === 200 && closedSeen.length === 0 && stillClosed === true && openTour.status === 200 && openSeen.length === 1,
         `close=${closeTour.status} seen=${closedSeen.length} clubUndo=${JSON.stringify(clubUndo.data)} still=${stillClosed} open=${openTour.status} seen=${openSeen.length}`);
 
+      // Single functions forced off: the account works, that one thing does not.
+      const noPost = await act({ action: 'account.setLimit', userId: ids.club, limit: 'post', blocked: true }, superCookie);
+      const noReceive = await act({ action: 'account.setLimit', userId: ids.club, limit: 'receive', blocked: true }, superCookie);
+      await signIn('club');
+      const refusedPost = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E Not Allowed', date: future(70) })).select('id');
+      const selfUnblock = await anon.from('clubs').update({ posting_blocked: false, applications_blocked: false }).eq('id', clubA).select('posting_blocked');
+      const editOwn = await anon.from('tours').update({ notes: 'still editable' }).eq('id', tourId).select('id');
+      const refusedApply = await admin.from('bookings').insert({ tour_id: soonTour.id, user_id: ids.ind, status: 'confirmed' });
+      const wrongKind = await act({ action: 'account.setLimit', userId: ids.club, limit: 'book', blocked: true }, superCookie);
+      await act({ action: 'account.setLimit', userId: ids.club, limit: 'post', blocked: false }, superCookie);
+      await act({ action: 'account.setLimit', userId: ids.club, limit: 'receive', blocked: false }, superCookie);
+      check('admin: a club can lose new listings and new applications, and cannot switch them back itself',
+        noPost.status === 200 && noReceive.status === 200 && !!refusedPost.error && selfUnblock.data?.[0]?.posting_blocked === true
+          && (editOwn.data || []).length === 1 && /ակումբի արշավներին/.test(refusedApply.error?.message || '') && wrongKind.status === 400,
+        `post=${noPost.status} receive=${noReceive.status} insert=${refusedPost.error ? 'refused' : 'ALLOWED'} self=${JSON.stringify(selfUnblock.data)} edit=${(editOwn.data || []).length} apply=${refusedApply.error ? refusedApply.error.message : 'ALLOWED'} wrong=${wrongKind.status}`);
+
+      const noBook = await act({ action: 'account.setLimit', userId: ids.ind2, limit: 'book', blocked: true }, admCookie);
+      const ind2Fresh = (await loginCookie(email('ind2'), PASSWORD)).cookie;
+      const refusedBook = await api('/api/bookings', { tour_id: tourId }, ind2Fresh);
+      await signIn('ind2');
+      const stillEdits = await anon.from('profiles').update({ first_name: 'Ազատ' }).eq('id', ids.ind2).select('id');
+      await act({ action: 'account.setLimit', userId: ids.ind2, limit: 'book', blocked: false }, admCookie);
+      check('admin: an individual can lose just the ability to sign up',
+        noBook.status === 200 && refusedBook.status >= 400 && (stillEdits.data || []).length === 1,
+        `limit=${noBook.status} book=${refusedBook.status} ${JSON.stringify(refusedBook.body)} edit=${(stillEdits.data || []).length}`);
+
       const heading = `E2E վերնագիր ${stamp}`;
       const badSlot = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'common.upTo', value: 'առանց թվի' }] }, superCookie);
       const saveText = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'home.heroTitle', value: heading }] }, superCookie);

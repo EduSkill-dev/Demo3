@@ -12,7 +12,7 @@ export type PublicClubInfo = {
 export type PublicTour = Tour & {
   club: PublicClubInfo;
   taken: number; // confirmed seats
-  cap: number; // seats the club's package allows on this tour
+  cap: number; // seats the club's package allows on this tour; 0 = sign-up closed
 };
 
 // Tours the public may see and book: active, not in the past, run by a club
@@ -23,7 +23,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
   const today = new Date().toISOString().slice(0, 10);
   let query = supabase
     .from("tours")
-    .select("*, clubs(id, name, tariff, package_ends_at)")
+    .select("*, clubs(id, name, tariff, package_ends_at, applications_blocked)")
     .eq("status", "active")
     .eq("admin_hidden", false)
     .gte("date", today)
@@ -31,7 +31,9 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
   if (opts.clubId) query = query.eq("club_id", opts.clubId);
   const { data } = await query;
 
-  type Row = Tour & { clubs: { id: string; name: string; tariff: string | null; package_ends_at: string | null } | null };
+  type Row = Tour & {
+    clubs: { id: string; name: string; tariff: string | null; package_ends_at: string | null; applications_blocked: boolean } | null;
+  };
   const rows = ((data ?? []) as Row[]).filter((t) => t.clubs && activePackage(t.clubs));
   if (rows.length === 0) return [];
 
@@ -55,7 +57,8 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
         rating: PACKAGES[pkg].showsRatings && r ? { average: Number(r.average), count: r.count } : null,
       },
       taken: taken.get(tour.id) ?? 0,
-      cap: Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour),
+      // 0 = sign-up closed (an admin switched the club's applications off).
+      cap: clubs!.applications_blocked ? 0 : Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour),
     };
   });
 }

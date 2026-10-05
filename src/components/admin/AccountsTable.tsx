@@ -1,4 +1,4 @@
-import { STATUS_LABELS, type AccountStatus } from "@/lib/adminLabels";
+import { STATUS_LABELS, type AccountLimit, type AccountStatus } from "@/lib/adminLabels";
 import AccountActions from "./AccountActions";
 import SearchBox from "./SearchBox";
 
@@ -10,6 +10,7 @@ export type AccountRow = {
   status: AccountStatus;
   joined: string; // already formatted
   extra?: string; // e.g. the club's package
+  limits: { key: AccountLimit; blocked: boolean }[]; // functions an admin can force off
 };
 
 const BADGE: Record<AccountStatus, string> = {
@@ -69,7 +70,7 @@ export default function AccountsTable({
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <AccountActions userId={r.userId} status={r.status} label={r.name || r.email} />
+                  <AccountActions userId={r.userId} status={r.status} label={r.name || r.email} limits={r.limits} />
                 </td>
               </tr>
             ))}

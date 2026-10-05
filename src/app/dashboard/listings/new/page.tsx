@@ -6,8 +6,9 @@ import TourForm from "@/components/TourForm";
 export default async function NewTourPage() {
   const mine = await getMyClub();
   if (!mine) redirect("/login");
-  // No package, or the cap is reached: the listings page explains why.
-  if (mine.limits.used >= mine.limits.maxListings) redirect("/dashboard");
+  // No package, the cap is reached, or an admin switched posting off: the
+  // listings page explains why.
+  if (mine.limits.used >= mine.limits.maxListings || mine.club.posting_blocked) redirect("/dashboard");
 
   const t = await getT();
   return (

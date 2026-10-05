@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { can, clientIp, getAdmin, logActivity, oneTimePassword, type AdminSession } from "@/lib/admin";
-import { ADMIN_PERMS, type AccountStatus, type AdminPerm } from "@/lib/adminLabels";
+import { ACCOUNT_LIMITS, ADMIN_PERMS, type AccountLimit, type AccountStatus, type AdminPerm } from "@/lib/adminLabels";
 import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
 import { DICTIONARIES } from "@/i18n/translate";
@@ -78,6 +78,37 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       targetType: "account",
       targetId: t.account.id,
       targetLabel: t.label,
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true });
+  },
+
+  // Force one function of an account off (or back on), whatever its package:
+  // a club's new listings / new applications, an individual's sign-ups.
+  async "account.setLimit"(ctx, body) {
+    const limit = str(body.limit) as AccountLimit;
+    if (!Object.prototype.hasOwnProperty.call(ACCOUNT_LIMITS, limit)) return fail("Անհայտ ֆունկցիա։");
+    const blocked = body.blocked === true;
+    const t = await targetAccount(ctx, str(body.userId));
+    if (t.error) return t.error;
+    if (t.account.role !== ACCOUNT_LIMITS[limit].role) return fail("Այս ֆունկցիան այս հաշվին չի վերաբերում։");
+
+    const { error } =
+      limit === "book"
+        ? await ctx.db.from("profiles").update({ booking_blocked: blocked }).eq("id", t.account.id)
+        : await ctx.db
+            .from("clubs")
+            .update(limit === "post" ? { posting_blocked: blocked } : { applications_blocked: blocked })
+            .eq("owner_id", t.account.id);
+    if (error) return fail(error.message, 500);
+
+    await logActivity({
+      actor: ctx.me.userId,
+      action: blocked ? "admin.limit_on" : "admin.limit_off",
+      targetType: "account",
+      targetId: t.account.id,
+      targetLabel: t.label,
+      meta: { limit: ACCOUNT_LIMITS[limit].label },
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true });

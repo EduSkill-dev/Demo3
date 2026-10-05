@@ -11,6 +11,8 @@ type Row = {
   phone: string | null;
   tariff: string | null;
   package_ends_at: string | null;
+  posting_blocked: boolean;
+  applications_blocked: boolean;
   profiles: { id: string; email: string; status: AccountStatus; created_at: string } | null;
 };
 
@@ -21,7 +23,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
   const fmt = await getFormatDate();
   const { data } = await createAdminClient()
     .from("clubs")
-    .select("name, phone, tariff, package_ends_at, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
+    .select("name, phone, tariff, package_ends_at, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -37,6 +39,10 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
         phone: c.phone,
         status: c.profiles!.status,
         joined: fmt(c.profiles!.created_at, "short"),
+        limits: [
+          { key: "post" as const, blocked: c.posting_blocked },
+          { key: "receive" as const, blocked: c.applications_blocked },
+        ],
         extra: pkg ? `${PACKAGES[pkg].name} · մինչև ${fmt(c.package_ends_at!, "short")}` : "Փաթեթ չկա",
       };
     })

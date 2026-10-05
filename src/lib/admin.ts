@@ -86,3 +86,21 @@ export async function inactiveAccountError(userId: string): Promise<string | nul
     ? null
     : "Ձեր հաշիվը սառեցված է․ գործողությունները ժամանակավորապես անհասանելի են։";
 }
+
+// Sign-ups an admin switched off (for the person, the club or the listing).
+// The database refuses them too; asking first keeps a paid sign-up from
+// being charged and then refused.
+export async function bookingRefusedByAdmin(userId: string, tourId: string): Promise<string | null> {
+  const db = createAdminClient();
+  const [{ data: profile }, { data: tour }] = await Promise.all([
+    db.from("profiles").select("booking_blocked").eq("id", userId).maybeSingle(),
+    db.from("tours").select("admin_hidden, clubs(applications_blocked)").eq("id", tourId).maybeSingle(),
+  ]);
+  if ((profile as { booking_blocked?: boolean } | null)?.booking_blocked) {
+    return "Արշավներին գրանցվելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։";
+  }
+  const t = tour as unknown as { admin_hidden: boolean; clubs: { applications_blocked: boolean } | null } | null;
+  if (t?.admin_hidden) return "Այս արշավին գրանցումը փակ է։";
+  if (t?.clubs?.applications_blocked) return "Այս ակումբի արշավներին գրանցումը ժամանակավորապես փակ է։";
+  return null;
+}

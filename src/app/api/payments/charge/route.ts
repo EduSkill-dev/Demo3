@@ -1,4 +1,4 @@
-import { inactiveAccountError } from "@/lib/admin";
+import { bookingRefusedByAdmin, inactiveAccountError } from "@/lib/admin";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -124,6 +124,9 @@ export async function POST(req: Request) {
     }
     tour = tourRow as unknown as TourRow;
     amount = Number(tour.price) || 0;
+
+    const refused = await bookingRefusedByAdmin(auth.user.id, tour.id);
+    if (refused) return NextResponse.json({ error: refused }, { status: 403 });
 
     const { data: existing } = await supabase
       .from("bookings")

@@ -2,11 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AccountStatus } from "@/lib/adminLabels";
+import { ACCOUNT_LIMITS, type AccountLimit, type AccountStatus } from "@/lib/adminLabels";
 import { adminAction, adminDanger, adminGhost } from "./adminApi";
 
-// Freeze / block / re-activate / delete for one individual or club account.
-export default function AccountActions({ userId, status, label }: { userId: string; status: AccountStatus; label: string }) {
+// Freeze / block / re-activate / delete for one individual or club account,
+// plus the single functions that can be forced off.
+export default function AccountActions({
+  userId,
+  status,
+  label,
+  limits,
+}: {
+  userId: string;
+  status: AccountStatus;
+  label: string;
+  limits: { key: AccountLimit; blocked: boolean }[];
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +72,30 @@ export default function AccountActions({ userId, status, label }: { userId: stri
           Ջնջել
         </button>
       </div>
+      <ul className="mt-2 space-y-1">
+        {limits.map((l) => (
+          <li key={l.key} className="flex items-center justify-end gap-2 text-xs">
+            <span className={l.blocked ? "font-semibold text-red-700 dark:text-red-300" : "text-muted"}>
+              {ACCOUNT_LIMITS[l.key].label}՝ {l.blocked ? "անջատված" : "միացված"}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              className={adminGhost}
+              onClick={() =>
+                run(
+                  { action: "account.setLimit", limit: l.key, blocked: !l.blocked },
+                  l.blocked
+                    ? `Միացնե՞լ «${ACCOUNT_LIMITS[l.key].label}» ֆունկցիան «${label}» հաշվի համար։`
+                    : `Անջատե՞լ «${ACCOUNT_LIMITS[l.key].label}» ֆունկցիան «${label}» հաշվի համար։`
+                )
+              }
+            >
+              {l.blocked ? "Միացնել" : "Անջատել"}
+            </button>
+          </li>
+        ))}
+      </ul>
       {error && <p className="mt-1 text-right text-xs text-red-600">{error}</p>}
     </div>
   );

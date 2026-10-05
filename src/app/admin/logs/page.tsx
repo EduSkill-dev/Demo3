@@ -38,6 +38,7 @@ function details(e: Entry): string {
   if (m.amount != null) parts.push(`${m.amount} ֏${m.kind === "subscription" ? ` · փաթեթ ${m.tariff ?? ""}` : ""}`);
   if (m.score != null) parts.push(`${m.score}/5`);
   if (m.via) parts.push("երկրորդ հասցեով");
+  if (typeof m.limit === "string") parts.push(m.limit);
   return parts.join(" · ");
 }
 
