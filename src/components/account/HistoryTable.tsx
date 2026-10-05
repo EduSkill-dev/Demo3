@@ -44,7 +44,7 @@ export default function HistoryTable({ rows, payer }: { rows: HistoryRow[]; paye
                 <td className="whitespace-nowrap px-4 py-3">{day(r.tour.date)}</td>
                 <td className="px-4 py-3">
                   {r.receipt ? (
-                    <button type="button" onClick={() => setReceipt(r)} className="font-semibold text-apricot hover:text-apricot-dark">
+                    <button data-view type="button" onClick={() => setReceipt(r)} className="font-semibold text-apricot hover:text-apricot-dark">
                       🧾 {t("common.view")}
                     </button>
                   ) : (
@@ -53,7 +53,7 @@ export default function HistoryTable({ rows, payer }: { rows: HistoryRow[]; paye
                 </td>
                 <td className="px-4 py-3 text-muted">{r.tour.regions.map((x) => t(`region.${x}`)).join(", ")}</td>
                 <td className="px-4 py-3 text-right">
-                  <button type="button" onClick={() => setTour(r)} className="font-semibold text-apricot hover:text-apricot-dark">
+                  <button data-view type="button" onClick={() => setTour(r)} className="font-semibold text-apricot hover:text-apricot-dark">
                     {t("common.view")}
                   </button>
                 </td>

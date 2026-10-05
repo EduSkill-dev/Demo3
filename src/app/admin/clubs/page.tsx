@@ -43,7 +43,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
           { key: "post" as const, blocked: c.posting_blocked },
           { key: "receive" as const, blocked: c.applications_blocked },
         ],
-        extra: pkg ? `${PACKAGES[pkg].name} · մինչև ${fmt(c.package_ends_at!, "short")}` : "Փաթեթ չկա",
+        extra: (pkg ? [PACKAGES[pkg].name, `մինչև ${fmt(c.package_ends_at!, "short")}`] : ["Փաթեթ չկա"]) as [string, string?],
       };
     })
     .filter((r) => !q || `${r.name} ${r.email} ${r.phone ?? ""}`.toLowerCase().includes(q));

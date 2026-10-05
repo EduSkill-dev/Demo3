@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ADMIN_PERMS, type AdminPerm } from "@/lib/adminLabels";
+import { accountBlockedEmail, sendEmail } from "@/lib/email";
 
 export type AdminSession = {
   userId: string;
@@ -103,4 +104,16 @@ export async function bookingRefusedByAdmin(userId: string, tourId: string): Pro
   if (t?.admin_hidden) return "Այս արշավին գրանցումը փակ է։";
   if (t?.clubs?.applications_blocked) return "Այս ակումբի արշավներին գրանցումը ժամանակավորապես փակ է։";
   return null;
+}
+
+// Email a blocked account that it is blocked — at most once every ten
+// minutes, so repeated "forgot password" attempts cannot flood it.
+export async function notifyBlocked(userId: string) {
+  const db = createAdminClient();
+  const { data } = await db.from("profiles").select("email, blocked_notice_at").eq("id", userId).maybeSingle();
+  const p = data as { email: string; blocked_notice_at: string | null } | null;
+  if (!p?.email) return;
+  if (p.blocked_notice_at && Date.now() - new Date(p.blocked_notice_at).getTime() < 10 * 60 * 1000) return;
+  await db.from("profiles").update({ blocked_notice_at: new Date().toISOString() }).eq("id", userId);
+  await sendEmail(accountBlockedEmail({ to: p.email }));
 }

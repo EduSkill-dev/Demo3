@@ -59,7 +59,7 @@ export default function ToursExplorer({
 
   return (
     <div>
-      <div className="rounded-2xl border border-line bg-surface p-4">
+      <div data-view className="rounded-2xl border border-line bg-surface p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-xs font-semibold text-muted">
             {t("toursPage.region")}

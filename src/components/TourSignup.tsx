@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { CANCEL_WINDOW_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
@@ -16,6 +17,7 @@ type BookingRow = { id: string; status: "confirmed" | "cancelled" };
 // writes the booking and sends the emails.
 export default function TourSignup({
   tourId,
+  clubId,
   date,
   taken,
   limit,
@@ -25,6 +27,7 @@ export default function TourSignup({
   bare = false,
 }: {
   tourId: string;
+  clubId?: string; // the club running the hike: its owner gets "edit" instead of "sign up"
   date: string;
   taken: number;
   limit: number; // seats the platform accepts (the club's package)
@@ -38,6 +41,7 @@ export default function TourSignup({
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  const [ownsTour, setOwnsTour] = useState(false);
   const [booking, setBooking] = useState<BookingRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +57,16 @@ export default function TourSignup({
         supabase.from("profiles").select("role").eq("id", auth.user.id).single(),
         supabase.from("bookings").select("id, status").eq("tour_id", tourId).eq("user_id", auth.user.id).maybeSingle(),
       ]);
-      setRole((profile as { role?: string } | null)?.role ?? null);
+      const userRole = (profile as { role?: string } | null)?.role ?? null;
+      setRole(userRole);
+      if (userRole === "club" && clubId) {
+        const { data: own } = await supabase.from("clubs").select("id").eq("owner_id", auth.user.id).maybeSingle();
+        setOwnsTour((own as { id?: string } | null)?.id === clubId);
+      }
       setBooking((row as BookingRow) ?? null);
       setReady(true);
     })();
-  }, [tourId]);
+  }, [tourId, clubId]);
 
   const isPast = date < new Date().toISOString().slice(0, 10);
   const confirmed = booking?.status === "confirmed";
@@ -130,6 +139,10 @@ export default function TourSignup({
       <div className="mt-4">
         {!ready ? (
           <p className="text-sm text-muted">{t("common.loading")}</p>
+        ) : ownsTour ? (
+          <Link href={`/dashboard/listings/${tourId}/edit`} className={`${primary} block text-center`}>
+            {t("signup.editOwn")}
+          </Link>
         ) : isPast ? (
           <p className="text-sm text-muted">{t("signup.past")}</p>
         ) : role === "club" ? (

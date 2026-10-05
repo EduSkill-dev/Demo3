@@ -106,6 +106,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
         <aside className="h-fit lg:sticky lg:top-24">
           <TourSignup
             tourId={tour.id}
+            clubId={tour.club_id}
             date={tour.date}
             taken={taken}
             limit={cap}

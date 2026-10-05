@@ -304,6 +304,22 @@ ${input.email ?? ""} ${input.phone ?? ""}`,
   };
 }
 
+// To an account an admin blocked.
+export function accountBlockedEmail(input: { to: string }) {
+  const html = layout(
+    "Ձեր հաշիվն արգելափակված է",
+    `<p>Highland հարթակում Ձեր հաշիվն արգելափակվել է ադմինիստրատորի կողմից, և առայժմ չեք կարող մուտք գործել կամ որևէ գործողություն կատարել։</p>
+     <p>Հարցերի դեպքում խնդրում ենք կապվել մեզ հետ հարթակի «Օգնություն» բաժնում։</p>
+     ${button(`${BASE_URL()}/help`, "Օգնություն")}`
+  );
+  return {
+    to: input.to,
+    subject: "Highland — Ձեր հաշիվն արգելափակված է",
+    html,
+    text: `Ձեր հաշիվն արգելափակվել է ադմինիստրատորի կողմից։ Հարցերի դեպքում կապվեք մեզ հետ հարթակի «Օգնություն» բաժնում՝ ${BASE_URL()}/help`,
+  };
+}
+
 // To the site owner: somebody confirmed a newsletter subscription.
 export function newSubscriberEmail(input: { to: string; email: string }) {
   return {

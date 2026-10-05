@@ -114,7 +114,7 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
                   <td className="px-4 py-3">{r.seq}/{r.cap}</td>
                   <td className="whitespace-nowrap px-4 py-3">{fmt(r.createdAt, true)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button type="button" onClick={() => view(r)} className="font-semibold text-apricot hover:text-apricot-dark">
+                    <button data-view type="button" onClick={() => view(r)} className="font-semibold text-apricot hover:text-apricot-dark">
                       {t("common.view")}
                     </button>
                   </td>

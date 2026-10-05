@@ -58,10 +58,16 @@ export async function middleware(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, status")
     .eq("id", user.id)
     .single();
   const role = (profile as { role?: string } | null)?.role;
+
+  // Blocked while signed in: the session ends here, not at the next refresh.
+  if ((profile as { status?: string } | null)?.status === "blocked") {
+    await supabase.auth.signOut({ scope: "local" });
+    return redirect("/login");
+  }
 
   const home = role === "individual" ? "/account" : role === "club" ? "/dashboard" : role === "admin" ? "/admin" : "/";
   const allowed = wantsAccount ? "individual" : wantsDashboard ? "club" : "admin";

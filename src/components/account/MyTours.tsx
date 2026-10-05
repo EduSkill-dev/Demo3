@@ -91,7 +91,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <div className="flex justify-end gap-3 font-semibold">
-                      <button type="button" onClick={() => setOpen(r)} className="text-apricot hover:text-apricot-dark">
+                      <button data-view type="button" onClick={() => setOpen(r)} className="text-apricot hover:text-apricot-dark">
                         {t("common.view")}
                       </button>
                       {!cancelled && (

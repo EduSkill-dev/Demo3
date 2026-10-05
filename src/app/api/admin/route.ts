@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { can, clientIp, getAdmin, logActivity, oneTimePassword, type AdminSession } from "@/lib/admin";
+import { can, clientIp, getAdmin, logActivity, notifyBlocked, oneTimePassword, type AdminSession } from "@/lib/admin";
 import { ACCOUNT_LIMITS, ADMIN_PERMS, type AccountLimit, type AccountStatus, type AdminPerm } from "@/lib/adminLabels";
 import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
@@ -70,7 +70,10 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     if (banError) return fail(banError.message, 500);
     const { error } = await ctx.db.from("profiles").update({ status }).eq("id", t.account.id);
     if (error) return fail(error.message, 500);
-    if (status === "blocked") await ctx.db.rpc("end_user_sessions", { p_user: t.account.id });
+    if (status === "blocked") {
+      await ctx.db.rpc("end_user_sessions", { p_user: t.account.id });
+      await notifyBlocked(t.account.id);
+    }
 
     await logActivity({
       actor: ctx.me.userId,

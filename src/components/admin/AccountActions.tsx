@@ -88,7 +88,7 @@ export function LimitSwitches({
 
   return (
     <div>
-      <div className="flex gap-1.5">
+      <div className="flex justify-center gap-1.5">
         {limits.map((l) => {
           const name = ACCOUNT_LIMITS[l.key].label;
           return (

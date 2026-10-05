@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
 import { authErrorMessage, confirmUrl } from "@/lib/authErrors";
@@ -12,11 +13,31 @@ export default function ForgotPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const router = useRouter();
+
+  // A blocked account reads the notice, then lands on the home page.
+  useEffect(() => {
+    if (!blocked) return;
+    const timer = setTimeout(() => router.push("/"), 6000);
+    return () => clearTimeout(timer);
+  }, [blocked, router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    const check = await fetch("/api/auth/forgot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
+    })
+      .then((r) => r.json() as Promise<{ blocked?: boolean }>)
+      .catch(() => ({ blocked: false }));
+    if (check.blocked) {
+      setBusy(false);
+      return setBlocked(true);
+    }
     const { error: err } = await createClient().auth.resetPasswordForEmail(email.trim(), {
       redirectTo: confirmUrl("recovery"),
     });
@@ -28,7 +49,9 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthCard title={t("auth.forgotTitle")}>
-      {sent ? (
+      {blocked ? (
+        <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{t("auth.blockedNoAction")}</p>
+      ) : sent ? (
         <p className="rounded-lg bg-green-50 p-4 text-sm text-green-800">{t("auth.linkSent")}</p>
       ) : (
         <form onSubmit={submit} className="space-y-4">

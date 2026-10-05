@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Tour } from "@/types/database";
 import { CANCEL_WINDOW_HOURS, formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
+import FramedPhoto from "@/components/ui/FramedPhoto";
 
 export type TourForDetails = Pick<
   Tour,
@@ -63,14 +64,11 @@ export default function TourDetails({
     <div className="space-y-5 text-sm">
       {photo ? (
         <div className="space-y-2">
-          {/* The whole photo, fitted inside the frame — never cropped or stretched. */}
-          <div className="h-64 overflow-hidden rounded-xl bg-sand sm:h-96">
-            <img src={photo} alt={tour.title} className="h-full w-full object-contain" />
-          </div>
+          <FramedPhoto src={photo} alt={tour.title} />
           {photos.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto p-0.5">
+            <div className="flex justify-center gap-2 overflow-x-auto p-0.5">
               {photos.map((u, i) => (
-                <button
+                <button data-view
                   key={`${u}-${i}`}
                   type="button"
                   onClick={() => setShown(i)}

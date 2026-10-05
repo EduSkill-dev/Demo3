@@ -21,6 +21,7 @@ export default function TourQuickView({ tour, onClose }: { tour: PublicTour | nu
             key={tour.id}
             bare
             tourId={tour.id}
+            clubId={tour.club_id}
             date={tour.date}
             taken={tour.taken}
             limit={tour.cap}

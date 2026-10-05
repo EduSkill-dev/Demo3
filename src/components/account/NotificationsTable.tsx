@@ -108,7 +108,7 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
                 <td className="px-4 py-3">{title(n)}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   <div className="flex justify-end gap-3 font-semibold">
-                    <button type="button" onClick={() => view(n)} className="text-apricot hover:text-apricot-dark">{t("common.view")}</button>
+                    <button data-view type="button" onClick={() => view(n)} className="text-apricot hover:text-apricot-dark">{t("common.view")}</button>
                     <button type="button" onClick={() => remove(n)} className="text-red-600 hover:text-red-700">{t("common.delete")}</button>
                   </div>
                 </td>

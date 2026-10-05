@@ -132,6 +132,7 @@ const en: DeepPartial<Dictionary> = {
     noAccount: "No account yet?",
     invalidLogin: "Wrong email or password.",
     blocked: "Your account has been blocked.",
+    blockedNoAction: "Your account is blocked, and for now you cannot do anything with it.",
     notConfirmed: "Your email is not confirmed yet. Please check your inbox.",
     resend: "Resend the confirmation email",
     resent: "Email sent again.",
@@ -496,6 +497,7 @@ const en: DeepPartial<Dictionary> = {
     network: "Could not reach the server. Please try again.",
   },
   signup: {
+    editOwn: "Edit the listing",
     seatsLeft: "Free places: {free}/{cap}",
     closed: "Sign-up closed",
     full: "Fully booked",

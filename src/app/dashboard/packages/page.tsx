@@ -233,7 +233,7 @@ export default function PackagesPage() {
                       {Number(h.amount) > 0 ? formatAmd(h.amount) : t("common.free")}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <button
+                      <button data-view
                         onClick={() => setReceipt(h)}
                         className="font-semibold text-apricot hover:text-apricot-dark"
                       >

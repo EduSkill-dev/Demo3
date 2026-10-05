@@ -61,7 +61,7 @@ export default function Modal({
           <h2 className="truncate font-serif text-lg font-semibold text-heading">{title}</h2>
           <div className="flex items-center gap-2">
             {actions}
-            <button
+            <button data-view
               type="button"
               onClick={onClose}
               aria-label={t("common.close")}

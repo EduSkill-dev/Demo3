@@ -28,7 +28,7 @@ export default function TourCard({
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
-      <button type="button" onClick={onOpen} className="relative block" aria-label={tour.title}>
+      <button data-view type="button" onClick={onOpen} className="relative block" aria-label={tour.title}>
         {tour.photo_urls?.[0] ? (
           <img src={tour.photo_urls[0]} alt="" className="h-44 w-full object-cover" />
         ) : (
@@ -46,7 +46,7 @@ export default function TourCard({
           {tour.regions.map((r, i) => (
             <span key={r} className="flex items-center gap-1.5">
               {onRegion ? (
-                <button
+                <button data-view
                   type="button"
                   onClick={() => onRegion(r)}
                   title={t("toursPage.filterByRegion", { region: t(`region.${r}`) })}
@@ -88,7 +88,7 @@ export default function TourCard({
           <p className="whitespace-nowrap font-semibold text-ink">
             {Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(tour.price) }) : t("common.free")}
           </p>
-          <button
+          <button data-view
             type="button"
             onClick={onOpen}
             className="shrink-0 whitespace-nowrap rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-apricot hover:text-apricot-dark"

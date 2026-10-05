@@ -9,7 +9,7 @@ export type AccountRow = {
   phone: string | null;
   status: AccountStatus;
   joined: string; // already formatted
-  extra?: string; // e.g. the club's package
+  extra?: [string, string?]; // e.g. the club's package and, under it, until when
   limits: { key: AccountLimit; blocked: boolean }[]; // functions an admin can force off
 };
 
@@ -49,10 +49,10 @@ export default function AccountsTable({
           <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
             <tr>
               <th className={th}>{nameHeader}</th>
-              {extraHeader && <th className={th}>{extraHeader}</th>}
-              <th className={th}>Գրանցվել է</th>
-              <th className={th}>Կարգավիճակ</th>
-              <th className={th}>Ֆունկցիաներ</th>
+              {extraHeader && <th className={`${th} text-center`}>{extraHeader}</th>}
+              <th className={`${th} text-center`}>Գրանցվել է</th>
+              <th className={`${th} text-center`}>Կարգավիճակ</th>
+              <th className={`${th} text-center`}>Ֆունկցիաներ</th>
               <th className={`${th} text-right`}>Գործողություններ</th>
             </tr>
           </thead>
@@ -74,12 +74,17 @@ export default function AccountsTable({
                     </span>
                   </div>
                 </td>
-                {extraHeader && <td className={`${td} text-muted`}>{r.extra ?? "—"}</td>}
-                <td className={`${td} text-muted`}>{r.joined}</td>
-                <td className={td}>
+                {extraHeader && (
+                  <td className={`${td} text-center`}>
+                    <span className="block font-medium text-ink">{r.extra?.[0] ?? "—"}</span>
+                    {r.extra?.[1] && <span className="block text-xs text-muted">{r.extra[1]}</span>}
+                  </td>
+                )}
+                <td className={`${td} text-center text-muted`}>{r.joined}</td>
+                <td className={`${td} text-center`}>
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
                 </td>
-                <td className={td}>
+                <td className={`${td} text-center`}>
                   <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
                 </td>
                 <td className={td}>

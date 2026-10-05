@@ -16,7 +16,7 @@ export default function FaqAccordion({ items }: { items: FaqItem[] }) {
         const open = openIndex === i;
         return (
           <div key={item.question}>
-            <button
+            <button data-view
               onClick={() => setOpenIndex(open ? null : i)}
               className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
               aria-expanded={open}
