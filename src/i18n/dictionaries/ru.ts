@@ -105,6 +105,7 @@ const ru: DeepPartial<Dictionary> = {
     download: "Скачать",
   },
   header: {
+    admin: "Панель админа",
     about: "О нас",
     tours: "Походы",
     clubs: "Клубы",
@@ -130,6 +131,7 @@ const ru: DeepPartial<Dictionary> = {
     forgot: "Забыли пароль?",
     noAccount: "Ещё нет аккаунта?",
     invalidLogin: "Неверная почта или пароль.",
+    blocked: "Ваш аккаунт заблокирован.",
     notConfirmed: "Ваша почта ещё не подтверждена. Проверьте входящие.",
     resend: "Отправить письмо ещё раз",
     resent: "Письмо отправлено повторно.",
@@ -232,6 +234,7 @@ const ru: DeepPartial<Dictionary> = {
     corporate: "Корпоративные мероприятия",
   },
   announcements: {
+    adminHidden: "Закрыто администратором",
     counter: "Объявления: {used}/{max}",
     new: "+ Новое объявление",
     noPackage: "Чтобы добавлять объявления, выберите подходящий",
@@ -338,6 +341,7 @@ const ru: DeepPartial<Dictionary> = {
     changeNotice: "Если участники уже записаны, они получат уведомление об изменении даты или места сбора.",
   },
   account: {
+    frozenNotice: "Ваш аккаунт заморожен: доступен только просмотр, действия недоступны.",
     toursCount: "Вы записаны на походов: {count}",
     toursEmpty: "Вы пока никуда не записаны.",
     findTours: "Найти поход",
@@ -462,6 +466,7 @@ const ru: DeepPartial<Dictionary> = {
     onTour: "поход: {title}",
   },
   errors: {
+    frozen: "Ваш аккаунт заморожен: действия временно недоступны.",
     alreadyBooked: "Вы уже записаны на этот поход.",
     seatsGone: "Мест больше нет.",
     tourPast: "Этот поход уже прошёл.",

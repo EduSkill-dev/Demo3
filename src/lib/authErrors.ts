@@ -3,10 +3,12 @@ import type { TFunction } from "@/i18n/translate";
 
 // Supabase Auth errors come back in English; map the ones people actually
 // hit to friendly, translated text.
-export function authErrorMessage(t: TFunction, error: Pick<AuthError, "code" | "message" | "status">): string {
+export function authErrorMessage(t: TFunction, error: Pick<AuthError, "message"> & { code?: string; status?: number }): string {
   switch (error.code) {
     case "invalid_credentials":
       return t("auth.invalidLogin");
+    case "user_banned":
+      return t("auth.blocked");
     case "email_not_confirmed":
       return t("auth.notConfirmed");
     case "user_already_exists":

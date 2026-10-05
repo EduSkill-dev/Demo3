@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Refreshes the Supabase session cookie on every request (server components
 // cannot write cookies themselves) and keeps each dashboard to its own role:
-// /account is for individuals, /dashboard is for clubs.
+// /account is for individuals, /dashboard is for clubs, /admin is for admins.
 export async function middleware(request: NextRequest) {
   // An auth email whose redirect target was not allowed falls back to the
   // site root; send its token on to the route that verifies it.
@@ -42,7 +42,8 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const wantsAccount = path === "/account" || path.startsWith("/account/");
   const wantsDashboard = path === "/dashboard" || path.startsWith("/dashboard/");
-  if (!wantsAccount && !wantsDashboard) return response;
+  const wantsAdmin = path === "/admin" || path.startsWith("/admin/");
+  if (!wantsAccount && !wantsDashboard && !wantsAdmin) return response;
 
   const redirect = (to: string) => {
     const url = request.nextUrl.clone();
@@ -62,8 +63,9 @@ export async function middleware(request: NextRequest) {
     .single();
   const role = (profile as { role?: string } | null)?.role;
 
-  if (wantsAccount && role !== "individual") return redirect(role === "club" ? "/dashboard" : "/");
-  if (wantsDashboard && role !== "club") return redirect(role === "individual" ? "/account" : "/");
+  const home = role === "individual" ? "/account" : role === "club" ? "/dashboard" : role === "admin" ? "/admin" : "/";
+  const allowed = wantsAccount ? "individual" : wantsDashboard ? "club" : "admin";
+  if (role !== allowed) return redirect(home);
 
   return response;
 }

@@ -35,6 +35,7 @@ export default async function AnnouncementsPage() {
       date: tour.date,
       regions: tour.regions,
       status: tour.status,
+      adminHidden: tour.admin_hidden,
       taken: mineB.filter((b) => b.status === "confirmed").length,
       cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
       unread: mineB.filter((b) => !b.read_at).length,

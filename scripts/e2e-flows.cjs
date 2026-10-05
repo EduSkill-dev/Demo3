@@ -106,6 +106,18 @@ async function api(route, body, cookie) {
   return { status: res.status, body: json, raw: text };
 }
 
+// Sign in through the site's own route; the cookie is what a browser would hold.
+async function loginCookie(address, password) {
+  const res = await fetch(`http://localhost:${DEV_PORT}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: address, password }),
+  });
+  const body = await res.json().catch(() => ({}));
+  const cookie = res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+  return { status: res.status, body, cookie };
+}
+
 // Wait until the dev server responds or give up.
 async function waitForServer(ms) {
   const start = Date.now();
@@ -550,7 +562,7 @@ async function main() {
       const subRow = (await admin.from('newsletter_subscribers').select('token, confirmed_at').eq('email', subEmail).single()).data;
       check('HTTP newsletter: subscribing stores an unconfirmed address', sub.status === 200 && subRow && !subRow.confirmed_at,
         `status=${sub.status} row=${JSON.stringify(subRow)}`);
-      const page = async (route) => (await fetch(`http://localhost:${DEV_PORT}${route}`)).text();
+      const page = async (route, cookie) => (await fetch(`http://localhost:${DEV_PORT}${route}`, { headers: cookie ? { Cookie: cookie } : {} })).text();
       await page(`/newsletter/confirm?token=${subRow?.token}`);
       const confirmedRow = (await admin.from('newsletter_subscribers').select('confirmed_at').eq('email', subEmail).single()).data;
       check('HTTP newsletter: the emailed link confirms it', !!confirmedRow?.confirmed_at, JSON.stringify(confirmedRow));
@@ -629,6 +641,114 @@ async function main() {
 
       const clubDelete = await api('/api/delete-account', null, club2Cookie);
       check('a club account cannot delete itself with one click', clubDelete.status === 403, `status=${clubDelete.status}`);
+
+      // ---------- Admin area ----------
+      ids.super = await makeUser('super', {});
+      await admin.from('profiles').update({ role: 'admin' }).eq('id', ids.super);
+      await admin.from('admins').insert({ user_id: ids.super, is_super: true, alt_email: email('superalt'), must_change_password: false });
+      // As scripts/create-super-admin.cjs does: the sign-up trigger logged it as an individual.
+      await admin.from('activity_log').delete().eq('actor_id', ids.super).eq('action', 'account.created');
+
+      const superLogin = await loginCookie(email('superalt'), PASSWORD);
+      const loginLog = (await admin.from('activity_log').select('actor_role, meta').eq('actor_id', ids.super).eq('action', 'auth.login')).data || [];
+      check('admin: signs in with the second address, and the sign-in is logged',
+        superLogin.status === 200 && superLogin.body.target === '/admin' && loginLog.length === 1 && loginLog[0].actor_role === 'super',
+        `status=${superLogin.status} body=${JSON.stringify(superLogin.body)} log=${JSON.stringify(loginLog)}`);
+      const superCookie = superLogin.cookie;
+      const act = (body, cookie) => api('/api/admin', body, cookie);
+
+      const outsider = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'frozen' }, indCookie);
+      check('admin: an ordinary account cannot call the admin API', outsider.status === 401, `status=${outsider.status}`);
+
+      const made = await act({ action: 'admin.create', email: email('adm'), altEmail: email('admalt'), perms: ['individuals'] }, superCookie);
+      ids.adm = (await admin.from('profiles').select('id').eq('email', email('adm')).maybeSingle()).data?.id;
+      check('admin: the super admin creates an admin with a one-time password',
+        made.status === 200 && typeof made.body.password === 'string' && !!ids.adm, `status=${made.status} body=${JSON.stringify(made.body).replace(/"password":"[^"]*"/, '"password":"…"')}`);
+
+      const admFirst = await loginCookie(email('adm'), made.body.password);
+      const early = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'frozen' }, admFirst.cookie);
+      const changed = await act({ action: 'password.change', password: 'E2e-admin-pass-1' }, admFirst.cookie);
+      check('admin: the one-time password opens nothing until it is replaced',
+        admFirst.status === 200 && early.status === 403 && changed.status === 200,
+        `login=${admFirst.status} early=${early.status} change=${changed.status} ${JSON.stringify(changed.body)}`);
+      const admCookie = (await loginCookie(email('admalt'), 'E2e-admin-pass-1')).cookie;
+
+      const overClub = await act({ action: 'account.setStatus', userId: ids.club2, status: 'frozen' }, admCookie);
+      const overTour = await act({ action: 'tour.setHidden', tourId, hidden: true }, admCookie);
+      const overText = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'home.heroTitle', value: 'x' }] }, admCookie);
+      const overAdmin = await act({ action: 'admin.create', email: email('adm2'), altEmail: email('adm2alt'), perms: [] }, admCookie);
+      check('admin: a regular admin can do only what was ticked',
+        overClub.status === 403 && overTour.status === 403 && overText.status === 403 && overAdmin.status === 403,
+        `club=${overClub.status} tour=${overTour.status} text=${overText.status} admin=${overAdmin.status}`);
+
+      const froze = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'frozen' }, admCookie);
+      const frozenBook = await api('/api/bookings', { tour_id: tourId }, ind2Cookie);
+      await signIn('ind2');
+      const frozenEdit = await anon.from('profiles').update({ first_name: 'Սառած' }).eq('id', ids.ind2).select('id');
+      const frozenDelete = await api('/api/delete-account', null, ind2Cookie);
+      check('admin: a frozen account can sign in but not act (not even delete itself)',
+        froze.status === 200 && frozenBook.status === 403 && !!frozenEdit.error && frozenDelete.status === 403,
+        `freeze=${froze.status} book=${frozenBook.status} edit=${frozenEdit.error ? 'refused' : 'ALLOWED'} delete=${frozenDelete.status}`);
+
+      const blocked = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'blocked' }, admCookie);
+      const blockedLogin = await loginCookie(email('ind2'), PASSWORD);
+      const reopened = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'active' }, admCookie);
+      const reopenedLogin = await loginCookie(email('ind2'), PASSWORD);
+      check('admin: a blocked account cannot sign in until it is re-activated',
+        blocked.status === 200 && blockedLogin.status !== 200 && reopened.status === 200 && reopenedLogin.status === 200,
+        `block=${blocked.status} login=${blockedLogin.status} ${JSON.stringify(blockedLogin.body)} reopen=${reopened.status} login=${reopenedLogin.status}`);
+
+      const closeTour = await act({ action: 'tour.setHidden', tourId, hidden: true }, superCookie);
+      const closedSeen = (await visitor.from('tours').select('id').eq('id', tourId)).data || [];
+      await signIn('club');
+      const clubUndo = await anon.from('tours').update({ admin_hidden: false }).eq('id', tourId).select('admin_hidden');
+      const stillClosed = (await admin.from('tours').select('admin_hidden').eq('id', tourId).single()).data?.admin_hidden;
+      const openTour = await act({ action: 'tour.setHidden', tourId, hidden: false }, superCookie);
+      const openSeen = (await visitor.from('tours').select('id').eq('id', tourId)).data || [];
+      check('admin: a closed listing leaves the site and the club cannot reopen it',
+        closeTour.status === 200 && closedSeen.length === 0 && stillClosed === true && openTour.status === 200 && openSeen.length === 1,
+        `close=${closeTour.status} seen=${closedSeen.length} clubUndo=${JSON.stringify(clubUndo.data)} still=${stillClosed} open=${openTour.status} seen=${openSeen.length}`);
+
+      const heading = `E2E վերնագիր ${stamp}`;
+      const badSlot = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'common.upTo', value: 'առանց թվի' }] }, superCookie);
+      const saveText = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'home.heroTitle', value: heading }] }, superCookie);
+      const homeEdited = await page('/');
+      const resetText = await act({ action: 'text.save', locale: 'hy', entries: [{ key: 'home.heroTitle', value: '' }] }, superCookie);
+      const homeReset = await page('/');
+      check('admin: an edited text shows on the site, and restoring brings the original back',
+        badSlot.status === 400 && saveText.status === 200 && homeEdited.includes(heading) && resetText.status === 200 && !homeReset.includes(heading),
+        `badSlot=${badSlot.status} save=${saveText.status} shown=${homeEdited.includes(heading)} reset=${resetText.status} gone=${!homeReset.includes(heading)}`);
+      await admin.from('site_texts').delete().eq('key', 'home.heroTitle').eq('value', heading);
+
+      // Deleting a club takes its tours and applications with it and tells the participants.
+      ids.club3 = await makeUser('club3', { role: 'club', club_name: 'E2E Club C' });
+      const clubC = (await admin.from('clubs').select('id').eq('owner_id', ids.club3).single()).data.id;
+      await givePackage(clubC, 'start');
+      const tourC = (await admin.from('tours').insert(tourRow(clubC, { title: 'E2E Club C Tour', date: future(60) })).select('id').single()).data;
+      await admin.from('bookings').insert({ tour_id: tourC.id, user_id: ids.ind, status: 'confirmed' });
+      const delClub = await act({ action: 'account.delete', userId: ids.club3 }, superCookie);
+      const goneClub = (await admin.auth.admin.getUserById(ids.club3)).data?.user;
+      const goneTour = (await admin.from('tours').select('id').eq('id', tourC.id)).data || [];
+      const notice = (await admin.from('notifications').select('id').eq('user_id', ids.ind).eq('kind', 'platform').like('message', '%E2E Club C Tour%')).data || [];
+      check('admin: deleting a club removes everything it owned and tells the participants',
+        delClub.status === 200 && !goneClub && goneTour.length === 0 && notice.length === 1,
+        `status=${delClub.status} ${JSON.stringify(delClub.body)} user=${!!goneClub} tours=${goneTour.length} notices=${notice.length}`);
+      if (!goneClub) ids.club3 = null;
+
+      const seenByAdmin = (await page('/admin/logs', admCookie));
+      const logRows = (await admin.from('activity_log').select('action, actor_role').in('actor_id', [ids.super, ids.adm])).data || [];
+      const logged = (a) => logRows.some((r) => r.action === a);
+      check('admin: admin actions are logged, and a regular admin does not see them',
+        logged('admin.account_frozen') && logged('admin.tour_closed') && logged('admin.text_saved') && logged('admin.admin_created')
+          && seenByAdmin.includes('Լոգեր') && !seenByAdmin.includes(email('super')),
+        `actions=${[...new Set(logRows.map((r) => r.action))].join(',')} pageOk=${seenByAdmin.includes('Լոգեր')} leak=${seenByAdmin.includes(email('super'))}`);
+
+      const delAdmin = await act({ action: 'admin.delete', userId: ids.adm }, superCookie);
+      const goneAdmin = (await admin.auth.admin.getUserById(ids.adm)).data?.user;
+      check('admin: the super admin removes an admin', delAdmin.status === 200 && !goneAdmin, `status=${delAdmin.status}`);
+      if (!goneAdmin) ids.adm = null;
+      await admin.from('activity_log').delete().like('actor_label', `%-${stamp}@example.com>%`);
+      await admin.from('activity_log').delete().like('target_label', `%-${stamp}@example.com%`);
 
       // ---------- Phase 7: daily job ----------
       const cronUrl = `http://localhost:${DEV_PORT}/api/cron/daily`;

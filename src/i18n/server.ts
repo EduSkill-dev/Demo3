@@ -9,6 +9,7 @@ import {
 } from "./config";
 import { makeT, type TFunction } from "./translate";
 import { formatDate, type DateStyle } from "./dates";
+import { getSiteTexts } from "@/lib/siteTexts";
 
 // Server components / route handlers: read the visitor's choices from cookies.
 export async function getLocale(): Promise<Locale> {
@@ -21,7 +22,8 @@ export async function getTheme(): Promise<Theme> {
 }
 
 export async function getT(): Promise<TFunction> {
-  return makeT(await getLocale());
+  const locale = await getLocale();
+  return makeT(locale, await getSiteTexts(locale));
 }
 
 export async function getFormatDate(): Promise<(value: string | Date, style?: DateStyle) => string> {

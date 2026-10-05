@@ -17,7 +17,10 @@ export type DynamicKey = `${keyof Dictionary & string}.${string}`;
 export type Vars = Record<string, string | number>;
 export type TFunction = (key: MessageKey | DynamicKey, vars?: Vars) => string;
 
-const DICTIONARIES: Record<Locale, DeepPartial<Dictionary>> = { hy, ru, en };
+// Admin-edited texts for one language: "home.heroTitle" → replacement.
+export type Overrides = Record<string, string>;
+
+export const DICTIONARIES: Record<Locale, DeepPartial<Dictionary>> = { hy, ru, en };
 
 function lookup(dict: unknown, key: string): string | undefined {
   let node: unknown = dict;
@@ -28,11 +31,12 @@ function lookup(dict: unknown, key: string): string | undefined {
   return typeof node === "string" ? node : undefined;
 }
 
-// Missing translations fall back to Armenian, then to the key itself.
-export function makeT(locale: Locale): TFunction {
+// An admin's replacement wins; missing translations fall back to Armenian,
+// then to the key itself.
+export function makeT(locale: Locale, overrides?: Overrides): TFunction {
   const dict = DICTIONARIES[locale];
   return (key, vars) => {
-    const raw = lookup(dict, key) ?? lookup(hy, key) ?? key;
+    const raw = overrides?.[key] ?? lookup(dict, key) ?? lookup(hy, key) ?? key;
     if (!vars) return raw;
     return raw.replace(/\{(\w+)\}/g, (m, name: string) =>
       name in vars ? String(vars[name]) : m

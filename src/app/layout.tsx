@@ -4,6 +4,7 @@ import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import { I18nProvider } from "@/i18n/client";
 import { getLocale, getTheme } from "@/i18n/server";
+import { getSiteTexts } from "@/lib/siteTexts";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -25,6 +26,7 @@ export default async function RootLayout({
 }) {
   // Language and theme come from cookies, so the first paint is already right.
   const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
+  const overrides = await getSiteTexts(locale);
 
   return (
     <html
@@ -32,7 +34,7 @@ export default async function RootLayout({
       className={`${fraunces.variable} ${inter.variable}${theme === "dark" ? " dark" : ""}`}
     >
       <body className="flex min-h-screen flex-col bg-stone font-sans text-ink">
-        <I18nProvider locale={locale}>
+        <I18nProvider locale={locale} overrides={overrides}>
           <SiteHeader />
           <div className="flex-1">{children}</div>
           <SiteFooter />

@@ -25,6 +25,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
     .from("tours")
     .select("*, clubs(id, name, tariff, package_ends_at)")
     .eq("status", "active")
+    .eq("admin_hidden", false)
     .gte("date", today)
     .order("date", { ascending: true });
   if (opts.clubId) query = query.eq("club_id", opts.clubId);

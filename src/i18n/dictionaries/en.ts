@@ -105,6 +105,7 @@ const en: DeepPartial<Dictionary> = {
     download: "Download",
   },
   header: {
+    admin: "Admin panel",
     about: "About",
     tours: "Hikes",
     clubs: "Clubs",
@@ -130,6 +131,7 @@ const en: DeepPartial<Dictionary> = {
     forgot: "Forgot your password?",
     noAccount: "No account yet?",
     invalidLogin: "Wrong email or password.",
+    blocked: "Your account has been blocked.",
     notConfirmed: "Your email is not confirmed yet. Please check your inbox.",
     resend: "Resend the confirmation email",
     resent: "Email sent again.",
@@ -232,6 +234,7 @@ const en: DeepPartial<Dictionary> = {
     corporate: "Corporate events",
   },
   announcements: {
+    adminHidden: "Closed by an administrator",
     counter: "Listings: {used}/{max}",
     new: "+ New listing",
     noPackage: "To add listings, choose a",
@@ -338,6 +341,7 @@ const en: DeepPartial<Dictionary> = {
     changeNotice: "If people have already signed up, they will be notified when the date or meeting details change.",
   },
   account: {
+    frozenNotice: "Your account is frozen: you can look around, but actions are unavailable.",
     toursCount: "You are signed up for {count} hikes",
     toursEmpty: "You have not signed up for any hike yet.",
     findTours: "Find a hike",
@@ -462,6 +466,7 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    frozen: "Your account is frozen: actions are temporarily unavailable.",
     alreadyBooked: "You are already signed up for this hike.",
     seatsGone: "No places left.",
     tourPast: "This hike has already taken place.",

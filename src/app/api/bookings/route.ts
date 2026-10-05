@@ -1,3 +1,4 @@
+import { inactiveAccountError } from "@/lib/admin";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
   if (!auth.user) {
     return NextResponse.json({ error: "Մուտք գործիր։" }, { status: 401 });
   }
+
+  const inactive = await inactiveAccountError(auth.user.id);
+  if (inactive) return NextResponse.json({ error: inactive }, { status: 403 });
 
   const { data: profile } = await supabase
     .from("profiles")

@@ -4,6 +4,7 @@ import type { MessageKey, TFunction } from "@/i18n/translate";
 // Recognise those messages and show them in the reader's language; anything
 // unknown is shown as-is.
 const KNOWN: [string, MessageKey][] = [
+  ["հաշիվը սառեցված", "errors.frozen"],
   ["Արդեն գրանցված", "errors.alreadyBooked"],
   ["duplicate key", "errors.alreadyBooked"],
   ["Տեղերը սպառված", "errors.seatsGone"],

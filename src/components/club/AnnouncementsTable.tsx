@@ -15,6 +15,7 @@ export type ListingRow = {
   date: string;
   regions: string[];
   status: TourStatus;
+  adminHidden: boolean;
   taken: number; // confirmed applications (A)
   cap: number; // seats the package allows for this tour (B)
   unread: number; // applications or cancellations the club has not opened
@@ -83,6 +84,11 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
                     r.status === "hidden" ? "bg-sand text-muted" : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
                   }`}>
                     {r.status === "hidden" ? t("announcements.hidden") : t("announcements.cancelled")}
+                  </span>
+                )}
+                {r.adminHidden && (
+                  <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                    {t("announcements.adminHidden")}
                   </span>
                 )}
               </td>

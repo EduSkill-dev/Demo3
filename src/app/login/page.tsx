@@ -27,20 +27,29 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     setUnconfirmed(false);
-    const supabase = createClient();
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (err) {
+    // The server signs in (and sets the session cookie): it logs the sign-in
+    // and knows an admin's second address.
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), password }),
+    }).catch(() => null);
+    const data = res
+      ? ((await res.json().catch(() => ({}))) as {
+          target?: string;
+          role?: string;
+          error?: { code?: string; message: string; status?: number };
+        })
+      : null;
+    if (!res?.ok || !data?.target) {
       setBusy(false);
-      setUnconfirmed(err.code === "email_not_confirmed");
-      return setError(authErrorMessage(t, err));
+      const err = data?.error;
+      setUnconfirmed(err?.code === "email_not_confirmed");
+      return setError(err ? authErrorMessage(t, err) : t("errors.network"));
     }
-    // Back to where they came from, else to their own dashboard.
-    let target = safeNext();
-    if (!target) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
-      target = (profile as { role?: string } | null)?.role === "club" ? "/dashboard" : "/account";
-    }
-    window.location.href = target;
+    // Back to where they came from, else to their own dashboard. Admins
+    // always land in the admin area.
+    window.location.href = (data.role !== "admin" && safeNext()) || data.target;
   }
 
   async function resend() {

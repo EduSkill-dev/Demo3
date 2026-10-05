@@ -9,7 +9,7 @@ import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import CountBadge from "@/components/ui/CountBadge";
 
-export type HeaderUser = { role: "individual" | "club"; name: string; unread: number };
+export type HeaderUser = { role: "individual" | "club" | "admin"; name: string; unread: number };
 
 export const NAV_LINKS = [
   { href: "/about", key: "header.about" },
@@ -55,8 +55,9 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
     router.refresh();
   }
 
-  const home = user ? (user.role === "club" ? "/dashboard" : "/account") : null;
-  const homeLabel = user?.role === "club" ? t("header.dashboard") : t("header.account");
+  const home = user ? (user.role === "admin" ? "/admin" : user.role === "club" ? "/dashboard" : "/account") : null;
+  const homeLabel =
+    user?.role === "admin" ? t("header.admin") : user?.role === "club" ? t("header.dashboard") : t("header.account");
   const navLink = (href: string) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition ${
       isActive(pathname, href) ? "text-apricot-dark dark:text-apricot" : "text-ink hover:text-apricot-dark"

@@ -52,8 +52,9 @@ export default async function TourDetailPage({ params }: { params: { id: string 
 
   const club = tour.clubs;
   const pkg = activePackage(club);
-  // Closed (cap 0) when the tour is not active or the club's package lapsed.
-  const cap = pkg && tour.status === "active" ? Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour) : 0;
+  // Closed (cap 0) when the tour is not active, an admin took it down, or the
+  // club's package lapsed.
+  const cap = pkg && tour.status === "active" && !tour.admin_hidden ? Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour) : 0;
   const showReviews = !!pkg && PACKAGES[pkg].showsRatings;
   const reviews = ((reviewRows ?? []) as {
     id: string;

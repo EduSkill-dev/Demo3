@@ -3,23 +3,33 @@
 import { createContext, useContext, useMemo } from "react";
 import { DEFAULT_LOCALE, type Locale } from "./config";
 import { formatDate, type DateStyle } from "./dates";
-import { makeT, type TFunction } from "./translate";
+import { makeT, type Overrides, type TFunction } from "./translate";
 
-const LocaleContext = createContext<Locale>(DEFAULT_LOCALE);
+const LocaleContext = createContext<{ locale: Locale; overrides?: Overrides }>({ locale: DEFAULT_LOCALE });
 
-// The root layout reads the locale cookie and passes it down once; client
-// components then translate with useT() without another round-trip.
-export function I18nProvider({ locale, children }: { locale: Locale; children: React.ReactNode }) {
-  return <LocaleContext.Provider value={locale}>{children}</LocaleContext.Provider>;
+// The root layout reads the locale cookie (and the admin-edited texts for
+// that language) and passes them down once; client components then translate
+// with useT() without another round-trip.
+export function I18nProvider({
+  locale,
+  overrides,
+  children,
+}: {
+  locale: Locale;
+  overrides?: Overrides;
+  children: React.ReactNode;
+}) {
+  const value = useMemo(() => ({ locale, overrides }), [locale, overrides]);
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
 export function useLocale(): Locale {
-  return useContext(LocaleContext);
+  return useContext(LocaleContext).locale;
 }
 
 export function useT(): TFunction {
-  const locale = useLocale();
-  return useMemo(() => makeT(locale), [locale]);
+  const { locale, overrides } = useContext(LocaleContext);
+  return useMemo(() => makeT(locale, overrides), [locale, overrides]);
 }
 
 // fmt(value, style) in the visitor's language; see ./dates for the styles.

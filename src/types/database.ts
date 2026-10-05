@@ -10,7 +10,8 @@ export { formatAmd } from "@/lib/catalog";
 
 export interface Profile {
   id: string; // matches auth.users.id
-  role: "individual" | "club";
+  role: "individual" | "club" | "admin";
+  status: "active" | "frozen" | "blocked"; // set by admins only
   first_name: string | null;
   last_name: string | null;
   age: number | null; // legacy; birth_date replaces it
@@ -58,6 +59,7 @@ export interface Tour {
   max_participants: number;
   photo_urls: string[];
   status: TourStatus;
+  admin_hidden: boolean; // an admin took it off the site; the club cannot undo it
   terrains: string[]; // Terrain keys
   overnight: boolean;
   difficulty: Difficulty;

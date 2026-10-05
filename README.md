@@ -244,3 +244,24 @@ can create tours — that unblocks `/tours` showing real data.
 ### Order of migrations
 Run every file in `supabase/migrations/` in name order with
 `node scripts/run-sql.cjs <file>` (0002 does not exist; that is expected).
+
+## Admin area
+
+`/admin` is for accounts with the `admin` role (Armenian only).
+
+- **Super admin** — created once with
+  `node scripts/create-super-admin.cjs <email> <second-email>`; the script
+  prints a one-time password that must be replaced at the first sign-in.
+- **Admins** — created by the super admin at `/admin/admins`, each with two
+  sign-in addresses (same password), a one-time password and ticked
+  permissions: individuals, clubs, tours, pages.
+- **Site texts** — `/admin/pages` stores replacements for the dictionaries in
+  `site_texts`; `makeT` lays them over the built-in texts.
+- **Accounts** — freeze (signed in, read-only), block (cannot sign in) or
+  delete with everything the account owns. **Tours** can be taken off the
+  site (`tours.admin_hidden`), not edited.
+- **Logs** — `activity_log`, written by database triggers and the server
+  routes. The super admin sees everyone; admins see individuals and clubs.
+
+All of it goes through `/api/admin` and the service role; see migrations
+0027–0028.
