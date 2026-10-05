@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
 import type { Tour } from "@/types/database";
-import { DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
+import { CANCEL_HOUR_OPTIONS, DEFAULT_CANCEL_HOURS, DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
+import SightPicker, { type SightOption } from "@/components/SightPicker";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
 
@@ -24,11 +25,13 @@ export default function TourForm({
   clubId,
   initialTour,
   seatCap,
+  sights,
 }: {
   mode: "create" | "edit";
   clubId: string;
   initialTour?: Tour;
   seatCap: number;
+  sights: SightOption[];
 }) {
   const router = useRouter();
   const t = useT();
@@ -40,6 +43,8 @@ export default function TourForm({
   const [date, setDate] = useState(initialTour?.date ?? "");
   const [difficulty, setDifficulty] = useState<Difficulty>(initialTour?.difficulty ?? "medium");
   const [overnight, setOvernight] = useState(initialTour?.overnight ?? false);
+  const [sightIds, setSightIds] = useState<string[]>(initialTour?.sight_ids ?? []);
+  const [cancelHours, setCancelHours] = useState(initialTour?.cancel_hours ?? DEFAULT_CANCEL_HOURS);
   const [maxParticipants, setMaxParticipants] = useState(
     String(initialTour?.max_participants ?? (seatCap || ""))
   );
@@ -100,6 +105,8 @@ export default function TourForm({
       date,
       difficulty,
       overnight,
+      sight_ids: sightIds,
+      cancel_hours: cancelHours,
       max_participants: Number(maxParticipants),
       coordinator_phone: coordinatorPhone.trim(),
       meeting_point: meetingPoint.trim() || null,
@@ -174,6 +181,12 @@ export default function TourForm({
         </div>
       </fieldset>
 
+      <div>
+        <p className={label}>{t("tourForm.sights")}</p>
+        <SightPicker sights={sights} value={sightIds} onChange={setSightIds} regions={regions} />
+        <p className={hint}>{t("tourForm.sightsHint")}</p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="date" className={label}>{t("tourForm.date")}</label>
@@ -196,6 +209,15 @@ export default function TourForm({
           <label htmlFor="price" className={label}>{t("tourForm.price")}</label>
           <input id="price" type="number" min={0} step="100" value={price} onChange={(e) => setPrice(e.target.value)} className={input} />
           <p className={hint}>{t("tourForm.priceHint")}</p>
+        </div>
+        <div className="sm:col-span-2">
+          <label htmlFor="cancel-hours" className={label}>{t("tourForm.cancelHours")}</label>
+          <select id="cancel-hours" value={cancelHours} onChange={(e) => setCancelHours(Number(e.target.value))} className={input}>
+            {CANCEL_HOUR_OPTIONS.map((h) => (
+              <option key={h} value={h}>{t("tourForm.cancelHoursOption", { hours: h })}</option>
+            ))}
+          </select>
+          <p className={hint}>{t("tourForm.cancelHoursHint")}</p>
         </div>
       </div>
 

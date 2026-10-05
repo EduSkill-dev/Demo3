@@ -15,7 +15,7 @@ export default async function MyToursPage() {
   const today = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
     .from("bookings")
-    .select("id, tours(*, clubs(id, name, cancel_hours))")
+    .select("id, tours(*, clubs(id, name))")
     .eq("user_id", user.id)
     .eq("status", "confirmed");
 

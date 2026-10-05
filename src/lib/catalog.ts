@@ -87,11 +87,11 @@ export function isTerrain(value: string): value is Terrain {
 }
 
 // A booking can be cancelled only while more than this many hours remain.
-// Each club picks one of the options; 48 is the default.
+// The club picks one of the options for each listing; 48 is the default.
 export const CANCEL_HOUR_OPTIONS = [24, 36, 48, 60] as const;
 export const DEFAULT_CANCEL_HOURS = 48;
-export const cancelHoursOf = (club: { cancel_hours?: number | null } | null | undefined): number =>
-  club?.cancel_hours ?? DEFAULT_CANCEL_HOURS;
+export const cancelHoursOf = (tour: { cancel_hours?: number | null } | null | undefined): number =>
+  tour?.cancel_hours ?? DEFAULT_CANCEL_HOURS;
 
 // Armenia is UTC+4 all year (no daylight saving), matching the DB's
 // tour_starts_at(date, meeting_time) in Asia/Yerevan.

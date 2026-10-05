@@ -34,7 +34,6 @@ export interface Club {
   description: string | null;
   phone: string | null;
   focus: string[]; // ClubFocus keys
-  cancel_hours: number; // how long before a hike a booking can still be cancelled (24/36/48/60)
   posting_blocked: boolean; // an admin switched off adding listings
   applications_blocked: boolean; // an admin switched off new sign-ups
   created_at: string;
@@ -63,6 +62,8 @@ export interface Tour {
   max_participants: number;
   photo_urls: string[];
   status: TourStatus;
+  cancel_hours: number; // how long before the hike a booking can still be cancelled (24/36/48/60)
+  sight_ids: string[]; // sights.id
   admin_hidden: boolean; // an admin took it off the site; the club cannot undo it
   terrains: string[]; // Terrain keys
   overnight: boolean;

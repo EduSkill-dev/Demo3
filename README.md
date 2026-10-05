@@ -265,3 +265,22 @@ Run every file in `supabase/migrations/` in name order with
 
 All of it goes through `/api/admin` and the service role; see migrations
 0027–0028.
+
+## Custom requests and sights
+
+- **Sights** (`sights`, seeded by migration 0033) are the platform's list of
+  places. Clubs tick them on a listing, individuals on a request; admins
+  manage the list at `/admin/sights` (entries are hidden, never deleted).
+- **Requests** — an individual describes a trip at `/account/requests`
+  (people, dates, regions, terrain, sights, overnight, budget, free text).
+  Contact details in the free text are refused (`hasContactDetails`).
+- **`/requests`** lists the open requests, newest first, for clubs only.
+  A club with an active package sends an offer (price per person, date,
+  message); its offers live at `/dashboard/offers`.
+- The individual accepts one offer: the others are declined, the request
+  closes, and only then do the two sides see each other's contacts.
+- Everything is written through `/api/requests`; row-level security lets a
+  request be read by its author and by clubs, an offer by its club and the
+  request's author.
+- The cancel window (24/36/48/60 h) is set **per listing**
+  (`tours.cancel_hours`).

@@ -23,6 +23,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
       title={t("nav.account.title")}
       items={[
         { href: "/account", label: t("nav.account.tours") },
+        { href: "/account/requests", label: t("nav.account.requests") },
         { href: "/account/history", label: t("nav.account.history") },
         { href: "/account/favorites", label: t("nav.account.favorites") },
         { href: "/account/notifications", label: t("nav.account.notifications"), badge: unread ?? 0 },

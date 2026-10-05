@@ -1,3 +1,4 @@
+import { getSightOptions } from "@/lib/sights";
 import { redirect } from "next/navigation";
 import { getMyClub } from "@/lib/myClub";
 import { getT } from "@/i18n/server";
@@ -14,7 +15,7 @@ export default async function NewTourPage() {
   return (
     <div>
       <h2 className="mb-6 font-serif text-xl font-semibold text-heading">{t("announcements.newTitle")}</h2>
-      <TourForm mode="create" clubId={mine.club.id} seatCap={mine.limits.maxPerTour} />
+      <TourForm mode="create" clubId={mine.club.id} seatCap={mine.limits.maxPerTour} sights={await getSightOptions()} />
     </div>
   );
 }

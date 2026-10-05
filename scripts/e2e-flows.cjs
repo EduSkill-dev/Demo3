@@ -709,19 +709,56 @@ async function main() {
         closeTour.status === 200 && closedSeen.length === 0 && stillClosed === true && openTour.status === 200 && openSeen.length === 1,
         `close=${closeTour.status} seen=${closedSeen.length} clubUndo=${JSON.stringify(clubUndo.data)} still=${stillClosed} open=${openTour.status} seen=${openSeen.length}`);
 
-      // Each club sets its own cancel window (24 / 36 / 48 / 60 hours). Noon two
+      // ---------- Custom requests and offers ----------
+      const rq = (body, cookie) => api('/api/requests', body, cookie);
+      const clubCookie = await cookieFor('club');
+      const sightId = (await admin.from('sights').select('id').limit(1).single()).data.id;
+      const wish = { action: 'create', people: 4, dateFrom: future(20), dateTo: future(25), regions: ['tavush'], terrains: ['forest'], sightIds: [sightId], overnight: true, budget: 15000 };
+      const withPhone = await rq({ ...wish, note: 'Զանգեք 099 12 34 56' }, indCookie);
+      const withMail = await rq({ ...wish, note: 'գրեք me@example.com' }, indCookie);
+      const created = await rq({ ...wish, note: 'Երեխաներով ենք, 15.11.2026-ը հարմար է' }, indCookie);
+      const byClub = await rq(wish, clubCookie);
+      const requestId = created.body.id;
+      check('requests: an individual posts one; contact details in the text are refused; clubs cannot post',
+        withPhone.status === 400 && withMail.status === 400 && created.status === 200 && !!requestId && byClub.status === 403,
+        `phone=${withPhone.status} mail=${withMail.status} ok=${created.status} ${JSON.stringify(created.body)} club=${byClub.status}`);
+
+      const seenByVisitor = (await visitor.from('tour_requests').select('id').eq('id', requestId)).data || [];
+      await signIn('ind2');
+      const seenByOther = (await anon.from('tour_requests').select('id').eq('id', requestId)).data || [];
+      const forged = await anon.from('tour_requests').insert({ user_id: ids.ind2, people: 2, date_from: future(5), date_to: future(5), regions: ['lori'] });
+      await signIn('club');
+      const seenByClub = (await anon.from('tour_requests').select('id, author_name').eq('id', requestId)).data || [];
+      check('requests: clubs see open requests; visitors and other individuals do not; nothing is written from a browser',
+        seenByVisitor.length === 0 && seenByOther.length === 0 && seenByClub.length === 1 && !!forged.error,
+        `visitor=${seenByVisitor.length} other=${seenByOther.length} club=${seenByClub.length} forged=${forged.error ? 'refused' : 'ALLOWED'}`);
+
+      const offered = await rq({ action: 'offer', requestId, price: 12000, date: future(21), message: 'Լաստիվեր, տրանսպորտը ներառված է' }, clubCookie);
+      const offerRow = (await admin.from('tour_offers').select('id, status, price').eq('request_id', requestId).single()).data;
+      const told = (await admin.from('notifications').select('id').eq('user_id', ids.ind).eq('kind', 'platform').like('message', '%անհատական պատվերին%')).data || [];
+      const notOwner = await rq({ action: 'accept', offerId: offerRow?.id }, (await loginCookie(email('ind2'), PASSWORD)).cookie);
+      const accepted = await rq({ action: 'accept', offerId: offerRow?.id }, indCookie);
+      const again = await rq({ action: 'accept', offerId: offerRow?.id }, indCookie);
+      const after = (await admin.from('tour_requests').select('status, tour_offers(status)').eq('id', requestId).single()).data;
+      const lateOffer = await rq({ action: 'offer', requestId, price: 9000, date: future(21) }, clubCookie);
+      check('requests: a club offers, the author is told and accepts once; the request closes',
+        offered.status === 200 && offerRow?.status === 'pending' && told.length === 1 && notOwner.status === 404 && accepted.status === 200
+          && again.status === 409 && after?.status === 'accepted' && after?.tour_offers?.[0]?.status === 'accepted' && lateOffer.status === 409,
+        `offer=${offered.status} ${JSON.stringify(offered.body)} told=${told.length} notOwner=${notOwner.status} accept=${accepted.status} again=${again.status} after=${JSON.stringify(after)} late=${lateOffer.status}`);
+      await admin.from('tour_requests').delete().eq('id', requestId);
+
+      // The club sets a cancel window per hike (24 / 36 / 48 / 60 hours). Noon two
       // days ahead is always 32-56 hours away: inside a 60 h window, outside a 24 h one.
       const midTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Day After', date: future(2), meeting_time: '12:00' })).select('id').single()).data;
       const midBooking = (await admin.from('bookings').insert({ tour_id: midTour.id, user_id: ids.ind, status: 'confirmed' }).select('id').single()).data;
       await signIn('club');
-      const badHours = await anon.from('clubs').update({ cancel_hours: 30 }).eq('id', clubA).select('cancel_hours');
-      const set60 = await anon.from('clubs').update({ cancel_hours: 60 }).eq('id', clubA).select('cancel_hours');
+      const badHours = await anon.from('tours').update({ cancel_hours: 30 }).eq('id', midTour.id).select('cancel_hours');
+      const set60 = await anon.from('tours').update({ cancel_hours: 60 }).eq('id', midTour.id).select('cancel_hours');
       const late60 = await api('/api/bookings', { action: 'cancel', booking_id: midBooking.id }, indCookie);
-      const set24 = await anon.from('clubs').update({ cancel_hours: 24 }).eq('id', clubA).select('cancel_hours');
+      const set24 = await anon.from('tours').update({ cancel_hours: 24 }).eq('id', midTour.id).select('cancel_hours');
       const ok24 = await api('/api/bookings', { action: 'cancel', booking_id: midBooking.id }, indCookie);
-      await admin.from('clubs').update({ cancel_hours: 48 }).eq('id', clubA);
       await admin.from('tours').delete().eq('id', midTour.id);
-      check('a club sets its own cancel window: 60 h refuses what 24 h allows',
+      check('the cancel window is set per hike: 60 h refuses what 24 h allows',
         !!badHours.error && set60.data?.[0]?.cancel_hours === 60 && late60.status >= 400 && set24.data?.[0]?.cancel_hours === 24 && ok24.status === 200,
         `bad=${badHours.error ? 'refused' : 'ALLOWED'} 60h=${late60.status} ${JSON.stringify(late60.body)} 24h=${ok24.status} ${JSON.stringify(ok24.body)}`);
 

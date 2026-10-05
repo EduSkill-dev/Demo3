@@ -25,6 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       items={[
         { href: "/dashboard", label: t("nav.club.announcements") },
         { href: "/dashboard/applications", label: t("nav.club.applications"), badge: unread ?? 0 },
+        { href: "/dashboard/offers", label: t("nav.club.offers") },
         { href: "/dashboard/club", label: t("nav.club.data") },
         { href: "/dashboard/packages", label: t("nav.club.packages") },
       ]}

@@ -58,6 +58,8 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   const home = user ? (user.role === "admin" ? "/admin" : user.role === "club" ? "/dashboard" : "/account") : null;
   const homeLabel =
     user?.role === "admin" ? t("header.admin") : user?.role === "club" ? t("header.dashboard") : t("header.account");
+  // Custom requests are for clubs to answer (admins may look).
+  const seesRequests = user?.role === "club" || user?.role === "admin";
   const navLink = (href: string) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition ${
       isActive(pathname, href) ? "text-apricot-dark dark:text-apricot" : "text-ink hover:text-apricot-dark"
@@ -107,6 +109,11 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
               {t(l.key)}
             </Link>
           ))}
+          {seesRequests && (
+            <Link href="/requests" className={navLink("/requests")} aria-current={isActive(pathname, "/requests") ? "page" : undefined}>
+              {t("requests.navLabel")}
+            </Link>
+          )}
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
@@ -179,6 +186,11 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
                 {t(l.key)}
               </Link>
             ))}
+            {seesRequests && (
+              <Link href="/requests" className={navLink("/requests")}>
+                {t("requests.navLabel")}
+              </Link>
+            )}
           </nav>
           <div className="mt-3 space-y-2 border-t border-line pt-4">
             {user ? (

@@ -6,6 +6,8 @@ import { can, clientIp, getAdmin, logActivity, notifyBlocked, oneTimePassword, t
 import { ACCOUNT_LIMITS, ADMIN_PERMS, type AccountLimit, type AccountStatus, type AdminPerm } from "@/lib/adminLabels";
 import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
+import { SIGHTS_TAG } from "@/lib/sights";
+import { REGIONS } from "@/lib/catalog";
 import { DICTIONARIES } from "@/i18n/translate";
 import { isLocale } from "@/i18n/config";
 import { MIN_PASSWORD } from "@/lib/authErrors";
@@ -201,6 +203,34 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       targetType: "text",
       targetLabel: `${locale}: ${entries.map((e) => str(e.key)).slice(0, 8).join(", ")}${entries.length > 8 ? "…" : ""}`,
       meta: { locale, changed: upserts.length, reset: resets.length },
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true });
+  },
+
+  // Add or change a sight (hidden rather than deleted: listings and requests
+  // keep pointing at it).
+  async "sight.save"(ctx, body) {
+    if (!can(ctx.me, "pages")) return fail(FORBIDDEN, 403);
+    const row = {
+      name_hy: str(body.name_hy).slice(0, 120),
+      name_ru: str(body.name_ru).slice(0, 120),
+      name_en: str(body.name_en).slice(0, 120),
+      region: str(body.region),
+      active: body.active !== false,
+    };
+    if (!row.name_hy || !row.name_ru || !row.name_en) return fail("Լրացրեք անվանումը երեք լեզվով։");
+    if (!(REGIONS as readonly string[]).includes(row.region)) return fail("Ընտրեք մարզը։");
+    const id = str(body.id);
+    const { error } = id ? await ctx.db.from("sights").update(row).eq("id", id) : await ctx.db.from("sights").insert(row);
+    if (error) return fail(error.code === "23505" ? "Այս անունով վայր արդեն կա։" : error.message, error.code === "23505" ? 400 : 500);
+    revalidateTag(SIGHTS_TAG);
+    await logActivity({
+      actor: ctx.me.userId,
+      action: "admin.sight_saved",
+      targetType: "sight",
+      targetLabel: row.name_hy,
+      meta: row.active ? {} : { hidden: true },
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true });

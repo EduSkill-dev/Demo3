@@ -11,7 +11,7 @@ export type TourForDetails = Pick<
   Tour,
   | "id" | "title" | "description" | "regions" | "terrains" | "date" | "max_participants" | "photo_urls"
   | "overnight" | "difficulty" | "coordinator_phone" | "notes" | "meeting_point" | "meeting_time" | "price"
-> & { club?: { id: string; name: string; cancel_hours?: number | null } | null };
+> & { cancel_hours?: number | null; club?: { id: string; name: string } | null; sights?: string[] };
 
 // The full announcement — used inside modals ("View", "See more").
 // `seats.cap` is what the platform accepts under the club's package; the
@@ -36,6 +36,7 @@ export default function TourDetails({
     [t("tour.date"), date],
     [t("tour.regions"), tour.regions.map((r) => t(`region.${r}`)).join(", ") || "—"],
     [t("tour.terrains"), tour.terrains.map((k) => t(`terrain.${k}`)).join(", ") || "—"],
+    ...(tour.sights?.length ? ([[t("tour.sights"), tour.sights.join(", ")]] as [string, React.ReactNode][]) : []),
     [t("tour.difficulty"), t(`difficulty.${tour.difficulty}`)],
     [t("tour.overnight"), tour.overnight ? t("tour.yes") : t("tour.no")],
     [
@@ -57,7 +58,7 @@ export default function TourDetails({
         {tour.coordinator_phone}
       </a>,
     ],
-    [t("tour.cancellation"), t("tour.cancellationText", { hours: cancelHoursOf(tour.club) })],
+    [t("tour.cancellation"), t("tour.cancellationText", { hours: cancelHoursOf(tour) })],
   ];
 
   return (

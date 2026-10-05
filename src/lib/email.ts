@@ -305,6 +305,46 @@ ${input.email ?? ""} ${input.phone ?? ""}`,
   };
 }
 
+// To the author of a custom request: a club answered.
+export function newOfferEmail(input: { to: string; clubName: string; price: number; date: string }) {
+  const html = layout(
+    "Նոր առաջարկ Ձեր պատվերին",
+    `<p>«${esc(input.clubName)}» ակումբն առաջարկ է ուղարկել Ձեր անհատական պատվերին։</p>
+     ${table([row("Գինը մեկ անձի համար", formatAmd(input.price)), row("Ամսաթիվ", input.date)].join(""))}
+     ${button(`${BASE_URL()}/account/requests`, "Տեսնել առաջարկը")}`
+  );
+  return {
+    to: input.to,
+    subject: `Highland — նոր առաջարկ «${input.clubName}» ակումբից`,
+    html,
+    text: `«${input.clubName}» ակումբն առաջարկ է ուղարկել Ձեր պատվերին՝ ${formatAmd(input.price)}, ${input.date}։ ${BASE_URL()}/account/requests`,
+  };
+}
+
+// To the club: its offer was accepted — here is who to call.
+export function offerAcceptedEmail(input: { to: string; name: string; phone: string | null; email: string; price: number; date: string }) {
+  const rows = [
+    row("Պատվիրատու", esc(input.name)),
+    input.phone ? row("Հեռախոս", esc(input.phone)) : "",
+    row("Էլ. հասցե", esc(input.email)),
+    row("Գինը մեկ անձի համար", formatAmd(input.price)),
+    row("Ամսաթիվ", input.date),
+  ].join("");
+  const html = layout(
+    "Ձեր առաջարկն ընդունվել է",
+    `<p>Պատվիրատուն ընդունել է Ձեր առաջարկը։ Կապվեք նրա հետ՝ մանրամասները պայմանավորվելու համար։</p>
+     ${table(rows)}
+     ${button(`${BASE_URL()}/dashboard/offers`, "Իմ առաջարկները")}`
+  );
+  return {
+    to: input.to,
+    replyTo: input.email,
+    subject: "Highland — Ձեր առաջարկն ընդունվել է",
+    html,
+    text: `Ձեր առաջարկն ընդունվել է։ ${input.name} · ${input.phone ?? ""} · ${input.email}`,
+  };
+}
+
 // To an account an admin blocked.
 export function accountBlockedEmail(input: { to: string }) {
   const html = layout(
