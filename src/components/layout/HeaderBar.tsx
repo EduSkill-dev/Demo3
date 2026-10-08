@@ -8,6 +8,7 @@ import { useT } from "@/i18n/client";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import CountBadge from "@/components/ui/CountBadge";
+import CulmenLogo from "@/components/CulmenLogo";
 
 export type HeaderUser = { role: "individual" | "club" | "admin"; name: string; unread: number };
 
@@ -61,9 +62,14 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   // Custom requests are for clubs to answer (admins may look).
   const seesRequests = user?.role === "club" || user?.role === "admin";
   const navLink = (href: string) =>
-    `rounded-lg px-3 py-2 text-sm font-medium transition ${
-      isActive(pathname, href) ? "text-apricot-dark dark:text-apricot" : "text-ink hover:text-apricot-dark"
+    `border-b-2 px-3 py-2 text-base font-semibold transition ${
+      isActive(pathname, href)
+        ? "border-terracotta-500 text-spruce-500 dark:text-spruce-300"
+        : "border-transparent text-ink hover:text-spruce-500 dark:hover:text-spruce-300"
     }`;
+  // Secondary button: transparent, 2px Spruce 900 border and text.
+  const secondary =
+    "rounded-full border-2 border-spruce-900 px-4 py-1.5 text-sm font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink dark:hover:bg-ink dark:hover:text-spruce-900";
 
   const registerMenu = (
     <div
@@ -97,10 +103,11 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
     ) : null;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-stone/90 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-        <Link href="/" className="shrink-0 text-lg font-bold text-heading">
-          🏔️ Highland
+        <Link href="/" className="shrink-0" aria-label="Culmen">
+          <span className="dark:hidden"><CulmenLogo variant="light" size={40} wordmarkSize={30} gap={8} /></span>
+          <span className="hidden dark:inline"><CulmenLogo variant="dark" size={40} wordmarkSize={30} gap={8} /></span>
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="main">
@@ -122,7 +129,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
               {bell}
               <Link
                 href={home!}
-                className="max-w-[16rem] truncate rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:text-apricot-dark"
+                className="max-w-[16rem] truncate rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:text-terracotta-700"
                 title={homeLabel}
               >
                 {t("header.hello", { name: user.name || homeLabel })}
@@ -130,14 +137,14 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
               <button
                 type="button"
                 onClick={logout}
-                className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-apricot"
+                className={secondary}
               >
                 {t("header.logout")}
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-apricot">
+              <Link href="/login" className={secondary}>
                 {t("header.login")}
               </Link>
               <div className="relative" ref={registerRef}>
@@ -146,7 +153,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
                   aria-haspopup="menu"
                   aria-expanded={registerOpen}
                   onClick={() => setRegisterOpen((v) => !v)}
-                  className="flex items-center gap-1 rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark"
+                  className="flex items-center gap-1 rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900"
                 >
                   {t("header.register")}
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 8l5 5 5-5" /></svg>
@@ -179,7 +186,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-line bg-stone px-4 pb-5 pt-2 lg:hidden">
+        <div className="border-t border-line bg-surface px-4 pb-5 pt-2 lg:hidden">
           <nav className="flex flex-col" aria-label="main">
             {NAV_LINKS.map((l) => (
               <Link key={l.href} href={l.href} className={navLink(l.href)}>
@@ -207,10 +214,10 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
                 <Link href="/login" className="block rounded-lg border border-line py-2.5 text-center text-sm font-semibold text-ink">
                   {t("header.login")}
                 </Link>
-                <Link href="/register?as=individual" className="block rounded-lg bg-apricot py-2.5 text-center text-sm font-semibold text-white">
+                <Link href="/register?as=individual" className="block rounded-full bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
                   {t("header.register")} — {t("header.asIndividual")}
                 </Link>
-                <Link href="/register/club" className="block rounded-lg border border-apricot py-2.5 text-center text-sm font-semibold text-apricot-dark dark:text-apricot">
+                <Link href="/register/club" className="block rounded-lg border border-terracotta-500 py-2.5 text-center text-sm font-semibold text-terracotta-700 dark:text-terracotta-300">
                   {t("header.register")} — {t("header.asClub")}
                 </Link>
               </>

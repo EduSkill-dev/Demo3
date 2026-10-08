@@ -48,7 +48,7 @@ export default function TextEditor({ locale, entries }: { locale: string; entrie
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <code className="text-xs text-muted">{e.key}</code>
                 <div className="flex items-center gap-2">
-                  {changed && <span className="rounded-full bg-apricot/15 px-2 py-0.5 text-[11px] font-semibold text-apricot-dark dark:text-apricot">Փոխված է</span>}
+                  {changed && <span className="rounded-full bg-terracotta-500/15 px-2 py-0.5 text-[11px] font-semibold text-terracotta-700 dark:text-terracotta-300">Փոխված է</span>}
                   {changed && (
                     <button type="button" className={adminGhost} onClick={() => change(e.key, e.original)}>
                       Վերականգնել սկզբնականը

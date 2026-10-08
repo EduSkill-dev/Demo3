@@ -3,7 +3,7 @@ import { getT } from "@/i18n/server";
 import LegalPage from "@/components/layout/LegalPage";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: `${(await getT())("legal.termsTitle")} | Highland` };
+  return { title: `${(await getT())("legal.termsTitle")}` };
 }
 
 // Placeholder until the final text is ready.

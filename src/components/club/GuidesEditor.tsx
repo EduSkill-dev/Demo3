@@ -8,7 +8,7 @@ import { useT } from "@/i18n/client";
 import type { ClubGuide } from "@/types/database";
 
 const input =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 
 type Draft = { id: string | null; name: string; role: string; bio: string; photo: string | null; file: File | null };
 const empty: Draft = { id: null, name: "", role: "", bio: "", photo: null, file: null };
@@ -79,7 +79,7 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-serif text-lg font-semibold text-heading">{t("clubData.guides")}</h2>
         {!draft && (
-          <button type="button" onClick={() => setDraft({ ...empty })} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-apricot">
+          <button type="button" onClick={() => setDraft({ ...empty })} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-spruce-500">
             {t("clubData.addGuide")}
           </button>
         )}
@@ -102,7 +102,7 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
             </datalist>
             <textarea rows={3} aria-label={t("clubData.guideBio")} placeholder={t("clubData.guideBioHint")} value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} className={input} />
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className="rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-50">
+              <button type="submit" disabled={busy} className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
                 {busy ? "..." : t("clubData.saveGuide")}
               </button>
               <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">
@@ -125,10 +125,10 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-ink">{fullName(g)}</p>
-                {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-apricot">{g.role}</p>}
+                {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-terracotta-500">{g.role}</p>}
                 {g.bio && <p className="mt-1 line-clamp-3 text-sm text-muted">{g.bio}</p>}
                 <div className="mt-2 flex gap-3 text-sm font-semibold">
-                  <button type="button" onClick={() => setDraft({ id: g.id, name: fullName(g), role: g.role ?? "", bio: g.bio ?? "", photo: g.photo_url, file: null })} className="text-apricot hover:text-apricot-dark">
+                  <button type="button" onClick={() => setDraft({ id: g.id, name: fullName(g), role: g.role ?? "", bio: g.bio ?? "", photo: g.photo_url, file: null })} className="text-terracotta-500 hover:text-terracotta-700">
                     {t("common.edit")}
                   </button>
                   <button type="button" onClick={() => remove(g)} className="text-red-600 hover:text-red-700">

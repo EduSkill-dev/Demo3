@@ -144,7 +144,7 @@ export default function PackagesPage() {
                     {t("packagesPage.active")}
                   </span>
                 ) : recommended ? (
-                  <span className="rounded-full bg-apricot px-2.5 py-1 text-xs font-semibold text-white">
+                  <span className="rounded-full bg-spruce-500 px-2.5 py-1 text-xs font-semibold text-white">
                     {t("packagesPage.recommended")}
                   </span>
                 ) : null}
@@ -179,7 +179,7 @@ export default function PackagesPage() {
                     onClick={() => buy(id)}
                     disabled={busy || lower}
                     title={lower ? t("packagesPage.afterExpiry") : undefined}
-                    className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink transition hover:border-apricot hover:text-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink transition hover:border-spruce-500 hover:text-terracotta-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t("packagesPage.choose", { name: p.name })}
                   </button>
@@ -235,7 +235,7 @@ export default function PackagesPage() {
                     <td className="px-4 py-2.5 text-right">
                       <button data-view
                         onClick={() => setReceipt(h)}
-                        className="font-semibold text-apricot hover:text-apricot-dark"
+                        className="font-semibold text-terracotta-500 hover:text-terracotta-700"
                       >
                         {t("packagesPage.viewReceipt")}
                       </button>

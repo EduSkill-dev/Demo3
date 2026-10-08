@@ -66,13 +66,13 @@ export default function MyRequests({ rows }: { rows: MyRequest[] }) {
                   {shown.map((o) => (
                     <li
                       key={o.id}
-                      className={`rounded-xl border p-4 ${o.status === "accepted" ? "border-apricot bg-apricot/5" : "border-line"} ${
+                      className={`rounded-xl border p-4 ${o.status === "accepted" ? "border-terracotta-500 bg-terracotta-500/5" : "border-line"} ${
                         o.status === "declined" ? "opacity-60" : ""
                       }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <Link href={`/clubs/${o.club.id}`} className="font-semibold text-heading hover:text-apricot-dark">
+                          <Link href={`/clubs/${o.club.id}`} className="font-semibold text-heading hover:text-terracotta-700">
                             {o.club.name}
                           </Link>
                           <p className="mt-0.5 text-sm text-ink">
@@ -107,9 +107,9 @@ export default function MyRequests({ rows }: { rows: MyRequest[] }) {
                         <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-ink">
                           <span className="font-semibold">{t("requests.clubContact")}</span>{" "}
                           {o.club.phone ? (
-                            <a href={`tel:${o.club.phone.replace(/\s/g, "")}`} className="text-apricot hover:underline">{o.club.phone}</a>
+                            <a href={`tel:${o.club.phone.replace(/\s/g, "")}`} className="text-terracotta-500 hover:underline">{o.club.phone}</a>
                           ) : (
-                            <Link href={`/clubs/${o.club.id}`} className="text-apricot hover:underline">{o.club.name}</Link>
+                            <Link href={`/clubs/${o.club.id}`} className="text-terracotta-500 hover:underline">{o.club.name}</Link>
                           )}
                         </p>
                       )}

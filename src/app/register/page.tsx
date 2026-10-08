@@ -71,7 +71,7 @@ export default function RegisterPage() {
 
   if (step === "choose") {
     const card =
-      "block w-full rounded-xl border border-line bg-surface p-5 text-left transition hover:border-apricot hover:shadow-sm";
+      "block w-full rounded-xl border border-line bg-surface p-5 text-left transition hover:border-spruce-500 hover:shadow-sm";
     return (
       <AuthCard title={t("auth.chooseTitle")}>
         <div className="space-y-3">
@@ -86,7 +86,7 @@ export default function RegisterPage() {
         </div>
         <p className="mt-6 text-center text-sm text-muted">
           {t("auth.haveAccount")}{" "}
-          <Link href="/login" className="font-semibold text-apricot hover:text-apricot-dark">{t("header.login")}</Link>
+          <Link href="/login" className="font-semibold text-terracotta-500 hover:text-terracotta-700">{t("header.login")}</Link>
         </p>
       </AuthCard>
     );
@@ -140,7 +140,7 @@ export default function RegisterPage() {
         </button>
         <p className="text-center text-sm text-muted">
           {t("auth.haveAccount")}{" "}
-          <Link href="/login" className="font-semibold text-apricot hover:text-apricot-dark">{t("header.login")}</Link>
+          <Link href="/login" className="font-semibold text-terracotta-500 hover:text-terracotta-700">{t("header.login")}</Link>
         </p>
       </form>
     </AuthCard>

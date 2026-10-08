@@ -2,6 +2,7 @@ import { getT } from "@/i18n/server";
 import { getViewer } from "@/lib/viewer";
 import { NewsletterForm, SuggestionForm, type FooterViewer } from "./FooterForms";
 import FooterLinks from "./FooterLinks";
+import CulmenLogo from "@/components/CulmenLogo";
 
 export default async function SiteFooter() {
   const t = await getT();
@@ -15,7 +16,7 @@ export default async function SiteFooter() {
   const viewer: FooterViewer | null = who?.email && who.emailConfirmed ? { email: who.email, phone: who.phone } : null;
 
   return (
-    <footer className="mt-auto bg-pine-dark text-white">
+    <footer className="mt-auto bg-spruce-900 text-white">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         {!isAdmin && (
           <div className="mb-12 grid gap-10 border-b border-white/10 pb-12 md:grid-cols-2">
@@ -24,6 +25,9 @@ export default async function SiteFooter() {
           </div>
         )}
 
+        <div className="mb-8 flex justify-center">
+          <CulmenLogo variant="dark" size={44} />
+        </div>
         <FooterLinks />
 
         <div className="mt-8 space-y-1 text-center text-sm text-white/70">

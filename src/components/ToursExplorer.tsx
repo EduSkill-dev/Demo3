@@ -12,7 +12,7 @@ const KEYS = ["region", "terrain", "club", "difficulty", "from", "to", "overnigh
 type Key = (typeof KEYS)[number];
 
 const field =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 
 // Filters live in the URL (?region=…&terrain=…), so the club page's "Back"
 // and the browser's own back button return to the same selection.
@@ -106,13 +106,13 @@ export default function ToursExplorer({
             <input type="date" value={get("to")} min={get("from") || undefined} onChange={(e) => set({ to: e.target.value })} className={`${field} mt-1`} />
           </label>
           <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-ink">
-            <input type="checkbox" checked={!!get("overnight")} onChange={(e) => set({ overnight: e.target.checked ? "1" : "" })} className="accent-apricot" />
+            <input type="checkbox" checked={!!get("overnight")} onChange={(e) => set({ overnight: e.target.checked ? "1" : "" })} className="accent-spruce-500" />
             🌙 {t("toursPage.overnightOnly")}
           </label>
           <div className="flex items-end justify-between gap-3 pb-1 text-sm">
             <span className="text-muted">{t("toursPage.results", { count: filtered.length })}</span>
             {active && (
-              <button type="button" onClick={() => router.replace(pathname, { scroll: false })} className="font-semibold text-apricot hover:text-apricot-dark">
+              <button type="button" onClick={() => router.replace(pathname, { scroll: false })} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
                 {t("toursPage.clear")}
               </button>
             )}

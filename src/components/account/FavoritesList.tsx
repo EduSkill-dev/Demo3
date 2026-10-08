@@ -38,7 +38,7 @@ export default function FavoritesList({ rows }: { rows: FavoriteRow[] }) {
             {c.photo_url ? <img src={c.photo_url} alt="" className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center">🏔️</div>}
           </div>
           <div className="min-w-0 flex-1">
-            <Link href={`/clubs/${c.id}`} className="font-semibold text-ink hover:text-apricot-dark">{c.name}</Link>
+            <Link href={`/clubs/${c.id}`} className="font-semibold text-ink hover:text-terracotta-700">{c.name}</Link>
             <p className="text-xs text-muted">{t("account.toursWithClub", { count: c.attended })}</p>
           </div>
           <button

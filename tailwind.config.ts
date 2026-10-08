@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
-// Colours are CSS variables (see globals.css) so the dark theme can swap
-// them: brand colours stay fixed, surfaces and text follow the theme.
+// Culmen brand. The four colour families are fixed; surfaces and text are
+// CSS variables (see globals.css) so the dark theme can swap them.
 const token = (name: string) => `rgb(var(--c-${name}) / <alpha-value>)`;
 
 const config: Config = {
@@ -13,23 +13,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pine: "#2b3d33",
-        "pine-dark": "#1c2921",
-        moss: "#5c7a63",
-        apricot: "#e2792b",
-        "apricot-dark": "#c4631d",
+        // main: actions, text, dark grounds
+        spruce: { 900: "#12332D", 700: "#14443B", 500: "#1E5B4F", 300: "#4FA08D", 100: "#DCEBE6" },
+        // main: warmth, highlights, focus
+        terracotta: { 700: "#8F2F10", 500: "#C9491F", 300: "#EE7F58", 100: "#F9DFD2" },
+        // secondary, small touches only (never white text on it)
+        apricot: { 700: "#6B4800", 500: "#F2B134", 300: "#F7CE7A", 100: "#FCEBC4" },
+        card: "#FFFDF8",
         // theme-aware
-        stone: token("stone"), // page background
-        sand: token("sand"), // tinted panels
+        stone: token("stone"), // page background (Sand 50)
+        sand: token("sand"), // tinted panels (Sand 100)
         surface: token("surface"), // cards, tables, modals
-        ink: token("ink"), // body text
-        muted: token("muted"), // secondary text
-        line: token("line"), // borders
-        heading: token("heading"), // titles (pine in light mode)
+        ink: token("ink"), // body text (Spruce 900)
+        muted: token("muted"), // secondary text (Moss)
+        line: token("line"), // borders (Sand 200)
+        heading: token("heading"), // titles
       },
       fontFamily: {
-        serif: ["var(--font-fraunces)", "Georgia", "serif"],
-        sans: ["var(--font-inter)", "ui-sans-serif", "sans-serif"],
+        // Outfit for Latin, Noto Sans Armenian for Armenian; headings use the
+        // same family, heavier.
+        sans: ["var(--font-outfit)", "var(--font-noto-armenian)", "system-ui", "sans-serif"],
+        serif: ["var(--font-outfit)", "var(--font-noto-armenian)", "system-ui", "sans-serif"],
+      },
+      borderRadius: {
+        "2xl": "1.5rem", // cards: 24px
       },
       keyframes: {
         // Rhythm of the classic "made with love" heart; scales evenly.

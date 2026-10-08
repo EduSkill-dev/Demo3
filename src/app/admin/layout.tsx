@@ -4,7 +4,7 @@ import DashboardShell, { type ShellItem } from "@/components/ui/DashboardShell";
 import PasswordForm from "@/components/admin/PasswordForm";
 import { can, getAdmin } from "@/lib/admin";
 
-export const metadata: Metadata = { title: "Ադմինի վահանակ | Highland", robots: { index: false } };
+export const metadata: Metadata = { title: "Ադմինի վահանակ", robots: { index: false } };
 
 // The admin area (Armenian only). src/middleware.ts lets only admin accounts
 // in; each page checks its own permission again.

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Noto_Sans_Armenian, Outfit } from "next/font/google";
 import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import { I18nProvider } from "@/i18n/client";
@@ -10,15 +10,16 @@ import FrozenGuard from "@/components/layout/FrozenGuard";
 import InputGuard from "@/components/layout/InputGuard";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["500", "600", "700"],
+// Outfit for Latin text and the wordmark, Noto Sans Armenian for Armenian.
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", weight: ["500", "700"] });
+const notoArmenian = Noto_Sans_Armenian({
+  subsets: ["armenian"],
+  variable: "--font-noto-armenian",
+  weight: ["400", "600", "700"],
 });
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Highland — hikes & tours across Armenia",
+  title: { default: "Culmen", template: "%s" },
   description: "Find and book hikes and tours from clubs across Armenia.",
 };
 
@@ -34,9 +35,9 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${fraunces.variable} ${inter.variable}${theme === "dark" ? " dark" : ""}`}
+      className={`${outfit.variable} ${notoArmenian.variable}${theme === "dark" ? " dark" : ""}`}
     >
-      <body className="flex min-h-screen flex-col bg-stone font-sans text-ink">
+      <body className="flex min-h-screen flex-col bg-stone font-sans text-[18px] leading-normal text-ink">
         <I18nProvider locale={locale} overrides={overrides}>
           <InputGuard />
           <SiteHeader />

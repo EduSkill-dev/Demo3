@@ -21,16 +21,16 @@ export default function ClubCard({
             <img src={club.photo_url} alt={club.name} className="max-h-full max-w-full object-contain" />
           </div>
         ) : (
-          <div className="flex h-44 items-center justify-center bg-gradient-to-br from-pine to-apricot/70 text-4xl">🏔️</div>
+          <div className="flex h-44 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
         )}
       </Link>
       <div className="flex flex-1 flex-col p-5">
-        <Link href={`/clubs/${club.id}`} className="font-serif text-xl font-semibold text-heading hover:text-apricot-dark">
+        <Link href={`/clubs/${club.id}`} className="font-serif text-xl font-semibold text-heading hover:text-terracotta-700">
           {club.name}
         </Link>
         {rating && (
           <p className="mt-1 text-sm">
-            <span className="font-semibold text-apricot">★ {rating.average.toFixed(1)}/5</span>{" "}
+            <span className="font-semibold text-terracotta-500">★ {rating.average.toFixed(1)}/5</span>{" "}
             <span className="text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
           </p>
         )}

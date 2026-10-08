@@ -7,7 +7,7 @@ import ClubCard from "@/components/ClubCard";
 import type { Club } from "@/types/database";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: `${(await getT())("clubsPage.title")} | Highland` };
+  return { title: `${(await getT())("clubsPage.title")}` };
 }
 
 export default async function ClubsPage() {

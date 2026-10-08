@@ -71,8 +71,8 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
         [t("applications.name"), name(open)],
         ...(age != null ? ([[t("applications.age"), t("applications.years", { count: age })]] as [string, React.ReactNode][]) : []),
         ...(p?.gender ? ([[t("applications.gender"), p.gender === "female" ? t("auth.female") : t("auth.male")]] as [string, React.ReactNode][]) : []),
-        [t("auth.email"), p?.email ? <a href={`mailto:${p.email}`} className="text-apricot hover:underline">{p.email}</a> : "—"],
-        [t("auth.phone"), p?.phone ? <a href={`tel:${p.phone.replace(/\s/g, "")}`} className="text-apricot hover:underline">{p.phone}</a> : "—"],
+        [t("auth.email"), p?.email ? <a href={`mailto:${p.email}`} className="text-terracotta-500 hover:underline">{p.email}</a> : "—"],
+        [t("auth.phone"), p?.phone ? <a href={`tel:${p.phone.replace(/\s/g, "")}`} className="text-terracotta-500 hover:underline">{p.phone}</a> : "—"],
         [t("applications.tour"), open.tourTitle],
         [t("applications.tourDate"), fmt(open.tourDate)],
         [t("applications.applied"), fmt(open.createdAt, true)],
@@ -114,7 +114,7 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
                   <td className="px-4 py-3">{r.seq}/{r.cap}</td>
                   <td className="whitespace-nowrap px-4 py-3">{fmt(r.createdAt, true)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button data-view type="button" onClick={() => view(r)} className="font-semibold text-apricot hover:text-apricot-dark">
+                    <button data-view type="button" onClick={() => view(r)} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
                       {t("common.view")}
                     </button>
                   </td>

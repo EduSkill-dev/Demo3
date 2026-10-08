@@ -43,7 +43,7 @@ export default function DashboardShell({
                 aria-current={isActive ? "page" : undefined}
                 className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
                   isActive
-                    ? "bg-apricot/10 text-apricot-dark dark:text-apricot"
+                    ? "bg-terracotta-500/10 text-terracotta-700 dark:text-terracotta-300"
                     : "text-muted hover:bg-sand/60 hover:text-ink"
                 }`}
               >

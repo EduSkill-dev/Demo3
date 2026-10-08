@@ -43,7 +43,7 @@ export default async function ClubOffersPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-muted">{t("requests.myOffersIntro")}</p>
-        <Link href="/requests" className="rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark">
+        <Link href="/requests" className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
           {t("requests.browse")}
         </Link>
       </div>
@@ -58,22 +58,22 @@ export default async function ClubOffersPage() {
             return (
               <li
                 key={o.id}
-                className={`space-y-4 rounded-2xl border bg-surface p-5 shadow-sm ${o.status === "accepted" ? "border-apricot" : "border-line"}`}
+                className={`space-y-4 rounded-2xl border bg-surface p-5 shadow-sm ${o.status === "accepted" ? "border-terracotta-500" : "border-line"}`}
               >
                 <RequestSummary request={request} showAuthor />
                 {person && (
-                  <div className="rounded-xl bg-apricot/10 p-4 text-sm text-ink">
+                  <div className="rounded-xl bg-terracotta-500/10 p-4 text-sm text-ink">
                     <p className="font-semibold text-heading">{t("requests.contacts")}</p>
                     <p className="mt-1">
                       {[person.first_name, person.last_name].filter(Boolean).join(" ") || "—"}
                       {person.phone && (
                         <>
                           {" · "}
-                          <a href={`tel:${person.phone.replace(/\s/g, "")}`} className="text-apricot hover:underline">{person.phone}</a>
+                          <a href={`tel:${person.phone.replace(/\s/g, "")}`} className="text-terracotta-500 hover:underline">{person.phone}</a>
                         </>
                       )}
                       {" · "}
-                      <a href={`mailto:${person.email}`} className="text-apricot hover:underline">{person.email}</a>
+                      <a href={`mailto:${person.email}`} className="text-terracotta-500 hover:underline">{person.email}</a>
                     </p>
                   </div>
                 )}

@@ -22,18 +22,19 @@ export type SendResult =
   | { ok: false; skipped: true; reason: string }
   | { ok: false; skipped: false; error: string };
 
-const BRAND = { pine: "#2b3d33", apricot: "#e2792b", stone: "#f7f4ee" };
+// Culmen: Spruce 900 text, Spruce 500 buttons, Sand 50 ground.
+const BRAND = { pine: "#12332D", apricot: "#1E5B4F", stone: "#FBF6EC" };
 
 function layout(title: string, bodyHtml: string): string {
   return `<!doctype html>
-<html><body style="margin:0;background:${BRAND.stone};font-family:Georgia,serif;color:#26221d">
+<html><body style="margin:0;background:${BRAND.stone};font-family:Arial,Helvetica,sans-serif;color:#12332D">
   <div style="max-width:560px;margin:0 auto;padding:28px 20px">
-    <div style="font-size:20px;font-weight:700;color:${BRAND.pine}">🏔️ Highland</div>
-    <div style="background:#fff;border:1px solid #ece5d6;border-radius:14px;padding:22px;margin-top:16px">
+    <div style="font-size:20px;font-weight:700;color:${BRAND.pine}">Culmen</div>
+    <div style="background:#fff;border:1px solid #E6D9C2;border-radius:20px;padding:22px;margin-top:16px">
       <h1 style="margin:0 0 14px;font-size:20px;color:${BRAND.pine}">${title}</h1>
       ${bodyHtml}
-      <p style="margin-top:22px;font-size:13px;color:#7a736a">
-        Այս նամակն ուղարկվել է հարթակից՝ Highland, Հայաստանի արշավական ակումբների հարթակ։
+      <p style="margin-top:22px;font-size:13px;color:#5B6B66">
+        Այս նամակն ուղարկվել է հարթակից՝ Culmen, Հայաստանի արշավական ակումբների հարթակ։
       </p>
     </div>
   </div>
@@ -41,7 +42,7 @@ function layout(title: string, bodyHtml: string): string {
 }
 
 function row(label: string, value: string): string {
-  return `<tr><td style="padding:5px 0;color:#7a736a">${label}</td>
+  return `<tr><td style="padding:5px 0;color:#5B6B66">${label}</td>
           <td style="padding:5px 0;text-align:right;font-weight:600">${value}</td></tr>`;
 }
 
@@ -51,7 +52,7 @@ function table(rows: string): string {
 
 function button(href: string, text: string): string {
   return `<p style="margin-top:18px"><a href="${href}"
-    style="display:inline-block;background:${BRAND.apricot};color:#fff;padding:11px 18px;border-radius:9px;text-decoration:none;font-weight:600;font-family:sans-serif">
+    style="display:inline-block;background:${BRAND.apricot};color:#FFFDF8;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:600;font-family:sans-serif">
     ${text}</a></p>`;
 }
 
@@ -99,7 +100,7 @@ export async function sendEmail(input: {
     try {
       const { createTransport } = await import("nodemailer");
       const info = await createTransport({ service: "gmail", auth: { user: gmailUser, pass: gmailPass } }).sendMail({
-        from: `Highland <${gmailUser}>`,
+        from: `Culmen <${gmailUser}>`,
         to: input.to,
         replyTo: input.replyTo,
         subject: input.subject,
@@ -120,7 +121,7 @@ export async function sendEmail(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "Highland <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM || "Culmen <onboarding@resend.dev>",
         to: [input.to],
         ...(input.replyTo ? { reply_to: input.replyTo } : {}),
         subject: input.subject,
@@ -253,14 +254,14 @@ export function paymentReceiptEmail(input: {
 export function newsletterConfirmEmail(input: { to: string; confirmUrl: string; unsubscribeUrl: string }) {
   const html = layout(
     "Հաստատեք բաժանորդագրությունը",
-    `<p>Ցանկանո՞ւմ եք ստանալ նամակներ Highland-ի նոր արշավների և նորությունների մասին։ Սեղմեք ստորև կոճակը՝ հաստատելու համար։</p>
+    `<p>Ցանկանո՞ւմ եք ստանալ նամակներ Culmen-ի նոր արշավների և նորությունների մասին։ Սեղմեք ստորև կոճակը՝ հաստատելու համար։</p>
     ${button(input.confirmUrl, "Հաստատել բաժանորդագրությունը")}
-    <p style="font-size:13px;color:#7a736a">Եթե դուք չեք բաժանորդագրվել, պարզապես անտեսեք այս նամակը կամ
-    <a href="${input.unsubscribeUrl}" style="color:#7a736a">չեղարկեք այն</a>։</p>`
+    <p style="font-size:13px;color:#5B6B66">Եթե դուք չեք բաժանորդագրվել, պարզապես անտեսեք այս նամակը կամ
+    <a href="${input.unsubscribeUrl}" style="color:#5B6B66">չեղարկեք այն</a>։</p>`
   );
   return {
     to: input.to,
-    subject: "Highland — հաստատեք բաժանորդագրությունը",
+    subject: "Culmen — հաստատեք բաժանորդագրությունը",
     html,
     text: `Հաստատեք բաժանորդագրությունը՝ ${input.confirmUrl}`,
   };
@@ -270,14 +271,14 @@ export function newsletterConfirmEmail(input: { to: string; confirmUrl: string; 
 export function contactConfirmEmail(input: { to: string; message: string; confirmUrl: string }) {
   const html = layout(
     "Հաստատեք Ձեր նամակը",
-    `<p>Highland-ի կայքից այս էլ. հասցեով ուղարկվել է հետևյալ նամակը։ Սեղմեք ստորև կոճակը, որպեսզի այն հասնի մեզ։</p>
+    `<p>Culmen-ի կայքից այս էլ. հասցեով ուղարկվել է հետևյալ նամակը։ Սեղմեք ստորև կոճակը, որպեսզի այն հասնի մեզ։</p>
     <p style="white-space:pre-line;background:${BRAND.stone};border-radius:9px;padding:12px">${esc(input.message)}</p>
     ${button(input.confirmUrl, "Հաստատել և ուղարկել")}
-    <p style="font-size:13px;color:#7a736a">Եթե Դուք չեք գրել այս նամակը, պարզապես անտեսեք այն՝ առանց հաստատման այն մեզ չի հասնի։</p>`
+    <p style="font-size:13px;color:#5B6B66">Եթե Դուք չեք գրել այս նամակը, պարզապես անտեսեք այն՝ առանց հաստատման այն մեզ չի հասնի։</p>`
   );
   return {
     to: input.to,
-    subject: "Highland — հաստատեք Ձեր նամակը",
+    subject: "Culmen — հաստատեք Ձեր նամակը",
     html,
     text: `Հաստատեք Ձեր նամակը՝ ${input.confirmUrl}
 
@@ -297,7 +298,7 @@ export function contactInboxEmail(input: { to: string; message: string; email: s
   return {
     to: input.to,
     replyTo: input.email ?? undefined,
-    subject: "Highland — նոր առաջարկ",
+    subject: "Culmen — նոր առաջարկ",
     html,
     text: `${input.message}
 
@@ -315,7 +316,7 @@ export function newOfferEmail(input: { to: string; clubName: string; price: numb
   );
   return {
     to: input.to,
-    subject: `Highland — նոր առաջարկ «${input.clubName}» ակումբից`,
+    subject: `Culmen — նոր առաջարկ «${input.clubName}» ակումբից`,
     html,
     text: `«${input.clubName}» ակումբն առաջարկ է ուղարկել Ձեր պատվերին՝ ${formatAmd(input.price)}, ${input.date}։ ${BASE_URL()}/account/requests`,
   };
@@ -339,7 +340,7 @@ export function offerAcceptedEmail(input: { to: string; name: string; phone: str
   return {
     to: input.to,
     replyTo: input.email,
-    subject: "Highland — Ձեր առաջարկն ընդունվել է",
+    subject: "Culmen — Ձեր առաջարկն ընդունվել է",
     html,
     text: `Ձեր առաջարկն ընդունվել է։ ${input.name} · ${input.phone ?? ""} · ${input.email}`,
   };
@@ -349,13 +350,13 @@ export function offerAcceptedEmail(input: { to: string; name: string; phone: str
 export function accountBlockedEmail(input: { to: string }) {
   const html = layout(
     "Ձեր հաշիվն արգելափակված է",
-    `<p>Highland հարթակում Ձեր հաշիվն արգելափակվել է ադմինիստրատորի կողմից, և առայժմ չեք կարող մուտք գործել կամ որևէ գործողություն կատարել։</p>
+    `<p>Culmen հարթակում Ձեր հաշիվն արգելափակվել է ադմինիստրատորի կողմից, և առայժմ չեք կարող մուտք գործել կամ որևէ գործողություն կատարել։</p>
      <p>Հարցերի դեպքում խնդրում ենք կապվել մեզ հետ հարթակի «Օգնություն» բաժնում։</p>
      ${button(`${BASE_URL()}/help`, "Օգնություն")}`
   );
   return {
     to: input.to,
-    subject: "Highland — Ձեր հաշիվն արգելափակված է",
+    subject: "Culmen — Ձեր հաշիվն արգելափակված է",
     html,
     text: `Ձեր հաշիվն արգելափակվել է ադմինիստրատորի կողմից։ Հարցերի դեպքում կապվեք մեզ հետ հարթակի «Օգնություն» բաժնում՝ ${BASE_URL()}/help`,
   };
@@ -366,7 +367,7 @@ export function newSubscriberEmail(input: { to: string; email: string }) {
   return {
     to: input.to,
     replyTo: input.email,
-    subject: "Highland — նոր բաժանորդ",
+    subject: "Culmen — նոր բաժանորդ",
     html: layout("Նոր բաժանորդագրություն", `<p>Նորություններին բաժանորդագրվեց՝ <strong>${esc(input.email)}</strong></p>`),
     text: `Նոր բաժանորդագրություն՝ ${input.email}`,
   };
@@ -414,7 +415,7 @@ export function packageExpiryEmail(input: { to: string; clubName: string; packag
   );
   return {
     to: input.to,
-    subject: `Highland — «${input.packageName}» փաթեթը լրանում է ${input.daysLeft} օրից`,
+    subject: `Culmen — «${input.packageName}» փաթեթը լրանում է ${input.daysLeft} օրից`,
     html,
     text: `Ձեր «${input.packageName}» փաթեթը գործում է մինչև ${input.endsAt}։ Երկարաձգեք՝ ${BASE_URL()}/dashboard/packages`,
   };
@@ -430,19 +431,19 @@ export function newsletterDigestEmail(input: {
     .map(
       (tour) => `<tr><td style="padding:8px 0;border-bottom:1px solid #ece5d6">
         <a href="${BASE_URL()}/tours/${tour.id}" style="color:${BRAND.pine};font-weight:700;text-decoration:none">${esc(tour.title)}</a><br>
-        <span style="color:#7a736a;font-size:13px">${tour.date} · ${esc(tour.clubName)} · ${tour.regions.map((r) => hyT(`region.${r}`)).join(", ")}</span>
+        <span style="color:#5B6B66;font-size:13px">${tour.date} · ${esc(tour.clubName)} · ${tour.regions.map((r) => hyT(`region.${r}`)).join(", ")}</span>
       </td></tr>`
     )
     .join("");
   const html = layout(
-    "Նոր արշավներ Highland-ում",
+    "Նոր արշավներ Culmen-ում",
     `<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
      ${button(`${BASE_URL()}/tours`, "Տեսնել բոլոր արշավները")}
-     <p style="font-size:12px;color:#7a736a;margin-top:18px"><a href="${input.unsubscribeUrl}" style="color:#7a736a">Ապաբաժանորդագրվել</a></p>`
+     <p style="font-size:12px;color:#5B6B66;margin-top:18px"><a href="${input.unsubscribeUrl}" style="color:#5B6B66">Ապաբաժանորդագրվել</a></p>`
   );
   return {
     to: input.to,
-    subject: `Highland — ${input.tours.length} նոր արշավ`,
+    subject: `Culmen — ${input.tours.length} նոր արշավ`,
     html,
     text: input.tours.map((tour) => `${tour.title} (${tour.date}) — ${BASE_URL()}/tours/${tour.id}`).join("\n"),
   };

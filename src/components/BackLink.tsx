@@ -16,7 +16,7 @@ export default function BackLink({
   label: string;
 }) {
   const router = useRouter();
-  const className = "inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-apricot-dark";
+  const className = "inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-terracotta-700";
 
   if (href) {
     return (

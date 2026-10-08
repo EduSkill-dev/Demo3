@@ -23,7 +23,7 @@ export default function FaqAccordion({ items }: { items: FaqItem[] }) {
             >
               <span className="font-medium text-heading">{item.question}</span>
               <span
-                className={`shrink-0 text-xl text-apricot transition-transform ${
+                className={`shrink-0 text-xl text-terracotta-500 transition-transform ${
                   open ? "rotate-45" : ""
                 }`}
               >

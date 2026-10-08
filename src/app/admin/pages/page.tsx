@@ -48,7 +48,7 @@ export default async function AdminPagesPage({ searchParams }: { searchParams: {
   const href = (s: string, l: string) => `/admin/pages?section=${s}&lang=${l}`;
   const chip = (active: boolean) =>
     `rounded-full px-3 py-1 text-sm font-medium ${
-      active ? "bg-apricot text-white" : "border border-line bg-surface text-ink hover:border-apricot"
+      active ? "bg-spruce-500 text-white" : "border border-line bg-surface text-ink hover:border-spruce-500"
     }`;
   const title = groups.flatMap((g) => g.sections).find(([k]) => k === section)?.[1] ?? section;
 

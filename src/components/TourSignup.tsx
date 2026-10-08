@@ -119,7 +119,7 @@ export default function TourSignup({
   }
 
   const primary =
-    "w-full rounded-lg bg-apricot py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:bg-apricot/50";
+    "w-full rounded-full bg-spruce-500 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:bg-spruce-500/50";
 
   return (
     <div className={bare ? "" : "rounded-2xl border border-line bg-surface p-5"}>
@@ -133,7 +133,7 @@ export default function TourSignup({
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-sand">
         <div
-          className={`h-full rounded-full ${full ? "bg-red-400" : "bg-apricot"}`}
+          className={`h-full rounded-full ${full ? "bg-red-400" : "bg-spruce-500"}`}
           style={{ width: `${limit > 0 ? Math.min(100, Math.round((taken / limit) * 100)) : 100}%` }}
         />
       </div>

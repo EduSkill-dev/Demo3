@@ -4,7 +4,7 @@ import { getT } from "@/i18n/server";
 import LegalPage from "@/components/layout/LegalPage";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: `${(await getT())("legal.helpTitle")} | Highland` };
+  return { title: `${(await getT())("legal.helpTitle")}` };
 }
 
 export default async function HelpPage() {
@@ -13,7 +13,7 @@ export default async function HelpPage() {
     <LegalPage title={t("legal.helpTitle")}>
       <p>{t("legal.helpText")}</p>
       <p>
-        <Link href="/faq" className="font-semibold text-apricot hover:text-apricot-dark">
+        <Link href="/faq" className="font-semibold text-terracotta-500 hover:text-terracotta-700">
           {t("header.faq")} →
         </Link>
       </p>

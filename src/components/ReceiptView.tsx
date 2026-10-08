@@ -43,7 +43,7 @@ export default function ReceiptView({
 
   return (
     <div className="text-sm">
-      <p className="font-serif text-xl font-semibold text-heading">🏔️ Highland</p>
+      <p className="font-serif text-xl font-semibold text-heading">Culmen</p>
       <dl className="mt-4 divide-y divide-line rounded-xl border border-line">
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-4 px-4 py-2.5">

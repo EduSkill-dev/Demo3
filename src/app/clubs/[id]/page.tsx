@@ -32,7 +32,7 @@ async function getClub(id: string) {
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const club = await getClub(params.id);
-  return { title: club ? `${club.name} | Highland` : "Highland" };
+  return { title: club ? club.name : { absolute: "Culmen" } };
 }
 
 export default async function ClubDetailPage({
@@ -91,12 +91,12 @@ export default async function ClubDetailPage({
           <h1 className="font-serif text-3xl font-semibold text-heading">{club.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             {showReviews && rating && (
-              <span className="font-semibold text-apricot">
+              <span className="font-semibold text-terracotta-500">
                 ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
               </span>
             )}
             {club.phone && (
-              <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-apricot-dark">📞 {club.phone}</a>
+              <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">📞 {club.phone}</a>
             )}
           </div>
         </div>
@@ -128,7 +128,7 @@ export default async function ClubDetailPage({
                     <p className="mt-3 font-serif text-lg font-semibold text-heading">
                       {[g.first_name, g.last_name].filter(Boolean).join(" ")}
                     </p>
-                    {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-apricot">{g.role}</p>}
+                    {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-terracotta-500">{g.role}</p>}
                     {g.bio && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted">{g.bio}</p>}
                   </li>
                 ))}
@@ -146,9 +146,9 @@ export default async function ClubDetailPage({
           <section id="comments">
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
             {isOwner && !publicRatings && (
-              <p className="mt-3 rounded-lg border border-apricot/40 bg-apricot/10 p-3 text-sm text-ink">
+              <p className="mt-3 rounded-lg border border-terracotta-500/40 bg-terracotta-500/10 p-3 text-sm text-ink">
                 {t("clubPage.hiddenForPackage")}{" "}
-                <Link href="/dashboard/packages" className="font-semibold text-apricot-dark underline dark:text-apricot">
+                <Link href="/dashboard/packages" className="font-semibold text-terracotta-700 underline dark:text-terracotta-300">
                   {t("clubPage.upgrade")}
                 </Link>
               </p>
@@ -183,7 +183,7 @@ export default async function ClubDetailPage({
                             <p className="font-semibold text-ink">{name}</p>
                             <p className="text-xs text-muted">{day(r.created_at)}</p>
                           </div>
-                          <p className="text-sm text-apricot" aria-label={`${r.score}/5`}>
+                          <p className="text-sm text-terracotta-500" aria-label={`${r.score}/5`}>
                             {"★".repeat(r.score)}
                             <span className="text-line">{"★".repeat(5 - r.score)}</span>
                             {r.tour_title && <span className="ml-2 text-xs text-muted">{t("clubPage.onTour", { title: r.tour_title })}</span>}

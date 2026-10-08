@@ -76,7 +76,7 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
     <div className="space-y-3">
       {unread.length > 0 && (
         <div className="flex justify-end">
-          <button type="button" onClick={() => markRead(unread)} className="text-sm font-semibold text-apricot hover:text-apricot-dark">
+          <button type="button" onClick={() => markRead(unread)} className="text-sm font-semibold text-terracotta-500 hover:text-terracotta-700">
             {t("account.markAllRead")}
           </button>
         </div>
@@ -100,15 +100,15 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
                 </td>
                 <td className="px-4 py-3">
                   {n.sender_type === "platform" || !n.clubs ? (
-                    "Highland"
+                    "Culmen"
                   ) : (
-                    <Link href={`/clubs/${n.clubs.id}`} className="hover:text-apricot-dark">{n.clubs.name}</Link>
+                    <Link href={`/clubs/${n.clubs.id}`} className="hover:text-terracotta-700">{n.clubs.name}</Link>
                   )}
                 </td>
                 <td className="px-4 py-3">{title(n)}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   <div className="flex justify-end gap-3 font-semibold">
-                    <button data-view type="button" onClick={() => view(n)} className="text-apricot hover:text-apricot-dark">{t("common.view")}</button>
+                    <button data-view type="button" onClick={() => view(n)} className="text-terracotta-500 hover:text-terracotta-700">{t("common.view")}</button>
                     <button type="button" onClick={() => remove(n)} className="text-red-600 hover:text-red-700">{t("common.delete")}</button>
                   </div>
                 </td>
@@ -124,7 +124,7 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
             <p className="text-xs text-muted">{when(open.created_at)}</p>
             <p className="leading-6">{text(open)}</p>
             {open.tours && open.kind !== "tour_cancelled" && (
-              <Link href={`/tours/${open.tours.id}`} className="inline-block rounded-lg bg-apricot px-4 py-2 font-semibold text-white hover:bg-apricot-dark">
+              <Link href={`/tours/${open.tours.id}`} className="inline-block rounded-full bg-spruce-500 px-4 py-2 font-semibold text-white hover:bg-spruce-900">
                 {t("account.openTour")}
               </Link>
             )}

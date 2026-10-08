@@ -29,7 +29,7 @@ export default function FooterLinks() {
             aria-current={active ? "page" : undefined}
             className={
               active
-                ? "font-semibold text-apricot underline decoration-2 underline-offset-4"
+                ? "font-semibold text-terracotta-500 underline decoration-2 underline-offset-4"
                 : "text-white/75 hover:text-white"
             }
           >

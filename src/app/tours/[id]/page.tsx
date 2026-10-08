@@ -21,8 +21,8 @@ async function getTour(id: string): Promise<TourWithClub | null> {
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const tour = await getTour(params.id);
-  if (!tour) return { title: "Highland" };
-  return { title: `${tour.title} | Highland`, description: tour.description ?? tour.title };
+  if (!tour) return { title: { absolute: "Culmen" } };
+  return { title: `${tour.title}`, description: tour.description ?? tour.title };
 }
 
 // The shareable page of one hike: full details, sign-up and its reviews.
@@ -33,7 +33,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
     return (
       <main className="mx-auto max-w-3xl px-4 py-20 text-center">
         <h1 className="font-serif text-2xl font-semibold text-heading">{t("toursPage.empty")}</h1>
-        <Link href="/tours" className="mt-6 inline-block rounded-lg bg-apricot px-5 py-3 font-semibold text-white">
+        <Link href="/tours" className="mt-6 inline-block rounded-full bg-spruce-500 px-5 py-3 font-semibold text-white">
           {t("home.allTours")}
         </Link>
       </main>
@@ -96,7 +96,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
                         </span>
                         <span className="text-xs text-muted">{day(r.created_at)}</span>
                       </div>
-                      <p className="text-apricot">{"★".repeat(r.score)}<span className="text-line">{"★".repeat(5 - r.score)}</span></p>
+                      <p className="text-terracotta-500">{"★".repeat(r.score)}<span className="text-line">{"★".repeat(5 - r.score)}</span></p>
                       <p className="mt-1 whitespace-pre-line leading-6 text-ink">{r.comment}</p>
                     </li>
                   ))}

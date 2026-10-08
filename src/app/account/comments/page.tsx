@@ -44,7 +44,7 @@ export default async function MyCommentsPage() {
           <li key={r.id} className="rounded-xl border border-line bg-surface p-4">
             <div className="flex items-center justify-between gap-3 text-xs">
               <span className="text-muted">{day(r.created_at)}</span>
-              <span className="font-semibold text-apricot" aria-label={`${r.score}/5`}>
+              <span className="font-semibold text-terracotta-500" aria-label={`${r.score}/5`}>
                 {"★".repeat(r.score)}
                 <span className="text-line">{"★".repeat(5 - r.score)}</span>
               </span>
@@ -52,14 +52,14 @@ export default async function MyCommentsPage() {
             <p className="mt-2 whitespace-pre-line text-sm leading-6 text-ink">{r.comment}</p>
             <p className="mt-3 text-xs text-muted">
               {club && (
-                <Link href={`/clubs/${club.id}`} className="font-semibold text-heading hover:text-apricot-dark">
+                <Link href={`/clubs/${club.id}`} className="font-semibold text-heading hover:text-terracotta-700">
                   {club.name}
                 </Link>
               )}
               {r.tours && (
                 <>
                   {" > "}
-                  <Link href={`/tours/${r.tours.id}`} className="hover:text-apricot-dark">{r.tours.title}</Link>{" "}
+                  <Link href={`/tours/${r.tours.id}`} className="hover:text-terracotta-700">{r.tours.title}</Link>{" "}
                   ({day(r.tours.date)})
                 </>
               )}

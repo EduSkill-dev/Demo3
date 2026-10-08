@@ -6,7 +6,7 @@ import type { RequestStatus, RequestView } from "@/lib/requests";
 
 const STATUS_STYLE: Record<RequestStatus, string> = {
   open: "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
-  accepted: "bg-apricot/15 text-apricot-dark dark:text-apricot",
+  accepted: "bg-terracotta-500/15 text-terracotta-700 dark:text-terracotta-300",
   closed: "bg-sand text-muted",
 };
 
@@ -28,7 +28,7 @@ export default function RequestSummary({ request, showAuthor = false }: { reques
     [t("requests.budget"), request.budget != null ? t("common.perPerson", { price: formatAmd(request.budget) }) : t("requests.budgetOpen")],
   ];
   const chips = [
-    ...request.regions.map((r) => ({ key: `r-${r}`, text: t(`region.${r}`), tone: "text-apricot-dark dark:text-apricot bg-apricot/10" })),
+    ...request.regions.map((r) => ({ key: `r-${r}`, text: t(`region.${r}`), tone: "text-terracotta-700 dark:text-terracotta-300 bg-terracotta-500/10" })),
     ...request.terrains.map((k) => ({ key: `t-${k}`, text: t(`terrain.${k}`), tone: "text-ink bg-sand" })),
     ...request.sights.map((s) => ({ key: `s-${s}`, text: `📍 ${s}`, tone: "text-ink bg-sand" })),
   ];

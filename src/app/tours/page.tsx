@@ -6,7 +6,7 @@ import { getT } from "@/i18n/server";
 import ToursExplorer from "@/components/ToursExplorer";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: `${(await getT())("toursPage.title")} | Highland` };
+  return { title: `${(await getT())("toursPage.title")}` };
 }
 
 export default async function ToursPage() {

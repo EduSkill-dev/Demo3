@@ -4,7 +4,7 @@ import FaqAccordion, { type FaqItem } from "@/components/FaqAccordion";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
-  return { title: `${t("faq.label")} | Highland`, description: t("faq.metaDescription") };
+  return { title: `${t("faq.label")}`, description: t("faq.metaDescription") };
 }
 
 const COUNT = 7;
@@ -22,7 +22,7 @@ export default async function FaqPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-apricot">{t("faq.label")}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-terracotta-500">{t("faq.label")}</p>
       <h1 className="mt-3 font-serif text-3xl font-semibold text-heading sm:text-4xl">{t("faq.title")}</h1>
       <p className="mt-3 text-muted">{t("faq.intro")}</p>
 

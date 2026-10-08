@@ -85,7 +85,7 @@ export default function PaymentSheet({
     <form onSubmit={pay} className="rounded-2xl border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-2">
         <b className="text-sm text-heading">{t("payment.title")}</b>
-        <span className="font-semibold text-apricot-dark">{formatAmd(amount)}</span>
+        <span className="font-semibold text-terracotta-700">{formatAmd(amount)}</span>
       </div>
       <p className="mt-1 text-xs text-muted">{label}</p>
 
@@ -152,7 +152,7 @@ export default function PaymentSheet({
         <button
           type="submit"
           disabled={busy}
-          className="flex-1 rounded-lg bg-apricot py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-50"
+          className="flex-1 rounded-full bg-spruce-500 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50"
         >
           {busy ? t("payment.processing") : submitLabel || t("payment.pay", { amount: formatAmd(amount) })}
         </button>

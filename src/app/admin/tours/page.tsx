@@ -59,7 +59,7 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-line last:border-0">
                 <td className="px-4 py-3">
-                  <Link href={`/tours/${r.id}`} className="font-medium text-ink hover:text-apricot-dark">{r.title}</Link>
+                  <Link href={`/tours/${r.id}`} className="font-medium text-ink hover:text-terracotta-700">{r.title}</Link>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-muted">{r.clubs?.name ?? "—"}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-muted">{fmt(r.date, "short")}</td>

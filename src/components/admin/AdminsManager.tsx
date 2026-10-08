@@ -21,7 +21,7 @@ function PermBoxes({ value, onChange, idPrefix }: { value: AdminPerm[]; onChange
           <input
             id={`${idPrefix}-${k}`}
             type="checkbox"
-            className="accent-apricot"
+            className="accent-spruce-500"
             checked={value.includes(k)}
             onChange={() => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k])}
           />
@@ -35,7 +35,7 @@ function PermBoxes({ value, onChange, idPrefix }: { value: AdminPerm[]; onChange
 // Shown once, right after a password was generated.
 function OneTimePassword({ email, password, onClose }: { email: string; password: string; onClose: () => void }) {
   return (
-    <div className="rounded-xl border border-apricot/50 bg-apricot/10 p-4 text-sm text-ink">
+    <div className="rounded-xl border border-terracotta-500/50 bg-terracotta-500/10 p-4 text-sm text-ink">
       <p className="font-semibold">Մեկանգամյա գաղտնաբառ՝ {email}</p>
       <p className="mt-2 select-all break-all rounded-lg bg-surface px-3 py-2 font-mono text-base">{password}</p>
       <p className="mt-2 text-xs text-muted">
@@ -71,7 +71,7 @@ function AdminItem({ row, onPassword }: { row: AdminRow; onPassword: (email: str
         <div className="min-w-0">
           <p className="break-all font-semibold text-ink">{row.email}</p>
           {row.mustChangePassword && (
-            <p className="mt-1 text-xs font-semibold text-apricot-dark dark:text-apricot">Դեռ չի փոխել մեկանգամյա գաղտնաբառը</p>
+            <p className="mt-1 text-xs font-semibold text-terracotta-700 dark:text-terracotta-300">Դեռ չի փոխել մեկանգամյա գաղտնաբառը</p>
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">

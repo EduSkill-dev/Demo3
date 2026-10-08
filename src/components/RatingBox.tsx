@@ -143,7 +143,7 @@ export default function RatingBox({
             onClick={() => setScore(n)}
             aria-label={t("rating.stars", { count: n })}
             className={`text-2xl leading-none transition ${
-              n <= score ? "text-apricot" : "text-line hover:text-apricot/50"
+              n <= score ? "text-terracotta-500" : "text-line hover:text-terracotta-500/50"
             }`}
           >
             ★
@@ -167,7 +167,7 @@ export default function RatingBox({
       <button
         type="submit"
         disabled={saving || score < 1}
-        className="rounded-lg bg-apricot px-5 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saving ? t("rating.saving") : existing ? t("rating.update") : t("rating.send")}
       </button>

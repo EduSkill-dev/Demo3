@@ -93,7 +93,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
                 )}
               </td>
               <td className="px-4 py-3">
-                <Link href="/dashboard/applications" className="relative inline-flex items-start pr-3 font-semibold text-ink hover:text-apricot-dark">
+                <Link href="/dashboard/applications" className="relative inline-flex items-start pr-3 font-semibold text-ink hover:text-terracotta-700">
                   <span className={r.taken >= r.cap && r.cap > 0 ? "text-red-600" : ""}>
                     {r.taken}/{r.cap}
                   </span>
@@ -112,7 +112,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   {r.status !== "cancelled" && (
                     <div className="flex justify-end gap-3 font-semibold">
-                      <Link href={`/dashboard/listings/${r.id}/edit`} className="text-apricot hover:text-apricot-dark">
+                      <Link href={`/dashboard/listings/${r.id}/edit`} className="text-terracotta-500 hover:text-terracotta-700">
                         {t("common.edit")}
                       </Link>
                       <button

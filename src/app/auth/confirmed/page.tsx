@@ -26,7 +26,7 @@ export default async function ConfirmedPage({
     return (
       <AuthCard title={t("auth.otherBrowserTitle")}>
         <p className="rounded-lg bg-sand/60 p-4 text-sm text-ink">{t("auth.otherBrowserText")}</p>
-        <Link href="/login" className="mt-6 inline-block rounded-lg bg-apricot px-5 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark">
+        <Link href="/login" className="mt-6 inline-block rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
           {t("header.login")}
         </Link>
       </AuthCard>
@@ -40,8 +40,8 @@ export default async function ConfirmedPage({
           {t("auth.linkInvalidText")}
         </p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold">
-          <Link href="/login" className="text-apricot hover:text-apricot-dark">{t("header.login")}</Link>
-          <Link href="/auth/forgot" className="text-apricot hover:text-apricot-dark">{t("auth.forgot")}</Link>
+          <Link href="/login" className="text-terracotta-500 hover:text-terracotta-700">{t("header.login")}</Link>
+          <Link href="/auth/forgot" className="text-terracotta-500 hover:text-terracotta-700">{t("auth.forgot")}</Link>
         </div>
       </AuthCard>
     );
@@ -70,10 +70,10 @@ export default async function ConfirmedPage({
         <p className="text-sm font-medium">{text}</p>
       </div>
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link href={next.href} className="rounded-lg bg-apricot px-5 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark">
+        <Link href={next.href} className="rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
           {next.label}
         </Link>
-        <Link href="/" className="rounded-lg border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:border-apricot">
+        <Link href="/" className="rounded-lg border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:border-spruce-500">
           {t("auth.goHome")}
         </Link>
       </div>

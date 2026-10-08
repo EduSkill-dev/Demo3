@@ -9,7 +9,7 @@ import { REQUEST_COLUMNS, toOfferView, toRequestView, type OfferRow, type Reques
 import RequestSummary from "@/components/requests/RequestSummary";
 import OfferForm from "@/components/requests/OfferForm";
 
-export const metadata: Metadata = { title: "Highland", robots: { index: false } };
+export const metadata: Metadata = { title: { absolute: "Culmen" }, robots: { index: false } };
 
 // Custom tour requests, newest first. Only clubs (and admins) see this page:
 // visitors are sent to log in, individuals to their own requests.

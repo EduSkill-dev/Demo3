@@ -84,7 +84,7 @@ export default function RequestForm({ sights }: { sights: SightOption[] }) {
         <div className={boxes}>
           {REGIONS.map((r) => (
             <label key={r} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggle(regions, setRegions, r)} className="accent-apricot" />
+              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggle(regions, setRegions, r)} className="accent-spruce-500" />
               {t(`region.${r}`)}
             </label>
           ))}
@@ -102,7 +102,7 @@ export default function RequestForm({ sights }: { sights: SightOption[] }) {
         <div className={boxes}>
           {TERRAINS.map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggle(terrains, setTerrains, k)} className="accent-apricot" />
+              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggle(terrains, setTerrains, k)} className="accent-spruce-500" />
               {t(`terrain.${k}`)}
             </label>
           ))}
@@ -116,7 +116,7 @@ export default function RequestForm({ sights }: { sights: SightOption[] }) {
           <p className={hint}>{t("requests.budgetHint")}</p>
         </div>
         <label className="flex items-center gap-2 text-sm font-medium text-ink sm:mt-8">
-          <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-apricot" />
+          <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-spruce-500" />
           {t("tourForm.overnight")}
         </label>
       </div>

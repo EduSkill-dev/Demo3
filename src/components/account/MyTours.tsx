@@ -42,7 +42,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center">
         <p className="text-muted">{t("account.toursEmpty")}</p>
-        <Link href="/tours" className="mt-4 inline-block rounded-lg bg-apricot px-5 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark">
+        <Link href="/tours" className="mt-4 inline-block rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
           {t("account.findTours")}
         </Link>
       </div>
@@ -87,11 +87,11 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
                   <td className="px-4 py-3 text-muted">{r.tour.regions.map((x) => t(`region.${x}`)).join(", ")}</td>
                   <td className="px-4 py-3">{r.tour.overnight ? "🌙 " + t("tour.yes") : "—"}</td>
                   <td className="whitespace-nowrap px-4 py-3">
-                    <a href={`tel:${r.tour.coordinator_phone.replace(/\s/g, "")}`} className="hover:text-apricot">{r.tour.coordinator_phone}</a>
+                    <a href={`tel:${r.tour.coordinator_phone.replace(/\s/g, "")}`} className="hover:text-terracotta-500">{r.tour.coordinator_phone}</a>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <div className="flex justify-end gap-3 font-semibold">
-                      <button data-view type="button" onClick={() => setOpen(r)} className="text-apricot hover:text-apricot-dark">
+                      <button data-view type="button" onClick={() => setOpen(r)} className="text-terracotta-500 hover:text-terracotta-700">
                         {t("common.view")}
                       </button>
                       {!cancelled && (

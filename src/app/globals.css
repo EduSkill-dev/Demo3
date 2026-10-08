@@ -2,28 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme tokens as "R G B" triplets, consumed by tailwind.config.ts. */
+/* Culmen theme tokens as "R G B" triplets, consumed by tailwind.config.ts.
+   The four brand families (Spruce, Terracotta, Sand, Apricot) are fixed
+   colours in the Tailwind theme; these are the surfaces and text that the
+   dark theme swaps. */
 :root {
-  --c-stone: 247 244 238;
-  --c-sand: 236 229 214;
-  --c-surface: 255 255 255;
-  --c-ink: 23 23 23;
-  --c-muted: 98 98 98;
-  --c-line: 229 229 229;
-  --c-heading: 43 61 51;
+  --c-stone: 251 246 236;   /* Sand 50  — page background */
+  --c-sand: 243 234 218;    /* Sand 100 — tinted panels */
+  --c-surface: 255 253 248; /* card */
+  --c-ink: 18 51 45;        /* Spruce 900 — body text */
+  --c-muted: 91 107 102;    /* Moss — secondary text */
+  --c-line: 230 217 194;    /* Sand 200 — borders */
+  --c-heading: 18 51 45;    /* Spruce 900 */
   color-scheme: light;
 }
 
 .dark {
-  --c-stone: 18 22 20;
-  --c-sand: 34 42 37;
-  --c-surface: 27 32 29;
-  --c-ink: 232 234 230;
-  --c-muted: 160 168 162;
-  --c-line: 52 61 56;
-  --c-heading: 178 210 186;
+  --c-stone: 11 30 27;
+  --c-sand: 24 46 41;
+  --c-surface: 17 39 35;
+  --c-ink: 236 240 234;
+  --c-muted: 158 176 169;
+  --c-line: 42 68 62;
+  --c-heading: 220 235 230; /* Spruce 100 */
   color-scheme: dark;
 }
+
+/* Keyboard focus: a Terracotta ring, everywhere. */
+:focus-visible {
+  outline: 2px solid #c9491f;
+  outline-offset: 2px;
+}
+
+/* On dark grounds Terracotta text uses its lighter steps. */
+.dark .text-terracotta-500,
+.dark .text-terracotta-700 { color: #ee7f58; }
+.dark .hover\:text-terracotta-700:hover { color: #f9dfd2; }
 
 /* Dark mode for the few light-only utilities still in use (success notes). */
 .dark .bg-green-50 { background-color: rgb(20 83 45 / 0.35); }

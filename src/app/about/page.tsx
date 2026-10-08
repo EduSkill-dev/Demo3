@@ -6,7 +6,7 @@ import { formatNumber } from "@/i18n/dates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
-  return { title: `${t("header.about")} | Highland`, description: t("about.metaDescription") };
+  return { title: `${t("header.about")}`, description: t("about.metaDescription") };
 }
 
 export default async function AboutPage() {
@@ -29,14 +29,14 @@ export default async function AboutPage() {
 
   return (
     <main>
-      <section className="relative overflow-hidden bg-pine text-white">
+      <section className="relative overflow-hidden bg-spruce-500 text-white">
         <div className="pointer-events-none absolute -right-24 -top-28 h-96 w-96 rounded-full border border-white/10" />
         <div className="pointer-events-none absolute -right-6 -top-10 h-72 w-72 rounded-full border border-white/10" />
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-apricot">Highland</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-apricot-300">Culmen</p>
           <h1 className="mt-4 max-w-2xl font-serif text-4xl font-semibold leading-tight sm:text-5xl">{t("about.heroTitle")}</h1>
           <p className="mt-5 max-w-xl text-lg leading-7 text-white/80">{t("about.heroText")}</p>
-          <Link href="/tours" className="mt-8 inline-flex rounded-lg bg-apricot px-5 py-3 text-sm font-semibold text-white transition hover:bg-apricot-dark">
+          <Link href="/tours" className="mt-8 inline-flex rounded-full bg-apricot-500 px-5 py-3 text-sm font-bold text-spruce-900 transition hover:bg-apricot-300">
             {t("about.heroCta")}
           </Link>
         </div>
@@ -56,7 +56,7 @@ export default async function AboutPage() {
       <section className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
         <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-apricot">{t("about.whyLabel")}</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-terracotta-500">{t("about.whyLabel")}</p>
             <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight text-heading">{t("about.whyTitle")}</h2>
           </div>
           <p className="text-base leading-8 text-ink">{t("about.whyText")}</p>
@@ -64,7 +64,7 @@ export default async function AboutPage() {
         <div className="mt-14 grid gap-8 border-t border-line pt-10 md:grid-cols-3">
           {pillars.map((p) => (
             <article key={p.title}>
-              <div className="h-1 w-10 rounded-full bg-apricot" />
+              <div className="h-1 w-10 rounded-full bg-spruce-500" />
               <h3 className="mt-4 font-serif text-xl font-semibold text-heading">{p.title}</h3>
               <p className="mt-2 text-sm leading-6 text-muted">{p.text}</p>
             </article>
@@ -79,7 +79,7 @@ export default async function AboutPage() {
             <p className="mt-1 text-sm text-muted">{t("about.ctaText")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/tours" className="rounded-lg bg-pine px-5 py-3 text-sm font-semibold text-white hover:bg-pine-dark">
+            <Link href="/tours" className="rounded-full bg-spruce-500 px-5 py-3 text-sm font-semibold text-white hover:bg-spruce-900">
               {t("about.ctaFind")}
             </Link>
             <Link href="/register" className="rounded-lg border border-line px-5 py-3 text-sm font-semibold text-ink hover:bg-surface">

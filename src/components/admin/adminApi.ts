@@ -17,11 +17,11 @@ export async function adminAction<T = Record<string, unknown>>(
 
 // A field in a row of filters: the caller gives it a width.
 export const adminInlineInput =
-  "rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+  "rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 export const adminInput = `w-full ${adminInlineInput}`;
 export const adminButton =
-  "rounded-lg bg-apricot px-4 py-2 text-sm font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50";
 export const adminGhost =
-  "rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-apricot disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-spruce-500 disabled:cursor-not-allowed disabled:opacity-50";
 export const adminDanger =
   "rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40";

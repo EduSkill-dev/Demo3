@@ -54,7 +54,7 @@ export default function TourDetails({
     ...(tour.meeting_time ? ([[t("tour.meetingTime"), tour.meeting_time.slice(0, 5)]] as [string, React.ReactNode][]) : []),
     [
       t("tour.coordinator"),
-      <a key="phone" href={`tel:${tour.coordinator_phone.replace(/\s/g, "")}`} className="text-apricot hover:underline">
+      <a key="phone" href={`tel:${tour.coordinator_phone.replace(/\s/g, "")}`} className="text-terracotta-500 hover:underline">
         {tour.coordinator_phone}
       </a>,
     ],
@@ -76,7 +76,7 @@ export default function TourDetails({
                   aria-label={t("tour.photo", { n: i + 1 })}
                   aria-current={u === photo}
                   className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg ring-2 ${
-                    u === photo ? "ring-apricot" : "ring-transparent opacity-70 hover:opacity-100"
+                    u === photo ? "ring-terracotta-500" : "ring-transparent opacity-70 hover:opacity-100"
                   }`}
                 >
                   <img src={u} alt="" className="h-full w-full object-cover" />
@@ -86,12 +86,12 @@ export default function TourDetails({
           )}
         </div>
       ) : (
-        <div className="flex h-36 items-center justify-center rounded-xl bg-gradient-to-br from-pine to-apricot/70 text-4xl">🏔️</div>
+        <div className="flex h-36 items-center justify-center rounded-xl bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
       )}
 
       <div>
         {tour.club && (
-          <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-apricot hover:text-apricot-dark">
+          <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-terracotta-500 hover:text-terracotta-700">
             {tour.club.name}
           </Link>
         )}
@@ -117,7 +117,7 @@ export default function TourDetails({
       )}
 
       {showPageLink && (
-        <Link href={`/tours/${tour.id}`} className="inline-block font-semibold text-apricot hover:text-apricot-dark">
+        <Link href={`/tours/${tour.id}`} className="inline-block font-semibold text-terracotta-500 hover:text-terracotta-700">
           {t("tour.openPage")} →
         </Link>
       )}

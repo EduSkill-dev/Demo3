@@ -13,7 +13,7 @@ import { useT } from "@/i18n/client";
 const MAX_PHOTOS = 5;
 
 const input =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 const label = "mb-1 block text-sm font-medium text-ink";
 const hint = "mt-1 text-xs text-muted";
 
@@ -162,7 +162,7 @@ export default function TourForm({
         <div className={checkboxGrid}>
           {REGIONS.map((r) => (
             <label key={r} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggle(regions, setRegions, r)} className="accent-apricot" />
+              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggle(regions, setRegions, r)} className="accent-spruce-500" />
               {t(`region.${r}`)}
             </label>
           ))}
@@ -174,7 +174,7 @@ export default function TourForm({
         <div className={checkboxGrid}>
           {TERRAINS.map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggle(terrains, setTerrains, k)} className="accent-apricot" />
+              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggle(terrains, setTerrains, k)} className="accent-spruce-500" />
               {t(`terrain.${k}`)}
             </label>
           ))}
@@ -222,7 +222,7 @@ export default function TourForm({
       </div>
 
       <label className="flex items-center gap-2 text-sm font-medium text-ink">
-        <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-apricot" />
+        <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-spruce-500" />
         {t("tourForm.overnight")}
       </label>
 
@@ -290,14 +290,14 @@ export default function TourForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-apricot px-5 py-3 font-semibold text-white hover:bg-apricot-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full bg-spruce-500 px-5 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? t("tourForm.saving") : mode === "create" ? t("tourForm.create") : t("tourForm.save")}
         </button>
         <button
           type="button"
           onClick={() => router.push("/dashboard")}
-          className="rounded-lg border border-line px-5 py-3 font-semibold text-ink hover:border-apricot"
+          className="rounded-lg border border-line px-5 py-3 font-semibold text-ink hover:border-spruce-500"
         >
           {t("common.cancel")}
         </button>

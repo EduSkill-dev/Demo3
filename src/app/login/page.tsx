@@ -72,7 +72,7 @@ export default function LoginPage() {
         <div>
           <div className="mb-1 flex items-baseline justify-between">
             <label htmlFor="password" className="text-sm font-medium text-ink">{t("auth.password")}</label>
-            <Link href="/auth/forgot" className="text-xs font-semibold text-apricot hover:text-apricot-dark">
+            <Link href="/auth/forgot" className="text-xs font-semibold text-terracotta-500 hover:text-terracotta-700">
               {t("auth.forgot")}
             </Link>
           </div>
@@ -80,7 +80,7 @@ export default function LoginPage() {
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         {unconfirmed && (
-          <button type="button" onClick={resend} disabled={resent} className="text-sm font-semibold text-apricot hover:text-apricot-dark disabled:opacity-60">
+          <button type="button" onClick={resend} disabled={resent} className="text-sm font-semibold text-terracotta-500 hover:text-terracotta-700 disabled:opacity-60">
             {resent ? t("auth.resent") : t("auth.resend")}
           </button>
         )}
@@ -90,7 +90,7 @@ export default function LoginPage() {
       </form>
       <p className="mt-6 text-center text-sm text-muted">
         {t("auth.noAccount")}{" "}
-        <Link href="/register" className="font-semibold text-apricot hover:text-apricot-dark">
+        <Link href="/register" className="font-semibold text-terracotta-500 hover:text-terracotta-700">
           {t("header.register")}
         </Link>
       </p>

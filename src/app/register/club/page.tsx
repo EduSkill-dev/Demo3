@@ -81,7 +81,7 @@ export default function ClubRegisterPage() {
         </button>
         <p className="text-center text-sm text-muted">
           {t("auth.haveAccount")}{" "}
-          <Link href="/login" className="font-semibold text-apricot hover:text-apricot-dark">{t("header.login")}</Link>
+          <Link href="/login" className="font-semibold text-terracotta-500 hover:text-terracotta-700">{t("header.login")}</Link>
         </p>
       </form>
     </AuthCard>

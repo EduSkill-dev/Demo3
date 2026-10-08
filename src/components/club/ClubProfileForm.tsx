@@ -10,7 +10,7 @@ import { useT } from "@/i18n/client";
 import type { Club } from "@/types/database";
 
 const input =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 
 // Photo, about text, phone and focus — everything shown on the public club page.
 export default function ClubProfileForm({ club }: { club: Club }) {
@@ -73,7 +73,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
         <div className="space-y-2">
           <p className="text-sm font-medium text-ink">{t("clubData.photo")}</p>
           <div className="flex flex-wrap gap-2">
-            <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-apricot">
+            <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-spruce-500">
               {busy === "photo" ? "..." : t("clubData.upload")}
               <input
                 type="file"
@@ -94,7 +94,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
             )}
           </div>
         </div>
-        <Link href={`/clubs/${club.id}`} className="ml-auto text-sm font-semibold text-apricot hover:text-apricot-dark">
+        <Link href={`/clubs/${club.id}`} className="ml-auto text-sm font-semibold text-terracotta-500 hover:text-terracotta-700">
           {t("clubData.publicLink")} →
         </Link>
       </div>
@@ -115,7 +115,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
               <label key={k} className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
-                  className="accent-apricot"
+                  className="accent-spruce-500"
                   checked={focus.includes(k)}
                   onChange={() => setFocus((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))}
                 />
@@ -126,7 +126,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
         </fieldset>
         {error && <p className="text-sm text-red-600">{error}</p>}
         {message && <p className="text-sm font-medium text-green-700">{message}</p>}
-        <button type="submit" disabled={busy === "info"} className="rounded-lg bg-apricot px-5 py-2.5 font-semibold text-white hover:bg-apricot-dark disabled:opacity-50">
+        <button type="submit" disabled={busy === "info"} className="rounded-full bg-spruce-500 px-5 py-2.5 font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
           {busy === "info" ? "..." : t("clubData.saveInfo")}
         </button>
       </form>

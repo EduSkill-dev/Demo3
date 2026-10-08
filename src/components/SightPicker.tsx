@@ -41,7 +41,7 @@ export default function SightPicker({
               type="button"
               onClick={() => toggle(s.id)}
               title={t("sights.remove")}
-              className="rounded-full bg-apricot/15 px-2.5 py-0.5 text-xs font-semibold text-apricot-dark hover:bg-apricot/25 dark:text-apricot"
+              className="rounded-full bg-terracotta-500/15 px-2.5 py-0.5 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-500/25 dark:text-terracotta-300"
             >
               {s.name} ✕
             </button>
@@ -54,13 +54,13 @@ export default function SightPicker({
         onChange={(e) => setQuery(e.target.value)}
         placeholder={t("sights.search")}
         aria-label={t("sights.search")}
-        className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-apricot focus:outline-none"
+        className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none"
       />
       <ul className="mt-2 grid max-h-44 gap-x-3 gap-y-1 overflow-y-auto sm:grid-cols-2">
         {shown.map((s) => (
           <li key={s.id}>
             <label className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={value.includes(s.id)} onChange={() => toggle(s.id)} className="accent-apricot" />
+              <input type="checkbox" checked={value.includes(s.id)} onChange={() => toggle(s.id)} className="accent-spruce-500" />
               <span className="truncate">{s.name}</span>
               <span className="ml-auto shrink-0 text-xs text-muted">{t(`region.${s.region}`)}</span>
             </label>

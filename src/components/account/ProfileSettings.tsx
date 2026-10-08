@@ -9,7 +9,7 @@ import { useT } from "@/i18n/client";
 import type { Profile } from "@/types/database";
 
 const input =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-apricot focus:outline-none focus:ring-2 focus:ring-apricot/20";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 const label = "mb-1 block text-sm font-medium text-ink";
 const card = "rounded-xl border border-line bg-surface p-5";
 const h2 = "font-serif text-lg font-semibold text-heading";
@@ -127,7 +127,7 @@ export default function ProfileSettings({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-apricot">
+            <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-spruce-500">
               {busy === "photo" ? "..." : t("account.changePhoto")}
               <input
                 type="file"
@@ -174,7 +174,7 @@ export default function ProfileSettings({
           )}
         </div>
         <NoteLine note={notes.profile ?? null} />
-        <button type="submit" disabled={busy === "profile"} className="rounded-lg bg-apricot px-5 py-2.5 font-semibold text-white hover:bg-apricot-dark disabled:opacity-50">
+        <button type="submit" disabled={busy === "profile"} className="rounded-full bg-spruce-500 px-5 py-2.5 font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
           {busy === "profile" ? "..." : t("account.saveProfile")}
         </button>
       </form>
@@ -182,13 +182,13 @@ export default function ProfileSettings({
       <form onSubmit={changeEmail} className={`${card} space-y-4`}>
         <h2 className={h2}>{t("account.emailSection")}</h2>
         <p className="text-sm text-muted">{t("account.currentEmail", { email: authEmail })}</p>
-        {pendingEmail && <p className="text-sm text-apricot-dark">{t("auth.emailPendingText")} ({pendingEmail})</p>}
+        {pendingEmail && <p className="text-sm text-terracotta-700">{t("auth.emailPendingText")} ({pendingEmail})</p>}
         <div>
           <label htmlFor="newEmail" className={label}>{t("account.newEmail")}</label>
           <input id="newEmail" type="email" required value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className={input} />
         </div>
         <NoteLine note={notes.email ?? null} />
-        <button type="submit" disabled={busy === "email"} className="rounded-lg border border-line px-5 py-2.5 font-semibold text-ink hover:border-apricot disabled:opacity-50">
+        <button type="submit" disabled={busy === "email"} className="rounded-lg border border-line px-5 py-2.5 font-semibold text-ink hover:border-spruce-500 disabled:opacity-50">
           {busy === "email" ? "..." : t("account.changeEmail")}
         </button>
       </form>
@@ -206,7 +206,7 @@ export default function ProfileSettings({
           </div>
         </div>
         <NoteLine note={notes.password ?? null} />
-        <button type="submit" disabled={busy === "password"} className="rounded-lg border border-line px-5 py-2.5 font-semibold text-ink hover:border-apricot disabled:opacity-50">
+        <button type="submit" disabled={busy === "password"} className="rounded-lg border border-line px-5 py-2.5 font-semibold text-ink hover:border-spruce-500 disabled:opacity-50">
           {busy === "password" ? "..." : t("account.changePassword")}
         </button>
       </form>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Configure Supabase Auth for Highland through the Management API:
+ * Configure Supabase Auth for Culmen through the Management API:
  *   * email confirmation ON (sign-up, email change, password reset)
  *   * Armenian email templates whose links come back to /auth/confirm with a
  *     token_hash, so they work in any browser or device (no PKCE cookie needed)
@@ -36,12 +36,12 @@ const site = (env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/
 const link = (type) => `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=${type}`;
 
 function layout(title, body, button, href) {
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1f2a24">
-  <p style="font-size:20px;font-weight:bold;color:#2b3d33;margin:0 0 16px">🏔️ Highland</p>
-  <h2 style="font-size:18px;color:#2b3d33;margin:0 0 12px">${title}</h2>
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#12332D">
+  <p style="font-size:20px;font-weight:bold;color:#12332D;margin:0 0 16px">Culmen</p>
+  <h2 style="font-size:18px;color:#12332D;margin:0 0 12px">${title}</h2>
   <p style="font-size:15px;line-height:1.6;margin:0 0 20px">${body}</p>
-  <p style="margin:0 0 24px"><a href="${href}" style="display:inline-block;background:#e2792b;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:8px">${button}</a></p>
-  <p style="font-size:12px;color:#6b7280;line-height:1.5;margin:0">Եթե դուք չեք կատարել այս գործողությունը, պարզապես անտեսեք այս նամակը։ Հղումը գործում է 1 ժամ։</p>
+  <p style="margin:0 0 24px"><a href="${href}" style="display:inline-block;background:#1E5B4F;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">${button}</a></p>
+  <p style="font-size:12px;color:#5B6B66;line-height:1.5;margin:0">Եթե դուք չեք կատարել այս գործողությունը, պարզապես անտեսեք այս նամակը։ Հղումը գործում է 1 ժամ։</p>
 </div>`;
 }
 
@@ -62,15 +62,15 @@ const base = {
 
 // Supabase lets free projects edit templates only with a custom SMTP sender.
 const templates = {
-  mailer_subjects_confirmation: 'Highland — հաստատեք Ձեր էլ. հասցեն',
+  mailer_subjects_confirmation: 'Culmen — հաստատեք Ձեր էլ. հասցեն',
   mailer_templates_confirmation_content: layout(
     'Գրեթե պատրաստ է',
-    'Շնորհակալություն Highland-ում գրանցվելու համար։ Սեղմեք ստորև կոճակը՝ Ձեր էլ. հասցեն հաստատելու և գրանցումն ավարտելու համար։',
+    'Շնորհակալություն Culmen-ում գրանցվելու համար։ Սեղմեք ստորև կոճակը՝ Ձեր էլ. հասցեն հաստատելու և գրանցումն ավարտելու համար։',
     'Հաստատել էլ. հասցեն',
     link('email')
   ),
 
-  mailer_subjects_recovery: 'Highland — գաղտնաբառի վերականգնում',
+  mailer_subjects_recovery: 'Culmen — գաղտնաբառի վերականգնում',
   mailer_templates_recovery_content: layout(
     'Գաղտնաբառի վերականգնում',
     'Ստացել ենք Ձեր գաղտնաբառը վերականգնելու հայտ։ Սեղմեք ստորև կոճակը՝ նոր գաղտնաբառ սահմանելու համար։',
@@ -78,7 +78,7 @@ const templates = {
     link('recovery')
   ),
 
-  mailer_subjects_email_change: 'Highland — հաստատեք նոր էլ. հասցեն',
+  mailer_subjects_email_change: 'Culmen — հաստատեք նոր էլ. հասցեն',
   mailer_templates_email_change_content: layout(
     'Էլ. հասցեի փոփոխություն',
     'Սեղմեք ստորև կոճակը՝ {{ .NewEmail }} հասցեն որպես Ձեր նոր էլ. հասցե հաստատելու համար։',
@@ -99,7 +99,7 @@ function smtpFromResend() {
     smtp_user: 'resend',
     smtp_pass: env.RESEND_API_KEY,
     smtp_admin_email: (m ? m[2] : env.EMAIL_FROM).trim(),
-    smtp_sender_name: (m ? m[1] : 'Highland').trim() || 'Highland',
+    smtp_sender_name: (m ? m[1] : 'Culmen').trim() || 'Culmen',
     rate_limit_email_sent: 100,
   };
 }
@@ -117,7 +117,7 @@ function smtpFromGmail() {
     smtp_user: env.GMAIL_USER.trim(),
     smtp_pass: env.GMAIL_APP_PASSWORD.replace(/\s/g, ''),
     smtp_admin_email: env.GMAIL_USER.trim(),
-    smtp_sender_name: 'Highland',
+    smtp_sender_name: 'Culmen',
     rate_limit_email_sent: 60,
   };
 }

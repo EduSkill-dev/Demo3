@@ -47,7 +47,7 @@ export default async function ContactConfirmPage({ searchParams }: { searchParam
       >
         {ok ? t("contact.confirmedText") : t("newsletter.invalidText")}
       </p>
-      <Link href="/tours" className="mt-6 inline-block text-sm font-semibold text-apricot hover:text-apricot-dark">
+      <Link href="/tours" className="mt-6 inline-block text-sm font-semibold text-terracotta-500 hover:text-terracotta-700">
         {t("header.tours")} →
       </Link>
     </AuthCard>

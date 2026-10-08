@@ -29,7 +29,7 @@ export default function PasswordForm({ forced }: { forced: boolean }) {
   return (
     <form onSubmit={submit} className="max-w-sm space-y-4">
       {forced && (
-        <p className="rounded-lg border border-apricot/40 bg-apricot/10 p-3 text-sm text-ink">
+        <p className="rounded-lg border border-terracotta-500/40 bg-terracotta-500/10 p-3 text-sm text-ink">
           Դուք մուտք եք գործել մեկանգամյա գաղտնաբառով։ Շարունակելու համար սահմանեք Ձեր սեփական գաղտնաբառը։
         </p>
       )}

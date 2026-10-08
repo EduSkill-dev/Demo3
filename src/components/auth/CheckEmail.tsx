@@ -40,7 +40,7 @@ export default function CheckEmail({ email }: { email: string }) {
         type="button"
         onClick={resend}
         disabled={state !== "idle"}
-        className="mt-6 text-sm font-semibold text-apricot hover:text-apricot-dark disabled:opacity-60"
+        className="mt-6 text-sm font-semibold text-terracotta-500 hover:text-terracotta-700 disabled:opacity-60"
       >
         {state === "sent" ? t("auth.resent") : t("auth.resend")}
       </button>

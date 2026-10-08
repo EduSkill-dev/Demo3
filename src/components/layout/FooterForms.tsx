@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/client";
 
 const field =
-  "w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-apricot focus:outline-none";
+  "w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-apricot-500 focus:outline-none";
 
 // The signed-in person's verified contact details (null for visitors).
 export type FooterViewer = { email: string; phone: string | null };
@@ -69,7 +69,7 @@ export function NewsletterForm({ viewer }: { viewer: FooterViewer | null }) {
           <button
             type="submit"
             disabled={state === "busy"}
-            className="shrink-0 rounded-lg bg-apricot px-4 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-60"
+            className="shrink-0 rounded-full bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
           >
             {t("footer.subscribe")}
           </button>
@@ -122,7 +122,7 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
           <button
             type="submit"
             disabled={state === "busy"}
-            className="rounded-lg bg-apricot px-4 py-2.5 text-sm font-semibold text-white hover:bg-apricot-dark disabled:opacity-60"
+            className="rounded-full bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
           >
             {t("footer.send")}
           </button>
