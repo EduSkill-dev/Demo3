@@ -32,3 +32,17 @@ export function confirmUrl(flow: "signup" | "recovery" | "email_change" = "signu
   const path = flow === "recovery" ? "/auth/recover" : flow === "email_change" ? "/auth/email-change" : "/auth/confirm";
   return `${window.location.origin}${path}`;
 }
+
+// Asks the server whether the phone number (and, for a club, its name) is
+// already registered. Returns the message to show, or null when both are free.
+export async function signupConflict(t: TFunction, input: { phone: string; clubName?: string }): Promise<string | null> {
+  const res = await fetch("/api/auth/check-signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }).catch(() => null);
+  const data = res?.ok ? ((await res.json().catch(() => ({}))) as { phoneTaken?: boolean; nameTaken?: boolean }) : {};
+  if (data.nameTaken) return t("auth.clubNameTaken");
+  if (data.phoneTaken) return t("auth.phoneTaken");
+  return null;
+}

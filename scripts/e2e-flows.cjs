@@ -709,6 +709,19 @@ async function main() {
         closeTour.status === 200 && closedSeen.length === 0 && stillClosed === true && openTour.status === 200 && openSeen.length === 1,
         `close=${closeTour.status} seen=${closedSeen.length} clubUndo=${JSON.stringify(clubUndo.data)} still=${stillClosed} open=${openTour.status} seen=${openSeen.length}`);
 
+      // ---------- One phone per account, one club per name ----------
+      const taken = await api('/api/auth/check-signup', { phone: '010 000002', clubName: '  e2e   CLUB b ' });
+      const free = await api('/api/auth/check-signup', { phone: '+374 77 ' + String(stamp).slice(-6), clubName: `E2E Free ${stamp}` });
+      const dupUser = await admin.auth.admin.createUser({ email: email('dup'), password: PASSWORD, email_confirm: true, user_metadata: { role: 'individual', first_name: 'Կրկնակ', phone: '+374 10 000002' } });
+      if (dupUser.data?.user) ids.dup = dupUser.data.user.id;
+      await signIn('club');
+      const stealName = await anon.from('clubs').update({ name: 'E2E club B' }).eq('id', clubA).select('name');
+      const stealPhone = await anon.from('clubs').update({ phone: '37410000002' }).eq('id', clubA).select('phone');
+      check('sign-up: a registered phone (in any format) and a taken club name (any case) are refused',
+        taken.body.phoneTaken === true && taken.body.nameTaken === true && free.body.phoneTaken === false && free.body.nameTaken === false
+          && !!dupUser.error && !!stealName.error && !!stealPhone.error,
+        `taken=${JSON.stringify(taken.body)} free=${JSON.stringify(free.body)} dup=${dupUser.error ? 'refused' : 'CREATED'} name=${stealName.error ? 'refused' : 'ALLOWED'} phone=${stealPhone.error ? 'refused' : 'ALLOWED'}`);
+
       // ---------- Custom requests and offers ----------
       const rq = (body, cookie) => api('/api/requests', body, cookie);
       const clubCookie = await cookieFor('club');

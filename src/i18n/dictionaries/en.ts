@@ -183,6 +183,8 @@ const en: DeepPartial<Dictionary> = {
     tooManyEmails: "Too many emails were sent. Please try again a little later.",
     weakPassword: "The password must be at least 8 characters.",
     emailTaken: "An account with this email already exists.",
+    phoneTaken: "This phone number is already registered — please give a different one.",
+    clubNameTaken: "A club with this name is already registered — please choose another name.",
     badBirthDate: "Please enter a valid date of birth.",
   },
   footer: {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
-import { MIN_PASSWORD, authErrorMessage, confirmUrl } from "@/lib/authErrors";
+import { MIN_PASSWORD, authErrorMessage, confirmUrl, signupConflict } from "@/lib/authErrors";
 import AuthCard, { authButton, authInput, authLabel } from "@/components/auth/AuthCard";
 import CheckEmail from "@/components/auth/CheckEmail";
 
@@ -38,6 +38,12 @@ export default function RegisterPage() {
     if (password !== repeat) return setError(t("auth.passwordsDiffer"));
 
     setBusy(true);
+    // Before the account is created and the confirmation email goes out.
+    const conflict = await signupConflict(t, { phone: phone.trim() });
+    if (conflict) {
+      setBusy(false);
+      return setError(conflict);
+    }
     const { data, error: err } = await createClient().auth.signUp({
       email: email.trim(),
       password,
