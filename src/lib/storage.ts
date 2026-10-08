@@ -3,6 +3,9 @@
 import { createClient } from "@/lib/supabase/client";
 
 export const BUCKET = "club-assets";
+export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const IMAGE_ACCEPT = IMAGE_TYPES.join(",");
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 // Storage policies only let people write under <folder>/<their user id>/…
 export type UploadFolder = "clubs" | "guides" | "tours" | "avatars";
@@ -17,12 +20,14 @@ function randomId(): string {
 
 export async function uploadImage(folder: UploadFolder, file: File): Promise<{ url: string } | { error: string }> {
   try {
+    // The bucket enforces the same two rules; this answers before the upload.
+    if (!IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_BYTES) return { error: "JPG / PNG / WebP · max 5 MB" };
     const supabase = createClient();
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return { error: "not signed in" };
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${folder}/${auth.user.id}/${randomId()}.${ext}`;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type || "image/jpeg" });
+    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type });
     if (error) return { error: error.message };
     return { url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
   } catch (e) {

@@ -77,7 +77,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
               {busy === "photo" ? "..." : t("clubData.upload")}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
                 disabled={busy === "photo"}
                 onChange={(e) => {

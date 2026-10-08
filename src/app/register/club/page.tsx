@@ -56,7 +56,7 @@ export default function ClubRegisterPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className={authLabel}>{t("auth.clubName")}</label>
-          <input id="name" required autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
+          <input id="name" required minLength={2} maxLength={100} autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
         </div>
         <div>
           <label htmlFor="email" className={authLabel}>{t("auth.email")}</label>
@@ -64,7 +64,7 @@ export default function ClubRegisterPage() {
         </div>
         <div>
           <label htmlFor="phone" className={authLabel}>{t("auth.phone")}</label>
-          <input id="phone" type="tel" required pattern="[+0-9 ()\-]{8,20}" placeholder="+374 XX XXXXXX" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={authInput} />
+          <input id="phone" type="tel" required pattern="[+0-9 \(\)\-]{8,20}" placeholder="+374 XX XXXXXX" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={authInput} />
         </div>
         <div>
           <label htmlFor="password" className={authLabel}>{t("auth.password")}</label>

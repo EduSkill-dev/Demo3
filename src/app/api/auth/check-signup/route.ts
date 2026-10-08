@@ -1,3 +1,4 @@
+import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -6,6 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // already registered? The database refuses duplicates either way (migration
 // 0034); this is what lets the form say so in plain words.
 export async function POST(req: Request) {
+  const limited = await tooMany(req, "signup-check", 40, 60);
+  if (limited) return limited;
+
   const body = (await req.json().catch(() => ({}))) as { phone?: string; clubName?: string };
   const phone = (body.phone ?? "").trim().slice(0, 40);
   const clubName = (body.clubName ?? "").trim().slice(0, 200);

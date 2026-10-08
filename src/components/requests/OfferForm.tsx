@@ -96,7 +96,7 @@ export default function OfferForm({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor={`of-price-${requestId}`} className={labelClass}>{t("requests.offerPrice")}</label>
-              <input id={`of-price-${requestId}`} required type="number" min={0} step="500" value={price} onChange={(e) => setPrice(e.target.value)} className={fieldClass} />
+              <input id={`of-price-${requestId}`} required type="number" min={0} step={100} value={price} onChange={(e) => setPrice(e.target.value)} className={fieldClass} />
             </div>
             <div>
               <label htmlFor={`of-date-${requestId}`} className={labelClass}>{t("requests.offerDate")}</label>

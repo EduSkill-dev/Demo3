@@ -89,7 +89,7 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
         <form onSubmit={save} className="mt-4 grid max-w-2xl gap-4 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[6rem_1fr]">
           <label className="group relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-line bg-sand text-xs text-muted">
             {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : t("clubData.guidePhoto")}
-            <input type="file" accept="image/*" className="sr-only" onChange={(e) => setDraft({ ...draft, file: e.target.files?.[0] ?? null })} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => setDraft({ ...draft, file: e.target.files?.[0] ?? null })} />
           </label>
           <div className="space-y-3">
             <input required aria-label={t("clubData.guideName")} placeholder={t("clubData.guideName")} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={input} />

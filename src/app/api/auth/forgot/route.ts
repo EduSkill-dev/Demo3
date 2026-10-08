@@ -1,3 +1,4 @@
+import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyBlocked } from "@/lib/admin";
@@ -7,6 +8,9 @@ import { notifyBlocked } from "@/lib/admin";
 // Everything else answers { blocked: false }, whether or not the address has
 // an account, so the page cannot be used to find out who is registered.
 export async function POST(req: Request) {
+  const limited = await tooMany(req, "forgot", 10, 60);
+  if (limited) return limited;
+
   const body = (await req.json().catch(() => ({}))) as { email?: string };
   const email = (body.email ?? "").trim().toLowerCase();
   if (!email) return NextResponse.json({ blocked: false });

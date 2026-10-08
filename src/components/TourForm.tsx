@@ -154,7 +154,7 @@ export default function TourForm({
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
       <div>
         <label htmlFor="title" className={label}>{t("tourForm.place")}</label>
-        <input id="title" required placeholder={t("tourForm.placeHint")} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
+        <input id="title" required minLength={2} maxLength={150} placeholder={t("tourForm.placeHint")} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
       </div>
 
       <fieldset>
@@ -194,7 +194,7 @@ export default function TourForm({
         </div>
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
-          <input id="cap" required type="number" min={1} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
+          <input id="cap" required type="number" min={1} max={10000} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
           {seatCap > 0 && <p className={hint}>{t("tourForm.capacityHint", { max: seatCap })}</p>}
         </div>
         <div>
@@ -258,7 +258,7 @@ export default function TourForm({
         <input
           id="photos"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           multiple
           onChange={handleFiles}
           disabled={previews.length >= MAX_PHOTOS}

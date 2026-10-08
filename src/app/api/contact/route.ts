@@ -1,3 +1,4 @@
+import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 //   * a visitor  — stored unconfirmed, and a link is emailed to the address;
 //     /contact/confirm forwards the message when that link is opened.
 export async function POST(req: Request) {
+  const limited = await tooMany(req, "contact", 6, 60);
+  if (limited) return limited;
+
   const body = (await req.json().catch(() => ({}))) as {
     message?: string;
     email?: string;

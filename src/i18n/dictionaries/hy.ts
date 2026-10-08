@@ -2,6 +2,7 @@
 // back to it for anything not yet translated.
 const hy = {
   common: {
+    tooMany: "Չափազանց շատ փորձեր։ Փորձեք մի փոքր ուշ։",
     loading: "Բեռնվում է...",
     save: "Պահպանել",
     cancel: "Չեղարկել",

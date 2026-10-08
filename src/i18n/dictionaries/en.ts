@@ -3,6 +3,7 @@ import type { Dictionary } from "./hy";
 
 const en: DeepPartial<Dictionary> = {
   common: {
+    tooMany: "Too many attempts. Please try again a little later.",
     loading: "Loading...",
     save: "Save",
     cancel: "Cancel",

@@ -7,6 +7,8 @@ export function authErrorMessage(t: TFunction, error: Pick<AuthError, "message">
   switch (error.code) {
     case "invalid_credentials":
       return t("auth.invalidLogin");
+    case "rate_limited":
+      return t("common.tooMany");
     case "user_banned":
       return t("auth.blocked");
     case "email_not_confirmed":

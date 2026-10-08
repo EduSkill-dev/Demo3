@@ -1,3 +1,4 @@
+import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -13,6 +14,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // A signed-in person subscribing their own account address has already
 // proved they own it, so that one is confirmed straight away, with no email.
 export async function POST(req: Request) {
+  const limited = await tooMany(req, "newsletter", 6, 60);
+  if (limited) return limited;
+
   const body = (await req.json().catch(() => ({}))) as { email?: string; website?: string };
   if (body.website) return NextResponse.json({ ok: true }); // honeypot: bots fill every field
 

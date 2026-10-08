@@ -709,6 +709,22 @@ async function main() {
         closeTour.status === 200 && closedSeen.length === 0 && stillClosed === true && openTour.status === 200 && openSeen.length === 1,
         `close=${closeTour.status} seen=${closedSeen.length} clubUndo=${JSON.stringify(clubUndo.data)} still=${stillClosed} open=${openTour.status} seen=${openSeen.length}`);
 
+      // ---------- Input limits enforced by the database ----------
+      await signIn('club');
+      const longTitle = await anon.from('tours').update({ title: 'Ա'.repeat(151) }).eq('id', tourId).select('id');
+      const badPhone = await anon.from('tours').update({ coordinator_phone: '<script>alert(1)</script>' }).eq('id', tourId).select('id');
+      const hugePrice = await anon.from('tours').update({ price: 1e12 }).eq('id', tourId).select('id');
+      const longAbout = await anon.from('clubs').update({ description: 'x'.repeat(5001) }).eq('id', clubA).select('id');
+      const notImage = await anon.storage.from('club-assets').upload(`tours/${ids.club}/e2e-${stamp}.html`, new Blob(['<script>1</script>'], { type: 'text/html' }), { contentType: 'text/html' });
+      const tooBig = await anon.storage.from('club-assets').upload(`tours/${ids.club}/e2e-${stamp}.jpg`, new Blob([new Uint8Array(5 * 1024 * 1024 + 10)], { type: 'image/jpeg' }), { contentType: 'image/jpeg' });
+      check('limits: over-long text, a malformed phone, an absurd price, a non-image and an oversized upload are refused',
+        !!longTitle.error && !!badPhone.error && !!hugePrice.error && !!longAbout.error && !!notImage.error && !!tooBig.error,
+        `title=${!!longTitle.error} phone=${!!badPhone.error} price=${!!hugePrice.error} about=${!!longAbout.error} html=${notImage.error ? 'refused' : 'UPLOADED'} big=${tooBig.error ? 'refused' : 'UPLOADED'}`);
+      const oddPrice = await api('/api/requests', { action: 'create', people: 2, dateFrom: future(12), regions: ['lori'], budget: 4549 }, indCookie);
+      const oddRow = (await admin.from('tour_requests').select('id, budget').eq('id', oddPrice.body.id).maybeSingle()).data;
+      check('prices are kept in whole hundreds of dram', oddPrice.status === 200 && oddRow?.budget === 4500, JSON.stringify(oddRow));
+      if (oddRow) await admin.from('tour_requests').delete().eq('id', oddRow.id);
+
       // ---------- One phone per account, one club per name ----------
       const taken = await api('/api/auth/check-signup', { phone: '010 000002', clubName: '  e2e   CLUB b ' });
       const free = await api('/api/auth/check-signup', { phone: '+374 77 ' + String(stamp).slice(-6), clubName: `E2E Free ${stamp}` });

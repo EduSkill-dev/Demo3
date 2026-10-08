@@ -1,3 +1,4 @@
+import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,10 +11,13 @@ import { clientIp, logActivity } from "@/lib/admin";
 //   * a blocked account is turned away even before its ban is noticed.
 // The session cookie is set by the server client.
 export async function POST(req: Request) {
+  const limited = await tooMany(req, "login", 30, 10);
+  if (limited) return limited;
+
   const body = (await req.json().catch(() => ({}))) as { email?: string; password?: string };
   const email = (body.email ?? "").trim().toLowerCase();
   const password = body.password ?? "";
-  if (!email || !password) {
+  if (!email || !password || email.length > 254 || password.length > 200) {
     return NextResponse.json({ error: { code: "invalid_credentials", message: "", status: 400 } }, { status: 400 });
   }
 

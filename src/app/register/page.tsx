@@ -98,11 +98,11 @@ export default function RegisterPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="first" className={authLabel}>{t("auth.firstName")}</label>
-            <input id="first" required autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={authInput} />
+            <input id="first" required maxLength={60} autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={authInput} />
           </div>
           <div>
             <label htmlFor="last" className={authLabel}>{t("auth.lastName")}</label>
-            <input id="last" required autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} className={authInput} />
+            <input id="last" required maxLength={60} autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} className={authInput} />
           </div>
           <div>
             <label htmlFor="birth" className={authLabel}>{t("auth.birthDate")}</label>
@@ -122,7 +122,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label htmlFor="phone" className={authLabel}>{t("auth.phone")}</label>
-            <input id="phone" type="tel" required pattern="[+0-9 ()\-]{8,20}" placeholder="+374 XX XXXXXX" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={authInput} />
+            <input id="phone" type="tel" required pattern="[+0-9 \(\)\-]{8,20}" placeholder="+374 XX XXXXXX" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={authInput} />
           </div>
           <div>
             <label htmlFor="password" className={authLabel}>{t("auth.password")}</label>

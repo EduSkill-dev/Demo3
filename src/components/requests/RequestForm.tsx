@@ -112,7 +112,7 @@ export default function RequestForm({ sights }: { sights: SightOption[] }) {
       <div className="grid items-start gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="rq-budget" className={labelClass}>{t("requests.budgetLabel")}</label>
-          <input id="rq-budget" type="number" min={0} step="500" value={budget} onChange={(e) => setBudget(e.target.value)} className={fieldClass} />
+          <input id="rq-budget" type="number" min={0} step={100} value={budget} onChange={(e) => setBudget(e.target.value)} className={fieldClass} />
           <p className={hint}>{t("requests.budgetHint")}</p>
         </div>
         <label className="flex items-center gap-2 text-sm font-medium text-ink sm:mt-8">

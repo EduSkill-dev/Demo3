@@ -131,7 +131,7 @@ export default function ProfileSettings({
               {busy === "photo" ? "..." : t("account.changePhoto")}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
                 disabled={busy === "photo"}
                 onChange={(e) => {
@@ -156,11 +156,11 @@ export default function ProfileSettings({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="first" className={label}>{t("auth.firstName")}</label>
-            <input id="first" required value={first} onChange={(e) => setFirst(e.target.value)} className={input} />
+            <input id="first" required maxLength={60} value={first} onChange={(e) => setFirst(e.target.value)} className={input} />
           </div>
           <div>
             <label htmlFor="last" className={label}>{t("auth.lastName")}</label>
-            <input id="last" required value={last} onChange={(e) => setLast(e.target.value)} className={input} />
+            <input id="last" required maxLength={60} value={last} onChange={(e) => setLast(e.target.value)} className={input} />
           </div>
           <div>
             <label htmlFor="phone" className={label}>{t("auth.phone")}</label>

@@ -18,6 +18,8 @@ type Ctx = { viewer: Viewer; db: ReturnType<typeof createAdminClient>; ip: strin
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const int = (v: unknown) => (typeof v === "number" || (typeof v === "string" && v.trim() !== "") ? Math.round(Number(v)) : NaN);
+// Prices are whole hundreds of dram.
+const hundreds = (v: unknown) => Math.round(int(v) / 100) * 100;
 const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(new Date(v).getTime());
 const today = () => new Date().toISOString().slice(0, 10);
 const list = (v: unknown, allowed: readonly string[]) =>
@@ -45,7 +47,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const regions = list(body.regions, REGIONS);
     const terrains = list(body.terrains, TERRAINS);
     const note = str(body.note).slice(0, 2000);
-    const budgetRaw = body.budget === "" || body.budget == null ? null : int(body.budget);
+    const budgetRaw = body.budget === "" || body.budget == null ? null : hundreds(body.budget);
     if (!(people >= 1 && people <= 200)) return fail("Նշեք մասնակիցների թիվը (1–200)։");
     if (!isDate(dateFrom) || !isDate(dateTo) || dateFrom < today() || dateTo < dateFrom) return fail("Նշեք ճիշտ ամսաթվեր։");
     if (budgetRaw !== null && !(budgetRaw >= 0 && budgetRaw <= 100_000_000)) return fail("Նշեք ճիշտ բյուջե։");
@@ -105,7 +107,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     if (!activePackage(club)) return fail("Առաջարկ ուղարկելու համար ընտրեք փաթեթ։", 403);
     if (club.posting_blocked) return fail("Նոր հայտարարություն ավելացնելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։", 403);
 
-    const price = int(body.price);
+    const price = hundreds(body.price);
     const date = str(body.date);
     const message = str(body.message).slice(0, 2000);
     if (!(price >= 0 && price <= 100_000_000)) return fail("Նշեք գինը մեկ անձի համար։");

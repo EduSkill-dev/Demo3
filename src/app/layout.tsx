@@ -7,6 +7,7 @@ import { getLocale, getTheme } from "@/i18n/server";
 import { getSiteTexts } from "@/lib/siteTexts";
 import { getViewer } from "@/lib/viewer";
 import FrozenGuard from "@/components/layout/FrozenGuard";
+import InputGuard from "@/components/layout/InputGuard";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -37,6 +38,7 @@ export default async function RootLayout({
     >
       <body className="flex min-h-screen flex-col bg-stone font-sans text-ink">
         <I18nProvider locale={locale} overrides={overrides}>
+          <InputGuard />
           <SiteHeader />
           {/* The header stays usable (language, theme, log out); a frozen
               account can only look at everything below it. */}
