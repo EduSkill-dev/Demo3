@@ -40,10 +40,11 @@ export async function getAdmin(): Promise<AdminSession | null> {
 
 export const can = (admin: AdminSession, perm: AdminPerm) => admin.isSuper || admin.perms.includes(perm);
 
-// The caller's address as the proxy reports it (Vercel sets x-forwarded-for).
+// The caller's address as the host's proxy reports it (Netlify has its own
+// header; Vercel and most others set x-forwarded-for).
 export function clientIp(req: Request): string | null {
   const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || req.headers.get("x-real-ip") || null;
+  return req.headers.get("x-nf-client-connection-ip") || forwarded || req.headers.get("x-real-ip") || null;
 }
 
 // One activity_log entry. Failures are swallowed: a log line never breaks

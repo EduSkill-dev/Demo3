@@ -1,0 +1,10 @@
+# Netlify build settings. The Next.js runtime is added by Netlify itself.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
