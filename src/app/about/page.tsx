@@ -45,7 +45,7 @@ export default async function AboutPage() {
       <section className="border-b border-line bg-surface">
         <div className="mx-auto grid max-w-5xl divide-y divide-line px-6 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {stats.map((s) => (
-            <div key={s.label} className="flex items-baseline gap-3 py-6 sm:flex-col sm:items-start sm:gap-1 sm:px-6 sm:first:pl-0">
+            <div key={s.label} className="flex flex-col items-center gap-1 px-6 py-6 text-center">
               <span className="font-serif text-3xl font-semibold text-heading">{s.value}</span>
               <span className="text-sm text-muted">{s.label}</span>
             </div>
