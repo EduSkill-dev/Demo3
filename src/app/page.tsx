@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPublicTours } from "@/lib/publicTours";
 import { getT } from "@/i18n/server";
 import { REGIONS } from "@/lib/catalog";
+import { SPOTLIGHT } from "@/lib/spotlight";
 import TourGrid from "@/components/tour/TourGrid";
 
 const field =
@@ -18,15 +19,13 @@ export default async function HomePage() {
   return (
     <main>
       <section className="bg-spruce-500 text-card">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
-          <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_1fr]">
-            <div>
-              <h1 className="text-[44px] font-bold leading-[1.1] sm:text-[52px]">{t("home.heroTitle")}</h1>
-              <p className="mt-5 max-w-xl text-lg text-card/90">{t("home.heroText")}</p>
-            </div>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-20">
+          <div>
+            <h1 className="text-[44px] font-bold leading-[1.1] sm:text-[52px]">{t("home.heroTitle")}</h1>
+            <p className="mt-5 max-w-xl text-lg text-card/90">{t("home.heroText")}</p>
 
             {/* The search opens the Tours page with these filters applied. */}
-            <form action="/tours" className="grid gap-3 rounded-[20px] bg-card p-4 text-spruce-900 shadow-lg sm:grid-cols-2">
+            <form action="/tours" className="mt-8 grid gap-3 rounded-[20px] bg-card p-4 text-spruce-900 shadow-lg sm:grid-cols-2">
               <label className="text-xs font-semibold text-[#5B6B66]">
                 {t("toursPage.region")}
                 <select name="region" defaultValue="" className={`${field} mt-1`}>
@@ -55,14 +54,41 @@ export default async function HomePage() {
             </form>
           </div>
 
-          {/* The photo is a wide panorama: shown whole, at its own shape. */}
-          <img
-            src="/images/ararat-hero.jpg"
-            alt=""
-            width={3840}
-            height={1293}
-            className="mt-10 h-auto w-full rounded-2xl shadow-xl sm:rounded-[28px]"
-          />
+          {/* Who was most active: the hiker of the quarter, and under it the
+              club of the month (see src/lib/spotlight.ts). */}
+          <div className="space-y-4">
+            <article className="flex items-center gap-5 rounded-[28px] bg-card p-4 text-spruce-900 shadow-xl">
+              <img
+                src={SPOTLIGHT.hiker.photo}
+                alt={SPOTLIGHT.hiker.name}
+                className="h-36 w-36 shrink-0 rounded-[20px] object-cover sm:h-52 sm:w-52"
+              />
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold leading-snug text-terracotta-500">
+                  🏅 {t("home.hikerLabel")}
+                </p>
+                <p className="mt-2 text-2xl font-bold leading-tight sm:text-[26px]">{SPOTLIGHT.hiker.name}</p>
+                <p className="mt-2 text-sm text-[#5B6B66]">{t("home.hikerStat", { count: SPOTLIGHT.hiker.hikes })}</p>
+              </div>
+            </article>
+
+            <article className="flex items-center gap-5 rounded-[28px] bg-card p-4 text-spruce-900 shadow-xl">
+              <img
+                src={SPOTLIGHT.club.photo}
+                alt={SPOTLIGHT.club.name}
+                className="h-24 w-24 shrink-0 rounded-full object-contain sm:h-28 sm:w-28"
+              />
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold leading-snug text-terracotta-500">
+                  🏆 {t("home.clubLabel")}
+                </p>
+                <p className="mt-1.5 text-xl font-bold leading-tight">{SPOTLIGHT.club.name}</p>
+                <p className="mt-1 text-sm text-[#5B6B66]">
+                  {t("home.clubStat", { hikes: SPOTLIGHT.club.hikes, people: SPOTLIGHT.club.people })}
+                </p>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 

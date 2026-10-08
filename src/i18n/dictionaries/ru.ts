@@ -429,6 +429,10 @@ const ru: DeepPartial<Dictionary> = {
     photo: "Фото {n}",
   },
   home: {
+    hikerLabel: "Самый активный турист квартала",
+    hikerStat: "{count} походов за этот квартал",
+    clubLabel: "Самый активный клуб месяца",
+    clubStat: "{hikes} походов · {people} участников за месяц",
     heroTitle: "Горы ждут вас",
     heroText: "Найдите следующий поход — все клубы Армении в одном месте.",
     heroCta: "Найти поход",
