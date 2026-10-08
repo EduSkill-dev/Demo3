@@ -49,7 +49,15 @@ const base = {
   mailer_autoconfirm: false,
   password_min_length: 8,
   site_url: site,
-  uri_allow_list: [...new Set(['http://localhost:*/**', `${site}/**`])].join(','),
+  // AUTH_EXTRA_URLS: other addresses the site answers on (comma-separated),
+  // e.g. the host's own address next to the custom domain.
+  uri_allow_list: [
+    ...new Set([
+      'http://localhost:*/**',
+      `${site}/**`,
+      ...(env.AUTH_EXTRA_URLS || '').split(',').map((u) => u.trim().replace(/\/$/, '')).filter(Boolean).map((u) => `${u}/**`),
+    ]),
+  ].join(','),
 };
 
 // Supabase lets free projects edit templates only with a custom SMTP sender.
