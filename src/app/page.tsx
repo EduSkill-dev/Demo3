@@ -18,13 +18,15 @@ export default async function HomePage() {
   return (
     <main>
       <section className="bg-spruce-500 text-card">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-20">
-          <div>
-            <h1 className="text-[44px] font-bold leading-[1.1] sm:text-[52px]">{t("home.heroTitle")}</h1>
-            <p className="mt-5 max-w-xl text-lg text-card/90">{t("home.heroText")}</p>
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+          <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_1fr]">
+            <div>
+              <h1 className="text-[44px] font-bold leading-[1.1] sm:text-[52px]">{t("home.heroTitle")}</h1>
+              <p className="mt-5 max-w-xl text-lg text-card/90">{t("home.heroText")}</p>
+            </div>
 
             {/* The search opens the Tours page with these filters applied. */}
-            <form action="/tours" className="mt-8 grid gap-3 rounded-[20px] bg-card p-4 text-spruce-900 shadow-lg sm:grid-cols-2">
+            <form action="/tours" className="grid gap-3 rounded-[20px] bg-card p-4 text-spruce-900 shadow-lg sm:grid-cols-2">
               <label className="text-xs font-semibold text-[#5B6B66]">
                 {t("toursPage.region")}
                 <select name="region" defaultValue="" className={`${field} mt-1`}>
@@ -53,9 +55,14 @@ export default async function HomePage() {
             </form>
           </div>
 
-          <div className="overflow-hidden rounded-[28px] shadow-xl">
-            <img src="/images/ararat-hero.jpg" alt="" className="h-64 w-full object-cover sm:h-80 lg:h-[26rem]" />
-          </div>
+          {/* The photo is a wide panorama: shown whole, at its own shape. */}
+          <img
+            src="/images/ararat-hero.jpg"
+            alt=""
+            width={3840}
+            height={1293}
+            className="mt-10 h-auto w-full rounded-2xl shadow-xl sm:rounded-[28px]"
+          />
         </div>
       </section>
 
