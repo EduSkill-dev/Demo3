@@ -19,6 +19,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .is("read_at", null)
     : { count: 0 };
 
+  const { count: unreadNotices } = user
+    ? await supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false)
+    : { count: 0 };
+
   return (
     <DashboardShell
       title={t("nav.club.title")}
@@ -26,6 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: "/dashboard", label: t("nav.club.announcements") },
         { href: "/dashboard/applications", label: t("nav.club.applications"), badge: unread ?? 0 },
         { href: "/dashboard/offers", label: t("nav.club.offers") },
+        { href: "/dashboard/notifications", label: t("nav.club.notifications"), badge: unreadNotices ?? 0 },
         { href: "/dashboard/club", label: t("nav.club.data") },
         { href: "/dashboard/packages", label: t("nav.club.packages") },
       ]}

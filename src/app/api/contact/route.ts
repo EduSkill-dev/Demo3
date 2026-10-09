@@ -1,4 +1,4 @@
-import { tooMany } from "@/lib/rateLimit";
+import { guardPublic } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -13,9 +13,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 //   * a visitor  — stored unconfirmed, and a link is emailed to the address;
 //     /contact/confirm forwards the message when that link is opened.
 export async function POST(req: Request) {
-  const limited = await tooMany(req, "contact", 6, 60);
-  if (limited) return limited;
-
   const body = (await req.json().catch(() => ({}))) as {
     message?: string;
     email?: string;
@@ -28,6 +25,13 @@ export async function POST(req: Request) {
     data: { user },
   } = await (await createClient()).auth.getUser();
   const verified = user?.email && user.email_confirmed_at ? user.email : null;
+
+  // Visitors are counted per address and the form pauses under a flood;
+  // a signed-in account has already proved who it is.
+  if (!verified) {
+    const limited = await guardPublic(req, "contact");
+    if (limited) return limited;
+  }
 
   const message = (body.message ?? "").trim().slice(0, 4000);
   const email = (verified ?? body.email ?? "").trim().toLowerCase();

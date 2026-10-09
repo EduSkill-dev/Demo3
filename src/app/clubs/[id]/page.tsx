@@ -100,7 +100,7 @@ export default async function ClubDetailPage({
             )}
           </div>
         </div>
-        <FavoriteToggle clubId={club.id} />
+        <FavoriteToggle clubId={club.id} clubName={club.name} />
       </section>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_20rem]">

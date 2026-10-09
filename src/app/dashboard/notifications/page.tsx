@@ -1,9 +1,11 @@
+// The club notifications: platform notices and answers to its offers.
+// (Applications to its hikes live in their own section.)
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import NewsToggle from "@/components/NewsToggle";
 import NotificationsTable, { type NotificationRow } from "@/components/account/NotificationsTable";
 
-export default async function NotificationsPage() {
+export default async function ClubNotificationsPage() {
   const supabase = await createClient();
   const {
     data: { user },

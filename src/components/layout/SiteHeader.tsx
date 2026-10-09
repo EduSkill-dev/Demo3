@@ -12,16 +12,18 @@ export default async function SiteHeader() {
   let headerUser: HeaderUser | null = null;
   if (viewer?.role === "admin") {
     headerUser = { role: "admin", name: "", unread: 0 };
-  } else if (viewer?.role === "club") {
-    headerUser = { role: "club", name: viewer.club?.name ?? "", unread: 0 };
   } else if (viewer) {
+    // The bell: unread notifications, for individuals and clubs alike.
     const supabase = await createClient();
     const { count } = await supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("user_id", viewer.id)
       .eq("read", false);
-    headerUser = { role: "individual", name: viewer.firstName ?? "", unread: count ?? 0 };
+    headerUser =
+      viewer.role === "club"
+        ? { role: "club", name: viewer.club?.name ?? "", unread: count ?? 0 }
+        : { role: "individual", name: viewer.firstName ?? "", unread: count ?? 0 };
   }
 
   if (!viewer?.frozen) return <HeaderBar user={headerUser} />;

@@ -54,6 +54,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "offer.sent": "Առաջարկ ուղարկեց պատվերին",
   "offer.accepted": "Ընդունեց ակումբի առաջարկը",
   "payment.made": "Կատարեց վճարում",
+  "security.ip_blocked": "Պաշտպանություն՝ IP հասցեն արգելափակվեց",
+  "security.function_paused": "Պաշտպանություն՝ ֆունկցիան ժամանակավորապես անջատվեց",
   "admin.account_frozen": "Սառեցրեց հաշիվը",
   "admin.account_blocked": "Արգելափակեց հաշիվը",
   "admin.account_activated": "Ակտիվացրեց հաշիվը",

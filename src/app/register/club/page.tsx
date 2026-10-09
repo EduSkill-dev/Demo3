@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
-import { MIN_PASSWORD, authErrorMessage, confirmUrl, signupConflict } from "@/lib/authErrors";
+import { MIN_PASSWORD, authErrorMessage } from "@/lib/authErrors";
 import AuthCard, { authButton, authInput, authLabel } from "@/components/auth/AuthCard";
 import CheckEmail from "@/components/auth/CheckEmail";
 
@@ -28,23 +27,18 @@ export default function ClubRegisterPage() {
     if (password !== repeat) return setError(t("auth.passwordsDiffer"));
 
     setBusy(true);
-    // Before the account is created and the confirmation email goes out.
-    const conflict = await signupConflict(t, { phone: phone.trim(), clubName: clubName.trim() });
-    if (conflict) {
-      setBusy(false);
-      return setError(conflict);
-    }
-    const { data, error: err } = await createClient().auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        emailRedirectTo: confirmUrl(),
-        data: { role: "club", club_name: clubName.trim(), phone: phone.trim() },
-      },
-    });
+    // The server creates the account: it checks the phone (and club name),
+    // counts sign-ups per address and sends the confirmation email.
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "club", email: email.trim(), password, phone: phone.trim(), clubName: clubName.trim() }),
+    }).catch(() => null);
+    const data = res
+      ? ((await res.json().catch(() => ({}))) as { session?: boolean; error?: { code?: string; message: string; status?: number } })
+      : null;
     setBusy(false);
-    if (err) return setError(authErrorMessage(t, err));
-    if (data.user && data.user.identities?.length === 0) return setError(t("auth.emailTaken"));
+    if (!res?.ok || !data) return setError(data?.error ? authErrorMessage(t, data.error) : t("errors.network"));
     if (data.session) window.location.href = "/auth/confirmed";
     else setSentTo(email.trim());
   }

@@ -175,7 +175,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const { viewer, db } = ctx;
     const { data: offerRow } = await db
       .from("tour_offers")
-      .select("id, request_id, club_id, status, price, date, clubs(name, profiles!clubs_owner_id_fkey(email))")
+      .select("id, request_id, club_id, status, price, date, clubs(name, owner_id, profiles!clubs_owner_id_fkey(email))")
       .eq("id", str(body.offerId))
       .maybeSingle();
     const offer = offerRow as unknown as {
@@ -185,7 +185,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       status: string;
       price: number;
       date: string;
-      clubs: { name: string; profiles: { email: string } | null } | null;
+      clubs: { name: string; owner_id: string; profiles: { email: string } | null } | null;
     } | null;
     const request = offer ? await ownRequest(ctx, offer.request_id) : null;
     if (!offer || !request) return fail("Առաջարկը չի գտնվել։", 404);
@@ -200,6 +200,16 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
 
     const { data: me } = await db.from("profiles").select("first_name, last_name, phone, email").eq("id", viewer.id).single();
     const p = me as { first_name: string | null; last_name: string | null; phone: string | null; email: string };
+    if (offer.clubs?.owner_id) {
+      await db.from("notifications").insert({
+        user_id: offer.clubs.owner_id,
+        club_id: null,
+        tour_id: null,
+        kind: "platform",
+        sender_type: "platform",
+        message: `Ձեր առաջարկն ընդունվել է (${offer.date})։ Պատվիրատուի կոնտակտները՝ «Իմ առաջարկները» բաժնում։`,
+      });
+    }
     const to = offer.clubs?.profiles?.email;
     if (to) {
       await sendEmail(

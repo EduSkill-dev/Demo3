@@ -8,6 +8,7 @@ import { getSiteTexts } from "@/lib/siteTexts";
 import { getViewer } from "@/lib/viewer";
 import FrozenGuard from "@/components/layout/FrozenGuard";
 import InputGuard from "@/components/layout/InputGuard";
+import { FavoritesProvider } from "@/components/FavoritesProvider";
 import "./globals.css";
 
 // Outfit for Latin text and the wordmark, Noto Sans Armenian for Armenian.
@@ -44,7 +45,9 @@ export default async function RootLayout({
           {/* The header stays usable (language, theme, log out); a frozen
               account can only look at everything below it. */}
           <FrozenGuard active={!!viewer?.frozen}>
-            <div className="flex-1">{children}</div>
+            <FavoritesProvider userId={viewer?.role === "individual" ? viewer.id : null}>
+              <div className="flex-1">{children}</div>
+            </FavoritesProvider>
             <SiteFooter />
           </FrozenGuard>
         </I18nProvider>

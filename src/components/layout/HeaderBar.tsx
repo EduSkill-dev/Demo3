@@ -62,7 +62,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   // Custom requests are for clubs to answer (admins may look).
   const seesRequests = user?.role === "club" || user?.role === "admin";
   const navLink = (href: string) =>
-    `border-b-2 px-3 py-2 text-base font-semibold transition ${
+    `whitespace-nowrap border-b-2 px-3 py-2 text-base font-semibold transition ${
       isActive(pathname, href)
         ? "border-terracotta-500 text-spruce-500 dark:text-spruce-300"
         : "border-transparent text-ink hover:text-spruce-500 dark:hover:text-spruce-300"
@@ -88,9 +88,9 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   );
 
   const bell =
-    user?.role === "individual" ? (
+    user && user.role !== "admin" ? (
       <Link
-        href="/account/notifications"
+        href={user.role === "club" ? "/dashboard/notifications" : "/account/notifications"}
         aria-label={t("header.notifications")}
         title={t("header.notifications")}
         className="relative rounded-lg p-2 text-muted hover:bg-sand hover:text-ink"
@@ -129,7 +129,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
               {bell}
               <Link
                 href={home!}
-                className="max-w-[16rem] truncate rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:text-terracotta-700"
+                className="max-w-[12rem] truncate rounded-lg px-2 py-2 text-sm font-semibold text-ink hover:text-terracotta-700"
                 title={homeLabel}
               >
                 {t("header.hello", { name: user.name || homeLabel })}

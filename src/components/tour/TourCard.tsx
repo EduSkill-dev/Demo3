@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import type { PublicTour } from "@/lib/publicTours";
+import FavoriteToggle from "@/components/FavoriteToggle";
 
 // Difficulty chips: easy = Spruce, hard = Terracotta, the rest neutral.
 const DIFFICULTY_CHIP: Record<string, string> = {
@@ -36,18 +37,24 @@ export default function TourCard({
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
-      <button data-view type="button" onClick={onOpen} className="relative block" aria-label={tour.title}>
-        {tour.photo_urls?.[0] ? (
-          <img src={tour.photo_urls[0]} alt="" className="h-48 w-full object-cover" />
-        ) : (
-          <div className="flex h-48 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
-        )}
+      <div className="relative">
+        <button data-view type="button" onClick={onOpen} className="block w-full" aria-label={tour.title}>
+          {tour.photo_urls?.[0] ? (
+            <img src={tour.photo_urls[0]} alt="" className="h-48 w-full object-cover" />
+          ) : (
+            <div className="flex h-48 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
+          )}
+        </button>
         {full && (
           <span className="absolute left-3 top-3 rounded-full bg-terracotta-500 px-2.5 py-1 text-xs font-semibold text-white">
             {closed ? t("signup.closed") : t("toursPage.full")}
           </span>
         )}
-      </button>
+        {/* Follow the club that runs this hike (individuals only). */}
+        <div className="absolute right-3 top-3">
+          <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col p-5">
         <h3 className="text-[21px] font-bold leading-snug text-heading">{tour.title}</h3>

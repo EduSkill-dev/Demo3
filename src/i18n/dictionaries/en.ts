@@ -194,6 +194,10 @@ const en: DeepPartial<Dictionary> = {
     subscribe: "Subscribe",
     subscribed: "Check your inbox and confirm your subscription.",
     subscribedDirect: "You have successfully subscribed to the platform news.",
+    alreadySubscribed: "You are already subscribed to the platform news.",
+    pendingConfirm: "The confirmation link has already been sent — check your inbox.",
+    accountExists: "This address has an account: log in and switch the news on in your Notifications section.",
+    manageNews: "You can manage this in the Notifications section of your account.",
     suggestTitle: "Suggestions",
     suggestText: "Have an idea or a question? Write to us.",
     message: "Your suggestion...",
@@ -352,6 +356,9 @@ const en: DeepPartial<Dictionary> = {
     changeNotice: "If people have already signed up, they will be notified when the date or meeting details change.",
   },
   account: {
+    newsOff: "Turn off platform news",
+    newsOnHint: "You receive platform news: new hikes and updates.",
+    newsOffHint: "Platform news are off. Notifications about your own hikes and favourite clubs keep coming.",
     frozenNotice: "Your account is frozen: you can look around, but actions are unavailable.",
     toursCount: "You are signed up for {count} hikes",
     toursEmpty: "You have not signed up for any hike yet.",
@@ -483,6 +490,8 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    ipBlocked: "Too many attempts from your address — please try again later.",
+    paused: "This function is temporarily switched off — please try again a little later.",
     bookingDisabled: "Signing up for hikes has been switched off by an administrator.",
     postingDisabled: "Adding new listings has been switched off by an administrator.",
     frozen: "Your account is frozen: actions are temporarily unavailable.",
@@ -676,6 +685,7 @@ const en: DeepPartial<Dictionary> = {
       data: "Club details",
       packages: "Packages",
       offers: "My offers",
+      notifications: "Notifications",
     },
     account: {
       title: "My account",

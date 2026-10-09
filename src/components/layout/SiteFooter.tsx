@@ -13,14 +13,14 @@ export default async function SiteFooter() {
   // visitor forms are not for them.
   const who = await getViewer();
   const isAdmin = who?.role === "admin";
-  const viewer: FooterViewer | null = who?.email && who.emailConfirmed ? { email: who.email, phone: who.phone } : null;
+  const viewer: FooterViewer | null = who?.email && who.emailConfirmed ? { email: who.email, phone: who.phone, news: who.platformNews } : null;
 
   return (
     <footer className="mt-auto bg-spruce-900 text-white">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         {!isAdmin && (
           <div className="mb-12 grid gap-10 border-b border-white/10 pb-12 md:grid-cols-2">
-            <NewsletterForm key={`n-${viewer?.email ?? ""}`} viewer={viewer} />
+            <NewsletterForm key={`n-${viewer?.email ?? ""}-${viewer?.news}`} viewer={viewer} />
             <SuggestionForm key={`s-${viewer?.email ?? ""}`} viewer={viewer} />
           </div>
         )}

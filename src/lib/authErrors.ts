@@ -8,7 +8,11 @@ export function authErrorMessage(t: TFunction, error: Pick<AuthError, "message">
     case "invalid_credentials":
       return t("auth.invalidLogin");
     case "rate_limited":
-      return t("common.tooMany");
+      return error.message || t("common.tooMany");
+    case "phone_taken":
+      return t("auth.phoneTaken");
+    case "club_name_taken":
+      return t("auth.clubNameTaken");
     case "user_banned":
       return t("auth.blocked");
     case "email_not_confirmed":

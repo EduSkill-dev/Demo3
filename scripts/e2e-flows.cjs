@@ -563,9 +563,27 @@ async function main() {
       check('HTTP newsletter: subscribing stores an unconfirmed address', sub.status === 200 && subRow && !subRow.confirmed_at,
         `status=${sub.status} row=${JSON.stringify(subRow)}`);
       const page = async (route, cookie) => (await fetch(`http://localhost:${DEV_PORT}${route}`, { headers: cookie ? { Cookie: cookie } : {} })).text();
+      const subAgain = await api('/api/newsletter', { email: subEmail });
+      const tokenAfter = (await admin.from('newsletter_subscribers').select('token').eq('email', subEmail).single()).data?.token;
+      check('HTTP newsletter: asking again does not send a second link', subAgain.body.state === 'pending' && tokenAfter === subRow?.token,
+        `state=${subAgain.body.state} sameToken=${tokenAfter === subRow?.token}`);
       await page(`/newsletter/confirm?token=${subRow?.token}`);
       const confirmedRow = (await admin.from('newsletter_subscribers').select('confirmed_at').eq('email', subEmail).single()).data;
       check('HTTP newsletter: the emailed link confirms it', !!confirmedRow?.confirmed_at, JSON.stringify(confirmedRow));
+      const subConfirmed = await api('/api/newsletter', { email: subEmail });
+      const asAccount = await api('/api/newsletter', { email: email('ind') });
+      const asMember = await api('/api/newsletter', {}, indCookie);
+      check('HTTP newsletter: a confirmed address and a registered account are told they are already subscribed',
+        subConfirmed.body.state === 'already' && asAccount.body.state === 'already' && asMember.body.state === 'already',
+        `guest=${subConfirmed.body.state} accountEmail=${asAccount.body.state} signedIn=${asMember.body.state}`);
+      await signIn('ind');
+      const newsOff = await anon.from('profiles').update({ platform_news: false }).eq('id', ids.ind).select('platform_news');
+      const offState = await api('/api/newsletter', { email: email('ind') });
+      const backOn = await api('/api/newsletter', {}, await cookieFor('ind'));
+      const newsNow = (await admin.from('profiles').select('platform_news').eq('id', ids.ind).single()).data?.platform_news;
+      check('platform news: an account switches them off itself and back on from the footer',
+        newsOff.data?.[0]?.platform_news === false && offState.body.state === 'account' && backOn.body.state === 'subscribed' && newsNow === true,
+        `off=${JSON.stringify(newsOff.data)} guestAsk=${offState.body.state} on=${backOn.body.state} now=${newsNow}`);
       await page(`/newsletter/unsubscribe?token=${subRow?.token}`);
       const unsubRow = (await admin.from('newsletter_subscribers').select('unsubscribed_at').eq('email', subEmail).single()).data;
       check('HTTP newsletter: the unsubscribe link works', !!unsubRow?.unsubscribed_at, JSON.stringify(unsubRow));
@@ -724,6 +742,32 @@ async function main() {
       const oddRow = (await admin.from('tour_requests').select('id, budget').eq('id', oddPrice.body.id).maybeSingle()).data;
       check('prices are kept in whole hundreds of dram', oddPrice.status === 200 && oddRow?.budget === 4500, JSON.stringify(oddRow));
       if (oddRow) await admin.from('tour_requests').delete().eq('id', oddRow.id);
+
+      // ---------- The guard on the open forms ----------
+      const g = (form, ip) => admin.rpc('guard_public_action', { p_action: form, p_ip: ip, p_ip_max: 3, p_global_max: 8, p_window_minutes: 10, p_ip_block_minutes: 60, p_pause_minutes: 30 });
+      const form1 = `e2e-a-${stamp}`, form2 = `e2e-b-${stamp}`, noisy = `203.0.113.${stamp % 200}`;
+      const calls = [];
+      for (let i = 0; i < 4; i++) calls.push((await g(form1, noisy)).data);
+      const otherForm = (await g(form2, noisy)).data;
+      const spread = [];
+      for (let i = 0; i < 9; i++) spread.push((await g(form2, `198.51.100.${i + 1}`)).data);
+      const afterPause = (await g(form2, '198.51.100.250')).data;
+      const seen = (await admin.from('activity_log').select('action').in('action', ['security.ip_blocked', 'security.function_paused']).in('target_id', [noisy, form2])).data || [];
+      check('abuse guard: one noisy address is blocked everywhere; a flood from many addresses pauses the form; both are logged',
+        calls.join() === 'ok,ok,ok,ip_blocked' && otherForm === 'ip_blocked' && spread.slice(0, 8).every((x) => x === 'ok') && spread[8] === 'paused'
+          && afterPause === 'paused' && seen.length === 2,
+        `sameIp=${calls.join()} otherForm=${otherForm} spread=${spread.join()} after=${afterPause} logged=${seen.length}`);
+      await admin.from('security_blocks').delete().in('key', [noisy, form1, form2]);
+      await admin.from('rate_hits').delete().like('key', `pa:e2e-%-${stamp}:%`);
+      await admin.from('activity_log').delete().in('target_id', [noisy, form2]);
+
+      const regTaken = await api('/api/auth/register', { role: 'individual', email: email('never'), password: PASSWORD, phone: '010 000002', firstName: 'Ա', lastName: 'Բ', birthDate: '1990-01-01' });
+      const regBad = await api('/api/auth/register', { role: 'club', email: 'not-an-email', password: PASSWORD, phone: '+374 77 000000', clubName: 'X' });
+      const regName = await api('/api/auth/register', { role: 'club', email: email('never2'), password: PASSWORD, phone: '+374 77 ' + String(stamp).slice(-6), clubName: 'e2e CLUB a' });
+      const created0 = (await admin.from('profiles').select('id').in('email', [email('never'), email('never2')])).data || [];
+      check('sign-up route: a taken phone or club name and bad input are refused before any account exists',
+        regTaken.status === 409 && regTaken.body.error?.code === 'phone_taken' && regBad.status === 400 && regName.body.error?.code === 'club_name_taken' && created0.length === 0,
+        `phone=${regTaken.status} ${regTaken.body.error?.code} bad=${regBad.status} name=${regName.body.error?.code} created=${created0.length}`);
 
       // ---------- One phone per account, one club per name ----------
       const taken = await api('/api/auth/check-signup', { phone: '010 000002', clubName: '  e2e   CLUB b ' });

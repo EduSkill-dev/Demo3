@@ -6,6 +6,7 @@ import type { Tour } from "@/types/database";
 import { cancelHoursOf, formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import FramedPhoto from "@/components/ui/FramedPhoto";
+import FavoriteToggle from "@/components/FavoriteToggle";
 
 export type TourForDetails = Pick<
   Tour,
@@ -91,9 +92,12 @@ export default function TourDetails({
 
       <div>
         {tour.club && (
-          <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-terracotta-500 hover:text-terracotta-700">
-            {tour.club.name}
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-terracotta-500 hover:text-terracotta-700">
+              {tour.club.name}
+            </Link>
+            <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
+          </div>
         )}
         <h3 className="mt-1 font-serif text-2xl font-semibold text-heading">{tour.title}</h3>
       </div>

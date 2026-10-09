@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 
 // Once a day (vercel.json → 06:00 UTC, 10:00 in Yerevan):
 //   1. remind clubs 7 and 2 days before their package lapses (once each)
-//   2. email newsletter subscribers the hikes published since the last run
+//   2. email the hikes published since the last run to everyone who gets
+//      platform news (registered accounts unless switched off, plus visitors
+//      who subscribed)
 // Vercel Cron sends "Authorization: Bearer $CRON_SECRET"; anyone else is refused.
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -82,15 +84,35 @@ export async function GET(req: Request) {
 
   let digests = 0;
   if (tours.length) {
+    // Every registered account that has not switched platform news off…
+    const { data: accounts } = await admin
+      .from("profiles")
+      .select("email, role")
+      .in("role", ["individual", "club"])
+      .eq("status", "active")
+      .eq("platform_news", true);
+    const { data: optedOut } = await admin.from("profiles").select("email").eq("platform_news", false);
+    const registered = new Map(((accounts ?? []) as { email: string; role: string }[]).map((a) => [a.email.toLowerCase(), a.role]));
+    const silent = new Set(((optedOut ?? []) as { email: string }[]).map((a) => a.email.toLowerCase()));
+    // …plus visitors who confirmed their address (an address that belongs to
+    // an account follows the account's own switch).
     const { data: subscribers } = await admin
       .from("newsletter_subscribers")
       .select("email, token")
       .not("confirmed_at", "is", null)
       .is("unsubscribed_at", null);
-    for (const s of (subscribers ?? []) as { email: string; token: string }[]) {
-      const result = await sendEmail(
-        newsletterDigestEmail({ to: s.email, tours, unsubscribeUrl: `${origin}/newsletter/unsubscribe?token=${s.token}` })
-      );
+
+    const recipients: { to: string; unsubscribeUrl: string }[] = [
+      ...[...registered].map(([to, role]) => ({
+        to,
+        unsubscribeUrl: `${origin}${role === "club" ? "/dashboard/notifications" : "/account/notifications"}`,
+      })),
+      ...((subscribers ?? []) as { email: string; token: string }[])
+        .filter((s) => !registered.has(s.email.toLowerCase()) && !silent.has(s.email.toLowerCase()))
+        .map((s) => ({ to: s.email, unsubscribeUrl: `${origin}/newsletter/unsubscribe?token=${s.token}` })),
+    ];
+    for (const r of recipients) {
+      const result = await sendEmail(newsletterDigestEmail({ to: r.to, tours, unsubscribeUrl: r.unsubscribeUrl }));
       if (result.ok) digests++;
     }
   }

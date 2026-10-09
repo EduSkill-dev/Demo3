@@ -39,6 +39,7 @@ function details(e: Entry): string {
   if (m.score != null) parts.push(`${m.score}/5`);
   if (m.via) parts.push("երկրորդ հասցեով");
   if (typeof m.limit === "string") parts.push(m.limit);
+  if (typeof m.form === "string") parts.push(`ձև՝ ${m.form} · ${m.calls} հարցում · ${m.minutes} րոպեով`);
   return parts.join(" · ");
 }
 
@@ -64,14 +65,17 @@ export default async function AdminLogsPage({
     .order("at", { ascending: false })
     .order("id", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-  query = role ? query.eq("actor_role", role) : query.in("actor_role", roles);
+  // Without a filter the super admin also sees entries nobody "did" (the
+  // abuse guard's blocks and pauses).
+  if (role) query = query.eq("actor_role", role);
+  else if (!me.isSuper) query = query.in("actor_role", roles);
   if (action) query = query.eq("action", action);
   if (q) query = query.or(`actor_label.ilike.%${q}%,target_label.ilike.%${q}%,ip.ilike.%${q}%`);
   const { data, count } = await query;
   const entries = (data ?? []) as Entry[];
   const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
-  const actions = Object.entries(ACTION_LABELS).filter(([key]) => me.isSuper || !key.startsWith("admin."));
+  const actions = Object.entries(ACTION_LABELS).filter(([key]) => me.isSuper || !(key.startsWith("admin.") || key.startsWith("security.")));
   const link = (p: number) => {
     const params = new URLSearchParams();
     if (role) params.set("role", role);

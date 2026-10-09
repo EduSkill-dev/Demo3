@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useT } from "@/i18n/client";
+import { serverErrorMessage } from "@/lib/serverErrors";
 
 const field =
   "w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-apricot-500 focus:outline-none";
 
 // The signed-in person's verified contact details (null for visitors).
-export type FooterViewer = { email: string; phone: string | null };
+export type FooterViewer = { email: string; phone: string | null; news: boolean };
 
 const locked = "cursor-not-allowed opacity-70";
 
@@ -34,24 +35,50 @@ async function post(url: string, body: object): Promise<boolean> {
   return !!res?.ok;
 }
 
+// What the server answered, as the sentence to show.
+type NewsState = "subscribed" | "already" | "sent" | "pending" | "account";
+
 export function NewsletterForm({ viewer }: { viewer: FooterViewer | null }) {
   const t = useT();
   const [email, setEmail] = useState(viewer?.email ?? "");
   const [website, setWebsite] = useState("");
-  const [state, setState] = useState<"idle" | "busy" | "sent" | "error">("idle");
+  const [busy, setBusy] = useState(false);
+  // A signed-in account that receives the news has nothing to fill in.
+  const [done, setDone] = useState<NewsState | null>(viewer?.news ? "already" : null);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setState("busy");
-    setState((await post("/api/newsletter", { email, website })) ? "sent" : "error");
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/newsletter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, website }),
+    }).catch(() => null);
+    const data = res ? ((await res.json().catch(() => ({}))) as { state?: NewsState; error?: { message?: string } }) : null;
+    setBusy(false);
+    if (!res?.ok || !data?.state) return setError(serverErrorMessage(t, data?.error?.message));
+    setDone(data.state);
   }
+
+  const message: Record<NewsState, string> = {
+    subscribed: `✓ ${t("footer.subscribedDirect")}`,
+    already: `✓ ${t("footer.alreadySubscribed")}`,
+    sent: `✉️ ${t("footer.subscribed")}`,
+    pending: `✉️ ${t("footer.pendingConfirm")}`,
+    account: t("footer.accountExists"),
+  };
 
   return (
     <div>
       <h2 className="font-serif text-lg font-semibold text-white">{t("footer.newsletterTitle")}</h2>
       <p className="mt-1 text-sm text-white/70">{t("footer.newsletterText")}</p>
-      {state === "sent" ? (
-        <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">{viewer ? `✓ ${t("footer.subscribedDirect")}` : `✉️ ${t("footer.subscribed")}`}</p>
+      {done ? (
+        <p role="status" className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">
+          {message[done]}
+          {viewer && <span className="mt-1 block text-xs text-white/70">{t("footer.manageNews")}</span>}
+        </p>
       ) : (
         <form onSubmit={submit} className="relative mt-4 flex flex-col gap-2 sm:flex-row">
           <Honeypot value={website} onChange={setWebsite} />
@@ -68,14 +95,14 @@ export function NewsletterForm({ viewer }: { viewer: FooterViewer | null }) {
           />
           <button
             type="submit"
-            disabled={state === "busy"}
+            disabled={busy}
             className="shrink-0 rounded-full bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
           >
             {t("footer.subscribe")}
           </button>
         </form>
       )}
-      {state === "error" && <p className="mt-2 text-xs text-red-300">{t("common.error")}</p>}
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
     </div>
   );
 }
