@@ -1,5 +1,6 @@
 "use client";
 
+import PasswordInput from "@/components/ui/PasswordInput";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
@@ -36,12 +37,12 @@ export default function ResetPasswordPage() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label htmlFor="password" className={authLabel}>{t("auth.newPassword")}</label>
-            <input id="password" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} />
+            <PasswordInput id="password" required minLength={MIN_PASSWORD} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} />
             <p className="mt-1 text-xs text-muted">{t("auth.passwordHint")}</p>
           </div>
           <div>
             <label htmlFor="repeat" className={authLabel}>{t("auth.passwordRepeat")}</label>
-            <input id="repeat" type="password" required autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} className={authInput} />
+            <PasswordInput id="repeat" required autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} className={authInput} />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={busy} className={authButton}>

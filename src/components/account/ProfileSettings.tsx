@@ -1,5 +1,6 @@
 "use client";
 
+import PasswordInput from "@/components/ui/PasswordInput";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -198,11 +199,11 @@ export default function ProfileSettings({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="pw" className={label}>{t("auth.newPassword")}</label>
-            <input id="pw" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
+            <PasswordInput id="pw" required minLength={MIN_PASSWORD} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
           </div>
           <div>
             <label htmlFor="pw2" className={label}>{t("auth.passwordRepeat")}</label>
-            <input id="pw2" type="password" required autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} className={input} />
+            <PasswordInput id="pw2" required autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} className={input} />
           </div>
         </div>
         <NoteLine note={notes.password ?? null} />

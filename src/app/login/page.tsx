@@ -1,5 +1,6 @@
 "use client";
 
+import PasswordInput from "@/components/ui/PasswordInput";
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -76,7 +77,7 @@ export default function LoginPage() {
               {t("auth.forgot")}
             </Link>
           </div>
-          <input id="password" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} />
+          <PasswordInput id="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         {unconfirmed && (

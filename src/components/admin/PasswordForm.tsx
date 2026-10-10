@@ -1,5 +1,6 @@
 "use client";
 
+import PasswordInput from "@/components/ui/PasswordInput";
 import { useState } from "react";
 import { adminAction, adminButton, adminInput } from "./adminApi";
 
@@ -35,11 +36,11 @@ export default function PasswordForm({ forced }: { forced: boolean }) {
       )}
       <div>
         <label htmlFor="new-password" className="mb-1 block text-sm font-medium text-ink">Նոր գաղտնաբառ</label>
-        <input id="new-password" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={adminInput} />
+        <PasswordInput id="new-password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={adminInput} />
       </div>
       <div>
         <label htmlFor="repeat-password" className="mb-1 block text-sm font-medium text-ink">Կրկնեք գաղտնաբառը</label>
-        <input id="repeat-password" type="password" required minLength={8} autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} className={adminInput} />
+        <PasswordInput id="repeat-password" required minLength={8} autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} className={adminInput} />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {done && <p className="text-sm text-green-700 dark:text-green-400">✓ Գաղտնաբառը փոխված է։</p>}

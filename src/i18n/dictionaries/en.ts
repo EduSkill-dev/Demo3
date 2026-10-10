@@ -132,6 +132,8 @@ const en: DeepPartial<Dictionary> = {
     forgot: "Forgot your password?",
     noAccount: "No account yet?",
     invalidLogin: "Wrong email or password.",
+    showPassword: "Show the password",
+    hidePassword: "Hide the password",
     blocked: "Your account has been blocked.",
     blockedNoAction: "Your account is blocked, and for now you cannot do anything with it.",
     notConfirmed: "Your email is not confirmed yet. Please check your inbox.",
