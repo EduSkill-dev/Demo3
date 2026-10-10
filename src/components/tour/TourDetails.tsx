@@ -7,12 +7,18 @@ import { cancelHoursOf, formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import FramedPhoto from "@/components/ui/FramedPhoto";
 import FavoriteToggle from "@/components/FavoriteToggle";
+import LikeButton from "@/components/LikeButton";
 
 export type TourForDetails = Pick<
   Tour,
   | "id" | "title" | "description" | "regions" | "terrains" | "date" | "max_participants" | "photo_urls"
   | "overnight" | "difficulty" | "coordinator_phone" | "notes" | "meeting_point" | "meeting_time" | "price"
-> & { cancel_hours?: number | null; club?: { id: string; name: string } | null; sights?: string[] };
+> & {
+  cancel_hours?: number | null;
+  club?: { id: string; name: string; likes?: number } | null;
+  sights?: string[];
+  likes?: number; // shown (and likeable) when the page supplied the count
+};
 
 // The full announcement — used inside modals ("View", "See more").
 // `seats.cap` is what the platform accepts under the club's package; the
@@ -96,10 +102,20 @@ export default function TourDetails({
             <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-terracotta-500 hover:text-terracotta-700">
               {tour.club.name}
             </Link>
-            <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
+            <span className="flex shrink-0 items-center gap-2">
+              {tour.club.likes !== undefined && <LikeButton kind="club" id={tour.club.id} count={tour.club.likes} size="md" />}
+              <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
+            </span>
           </div>
         )}
-        <h3 className="mt-1 font-serif text-2xl font-semibold text-heading">{tour.title}</h3>
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <h3 className="font-serif text-2xl font-semibold text-heading">{tour.title}</h3>
+          {tour.likes !== undefined && (
+            <span className="mt-1 shrink-0">
+              <LikeButton kind="tour" id={tour.id} count={tour.likes} size="md" />
+            </span>
+          )}
+        </div>
       </div>
 
       {tour.description && <p className="whitespace-pre-line leading-6 text-ink">{tour.description}</p>}

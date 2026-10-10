@@ -242,6 +242,8 @@ const en: DeepPartial<Dictionary> = {
     corporate: "Corporate events",
   },
   announcements: {
+    republish: "Publish again",
+    republishBlocked: "A new listing cannot be added right now (package or limit).",
     postingBlocked: "Adding new listings has been switched off by an administrator.",
     applicationsBlocked: "New sign-ups for your hikes have been switched off by an administrator.",
     adminHidden: "Closed by an administrator",
@@ -319,6 +321,7 @@ const en: DeepPartial<Dictionary> = {
     uploadFailed: "The photo did not upload: {message}",
   },
   tourForm: {
+    copyNotice: "The details were copied from the past hike. Pick a new date, check the rest and publish: this is a new listing.",
     cancelHours: "Until when a booking can be cancelled",
     cancelHoursOption: "{hours} hours before the hike",
     cancelHoursHint: "Decide per hike: how hard it is to find a new participant for a freed place. After that a participant can no longer cancel.",
@@ -676,6 +679,11 @@ const en: DeepPartial<Dictionary> = {
     search: "Search a place or region",
     none: "Nothing found.",
     remove: "Remove",
+  },
+  like: {
+    club: "Like the club",
+    tour: "Like the hike",
+    onlyParticipants: "participants can like it after the hike",
   },
   nav: {
     club: {

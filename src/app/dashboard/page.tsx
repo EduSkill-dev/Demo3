@@ -89,7 +89,7 @@ export default async function AnnouncementsPage() {
         )}
       </div>
 
-      <AnnouncementsTable rows={rows} />
+      <AnnouncementsTable rows={rows} canRepublish={canAdd} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { getLikeCounts } from "@/lib/likes";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getT } from "@/i18n/server";
@@ -20,11 +21,13 @@ export default async function MyToursPage() {
     .eq("status", "confirmed");
 
   type Raw = { id: string; tours: (Tour & { clubs: { id: string; name: string } | null }) | null };
+  const booked = ((data ?? []) as unknown as Raw[]).filter((b) => b.tours);
+  const likes = await getLikeCounts(booked.map((b) => b.tours!.id), [...new Set(booked.map((b) => b.tours!.club_id))]);
   const rows: MyTourRow[] = ((data ?? []) as unknown as Raw[])
     .filter((b) => b.tours && b.tours.date >= today)
     .map((b) => {
       const { clubs, ...tour } = b.tours!;
-      return { bookingId: b.id, tour: { ...tour, club: clubs } };
+      return { bookingId: b.id, tour: { ...tour, likes: likes.tours.get(tour.id) ?? 0, club: clubs && { ...clubs, likes: likes.clubs.get(clubs.id) ?? 0 } } };
     })
     .sort((a, b) => (a.tour.date < b.tour.date ? -1 : 1));
 

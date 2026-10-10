@@ -2,10 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tour } from "@/types/database";
 import { PACKAGES, activePackage } from "@/lib/catalog";
 import { getSightNames } from "@/lib/sights";
+import { getLikeCounts } from "@/lib/likes";
 
 export type PublicClubInfo = {
   id: string;
   name: string;
+  likes: number; // hearts from people who hiked with the club
   // Present only when the club's package shows ratings to the public.
   rating: { average: number; count: number } | null;
 };
@@ -13,6 +15,7 @@ export type PublicClubInfo = {
 export type PublicTour = Tour & {
   club: PublicClubInfo;
   taken: number; // confirmed seats
+  likes: number; // thumbs-up from people who took part
   sights: string[]; // names of the ticked sights, in the reader's language
   cap: number; // seats the club's package allows on this tour; 0 = sign-up closed
 };
@@ -40,6 +43,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
   if (rows.length === 0) return [];
 
   const sightNames = await getSightNames();
+  const likes = await getLikeCounts(rows.map((t) => t.id), [...new Set(rows.map((t) => t.club_id))]);
   const [{ data: seats }, { data: ratings }] = await Promise.all([
     supabase.rpc("tours_seats_taken", { p_tours: rows.map((t) => t.id) }),
     supabase.from("club_rating_summary").select("club_id, average, count").in("club_id", [...new Set(rows.map((t) => t.club_id))]),
@@ -57,8 +61,10 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
       club: {
         id: clubs!.id,
         name: clubs!.name,
+        likes: likes.clubs.get(clubs!.id) ?? 0,
         rating: PACKAGES[pkg].showsRatings && r ? { average: Number(r.average), count: r.count } : null,
       },
+      likes: likes.tours.get(tour.id) ?? 0,
       sights: (tour.sight_ids ?? []).map((id) => sightNames.get(id)).filter((n): n is string => !!n),
       taken: taken.get(tour.id) ?? 0,
       // 0 = sign-up closed (an admin switched the club's applications off).

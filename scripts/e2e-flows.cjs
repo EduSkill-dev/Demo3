@@ -743,6 +743,28 @@ async function main() {
       check('prices are kept in whole hundreds of dram', oddPrice.status === 200 && oddRow?.budget === 4500, JSON.stringify(oddRow));
       if (oddRow) await admin.from('tour_requests').delete().eq('id', oddRow.id);
 
+      // ---------- Likes: only for people who took part ----------
+      const pastTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Liked Route', date: future(30), status: 'active' })).select('id').single()).data;
+      // Booked while it was still ahead, then the day passes.
+      await admin.from('bookings').insert({ tour_id: pastTour.id, user_id: ids.ind2, status: 'confirmed' });
+      await admin.from('tours').update({ date: future(-3) }).eq('id', pastTour.id);
+      await signIn('ind');
+      const strangerTour = await anon.from('tour_likes').insert({ user_id: ids.ind, tour_id: pastTour.id });
+      await signIn('ind2');
+      const upcomingLike = await anon.from('tour_likes').insert({ user_id: ids.ind2, tour_id: soonTour.id });
+      const likeTour = await anon.from('tour_likes').insert({ user_id: ids.ind2, tour_id: pastTour.id });
+      const likeClub = await anon.from('club_likes').insert({ user_id: ids.ind2, club_id: clubA });
+      const forOther = await anon.from('club_likes').insert({ user_id: ids.ind, club_id: clubA });
+      const mine = (await anon.rpc('my_engagement')).data;
+      const counts = [(await visitor.from('tour_like_counts').select('likes').eq('tour_id', pastTour.id).maybeSingle()).data?.likes,
+        (await visitor.from('club_like_counts').select('likes').eq('club_id', clubA).maybeSingle()).data?.likes];
+      const unlike = await anon.from('club_likes').delete().eq('user_id', ids.ind2).eq('club_id', clubA).select('club_id');
+      check('likes: a participant likes the hike and its club after the hike; nobody else can; counts are public',
+        !!strangerTour.error && !!upcomingLike.error && !likeTour.error && !likeClub.error && !!forOther.error
+          && mine?.tourLikes?.includes(pastTour.id) && mine?.attendedClubs?.includes(clubA) && counts[0] === 1 && counts[1] === 1 && (unlike.data || []).length === 1,
+        `stranger=${strangerTour.error ? 'refused' : 'ALLOWED'} upcoming=${upcomingLike.error ? 'refused' : 'ALLOWED'} tour=${likeTour.error?.message ?? 'ok'} club=${likeClub.error?.message ?? 'ok'} forOther=${forOther.error ? 'refused' : 'ALLOWED'} counts=${counts.join('/')} unlike=${(unlike.data || []).length}`);
+      await admin.from('tours').delete().eq('id', pastTour.id);
+
       // ---------- The guard on the open forms ----------
       const g = (form, ip) => admin.rpc('guard_public_action', { p_action: form, p_ip: ip, p_ip_max: 3, p_global_max: 8, p_window_minutes: 10, p_ip_block_minutes: 60, p_pause_minutes: 30 });
       const form1 = `e2e-a-${stamp}`, form2 = `e2e-b-${stamp}`, noisy = `203.0.113.${stamp % 200}`;

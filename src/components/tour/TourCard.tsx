@@ -5,6 +5,7 @@ import { formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import type { PublicTour } from "@/lib/publicTours";
 import FavoriteToggle from "@/components/FavoriteToggle";
+import LikeButton from "@/components/LikeButton";
 
 // Difficulty chips: easy = Spruce, hard = Terracotta, the rest neutral.
 const DIFFICULTY_CHIP: Record<string, string> = {
@@ -50,7 +51,7 @@ export default function TourCard({
             {closed ? t("signup.closed") : t("toursPage.full")}
           </span>
         )}
-        {/* Follow the club that runs this hike (individuals only). */}
+        {/* The bookmark: follow the club that runs this hike (individuals only). */}
         <div className="absolute right-3 top-3">
           <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
         </div>
@@ -99,6 +100,9 @@ export default function TourCard({
           <span className={`${chip} ${DIFFICULTY_CHIP[tour.difficulty] ?? NEUTRAL_CHIP}`}>{t(`difficulty.${tour.difficulty}`)}</span>
           {tour.overnight && <span className={`${chip} bg-apricot-100 text-apricot-700`}>🌙 {t("common.overnight")}</span>}
           <span className={`${chip} ${NEUTRAL_CHIP}`}>{t("common.upTo", { count: tour.max_participants })}</span>
+          <span className="ml-auto">
+            <LikeButton kind="tour" id={tour.id} count={tour.likes} />
+          </span>
         </div>
 
         <div className="mt-auto pt-4">
@@ -113,6 +117,9 @@ export default function TourCard({
                   (<span className="text-apricot-500">★</span> {tour.club.rating.average.toFixed(1)}/5)
                 </span>
               )}
+              <span className="ml-2 align-middle">
+                <LikeButton kind="club" id={tour.club.id} count={tour.club.likes} />
+              </span>
             </p>
             <p className="shrink-0 whitespace-nowrap font-bold text-heading">
               {Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(tour.price) }) : t("common.free")}

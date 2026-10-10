@@ -24,12 +24,14 @@ export default function TourForm({
   mode,
   clubId,
   initialTour,
+  template,
   seatCap,
   sights,
 }: {
   mode: "create" | "edit";
   clubId: string;
   initialTour?: Tour;
+  template?: Tour; // "publish again": a new listing pre-filled from this one, without its date
   seatCap: number;
   sights: SightOption[];
 }) {
@@ -37,24 +39,26 @@ export default function TourForm({
   const t = useT();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [title, setTitle] = useState(initialTour?.title ?? "");
-  const [regions, setRegions] = useState<string[]>(initialTour?.regions ?? []);
-  const [terrains, setTerrains] = useState<string[]>(initialTour?.terrains ?? []);
+  const source = initialTour ?? template;
+
+  const [title, setTitle] = useState(source?.title ?? "");
+  const [regions, setRegions] = useState<string[]>(source?.regions ?? []);
+  const [terrains, setTerrains] = useState<string[]>(source?.terrains ?? []);
   const [date, setDate] = useState(initialTour?.date ?? "");
-  const [difficulty, setDifficulty] = useState<Difficulty>(initialTour?.difficulty ?? "medium");
-  const [overnight, setOvernight] = useState(initialTour?.overnight ?? false);
-  const [sightIds, setSightIds] = useState<string[]>(initialTour?.sight_ids ?? []);
-  const [cancelHours, setCancelHours] = useState(initialTour?.cancel_hours ?? DEFAULT_CANCEL_HOURS);
+  const [difficulty, setDifficulty] = useState<Difficulty>(source?.difficulty ?? "medium");
+  const [overnight, setOvernight] = useState(source?.overnight ?? false);
+  const [sightIds, setSightIds] = useState<string[]>(source?.sight_ids ?? []);
+  const [cancelHours, setCancelHours] = useState(source?.cancel_hours ?? DEFAULT_CANCEL_HOURS);
   const [maxParticipants, setMaxParticipants] = useState(
-    String(initialTour?.max_participants ?? (seatCap || ""))
+    String(source?.max_participants ?? (seatCap || ""))
   );
-  const [price, setPrice] = useState(initialTour?.price != null ? String(initialTour.price) : "0");
-  const [coordinatorPhone, setCoordinatorPhone] = useState(initialTour?.coordinator_phone ?? "");
-  const [meetingPoint, setMeetingPoint] = useState(initialTour?.meeting_point ?? "");
-  const [meetingTime, setMeetingTime] = useState((initialTour?.meeting_time ?? "").slice(0, 5));
-  const [description, setDescription] = useState(initialTour?.description ?? "");
-  const [notes, setNotes] = useState(initialTour?.notes ?? "");
-  const [savedPhotos, setSavedPhotos] = useState<string[]>(initialTour?.photo_urls ?? []);
+  const [price, setPrice] = useState(source?.price != null ? String(source.price) : "0");
+  const [coordinatorPhone, setCoordinatorPhone] = useState(source?.coordinator_phone ?? "");
+  const [meetingPoint, setMeetingPoint] = useState(source?.meeting_point ?? "");
+  const [meetingTime, setMeetingTime] = useState((source?.meeting_time ?? "").slice(0, 5));
+  const [description, setDescription] = useState(source?.description ?? "");
+  const [notes, setNotes] = useState(source?.notes ?? "");
+  const [savedPhotos, setSavedPhotos] = useState<string[]>(source?.photo_urls ?? []);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -152,6 +156,9 @@ export default function TourForm({
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
+      {mode === "create" && template && (
+        <p className="rounded-lg border border-terracotta-500/40 bg-terracotta-500/10 p-3 text-sm text-ink">{t("tourForm.copyNotice")}</p>
+      )}
       <div>
         <label htmlFor="title" className={label}>{t("tourForm.place")}</label>
         <input id="title" required minLength={2} maxLength={150} placeholder={t("tourForm.placeHint")} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />

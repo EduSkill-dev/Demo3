@@ -49,6 +49,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "booking.created": "Ամրագրեց արշավ",
   "booking.cancelled": "Չեղարկեց ամրագրումը",
   "review.created": "Թողեց գնահատական",
+  "tour.liked": "Հավանեց արշավը",
+  "club.liked": "Հավանեց ակումբը",
   "request.created": "Թողեց անհատական պատվեր",
   "request.closed": "Փակեց իր պատվերը",
   "offer.sent": "Առաջարկ ուղարկեց պատվերին",

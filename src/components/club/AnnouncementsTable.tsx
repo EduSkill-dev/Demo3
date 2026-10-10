@@ -25,7 +25,7 @@ export type ListingRow = {
 // The club's listings: Place · Applications A/B (+ unread badge) · Date ·
 // Region · Edit / Hide / Delete. A tour with participants is cancelled
 // rather than deleted, so they hear about it.
-export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
+export default function AnnouncementsTable({ rows, canRepublish } : { rows: ListingRow[]; canRepublish: boolean }) {
   const t = useT();
   const fmt = useFormatDate();
   const router = useRouter();
@@ -57,7 +57,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
 
   const day = (d: string) => fmt(d, "short");
 
-  const table = (list: ListingRow[], withActions: boolean) => (
+  const table = (list: ListingRow[], kind: "upcoming" | "past") => (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
       <table className="w-full min-w-[640px] text-sm">
         <thead>
@@ -66,7 +66,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
             <th className="px-4 py-3">{t("announcements.colApplications")}</th>
             <th className="px-4 py-3">{t("announcements.colDate")}</th>
             <th className="px-4 py-3">{t("announcements.colRegion")}</th>
-            {withActions && <th className="px-4 py-3" />}
+            <th className="px-4 py-3" />
           </tr>
         </thead>
         <tbody>
@@ -108,7 +108,7 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-ink">{day(r.date)}</td>
               <td className="px-4 py-3 text-muted">{r.regions.map((x) => t(`region.${x}`)).join(", ")}</td>
-              {withActions && (
+              {kind === "upcoming" ? (
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   {r.status !== "cancelled" && (
                     <div className="flex justify-end gap-3 font-semibold">
@@ -134,6 +134,19 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
                     </div>
                   )}
                 </td>
+              ) : (
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  {/* A new listing that starts as a copy of this one. */}
+                  {canRepublish ? (
+                    <Link href={`/dashboard/listings/new?from=${r.id}`} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
+                      {t("announcements.republish")}
+                    </Link>
+                  ) : (
+                    <span className="cursor-not-allowed font-semibold text-muted" title={t("announcements.republishBlocked")}>
+                      {t("announcements.republish")}
+                    </span>
+                  )}
+                </td>
               )}
             </tr>
           ))}
@@ -145,13 +158,13 @@ export default function AnnouncementsTable({ rows }: { rows: ListingRow[] }) {
   return (
     <div className="space-y-6">
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      {table(upcoming, true)}
+      {table(upcoming, "upcoming")}
       {past.length > 0 && (
         <details className="group">
           <summary className="cursor-pointer select-none text-sm font-semibold text-muted hover:text-ink">
             {t("announcements.past", { count: past.length })}
           </summary>
-          <div className="mt-3">{table(past, false)}</div>
+          <div className="mt-3">{table(past, "past")}</div>
         </details>
       )}
     </div>
