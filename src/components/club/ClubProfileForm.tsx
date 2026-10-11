@@ -19,6 +19,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
   const [photo, setPhoto] = useState(club.photo_url);
   const [about, setAbout] = useState(club.description ?? "");
   const [phone, setPhone] = useState(club.phone ?? "");
+  const [slug, setSlug] = useState(club.slug ?? "");
   const [focus, setFocus] = useState<string[]>(club.focus ?? []);
   const [busy, setBusy] = useState<"photo" | "info" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,13 +50,16 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     e.preventDefault();
     setError(null);
     setMessage(null);
+    const address = slug.trim().toLowerCase();
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(address) || address.length < 3 || address.length > 40) return setError(t("clubData.slugInvalid"));
     setBusy("info");
     const { error: err } = await createClient()
       .from("clubs")
-      .update({ description: about.trim() || null, phone: phone.trim() || null, focus })
+      .update({ description: about.trim() || null, phone: phone.trim() || null, focus, slug: address })
       .eq("id", club.id);
     setBusy(null);
-    if (err) return setError(err.message);
+    if (err) return setError(err.code === "23505" && err.message.includes("slug") ? t("clubData.slugTaken") : err.code === "23514" ? t("clubData.slugInvalid") : err.message);
+    setSlug(address);
     setMessage(t("clubData.saved"));
     router.refresh();
   }
@@ -94,7 +98,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
             )}
           </div>
         </div>
-        <Link href={`/clubs/${club.id}`} className="ml-auto text-sm font-semibold text-terracotta-500 hover:text-terracotta-700">
+        <Link href={`/clubs/${club.slug ?? club.id}`} className="ml-auto text-sm font-semibold text-terracotta-500 hover:text-terracotta-700">
           {t("clubData.publicLink")} →
         </Link>
       </div>
@@ -107,6 +111,25 @@ export default function ClubProfileForm({ club }: { club: Club }) {
         <div className="max-w-xs">
           <label htmlFor="phone" className="mb-1 block text-sm font-medium text-ink">{t("clubData.phone")}</label>
           <input id="phone" type="tel" placeholder="+374 XX XXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} className={input} />
+        </div>
+        <div className="max-w-md">
+          <label htmlFor="slug" className="mb-1 block text-sm font-medium text-ink">{t("clubData.slug")}</label>
+          <div className="flex items-center rounded-lg border border-line bg-surface focus-within:border-terracotta-500 focus-within:ring-2 focus-within:ring-terracotta-500/30">
+            <span className="select-none whitespace-nowrap pl-3 text-sm text-muted">/clubs/</span>
+            <input
+              id="slug"
+              required
+              minLength={3}
+              maxLength={40}
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+              className="min-w-0 flex-1 rounded-lg bg-transparent py-2.5 pl-0.5 pr-3 text-ink focus:outline-none"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted">{t("clubData.slugHint")}</p>
         </div>
         <fieldset>
           <legend className="mb-1 block text-sm font-medium text-ink">{t("clubData.focus")}</legend>

@@ -9,6 +9,7 @@ import { CANCEL_HOUR_OPTIONS, DEFAULT_CANCEL_HOURS, DIFFICULTIES, REGIONS, TERRA
 import SightPicker, { type SightOption } from "@/components/SightPicker";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
+import PlannerPanel from "@/components/club/PlannerPanel";
 
 const MAX_PHOTOS = 5;
 
@@ -27,6 +28,7 @@ export default function TourForm({
   template,
   seatCap,
   sights,
+  planner = false,
 }: {
   mode: "create" | "edit";
   clubId: string;
@@ -34,6 +36,7 @@ export default function TourForm({
   template?: Tour; // "publish again": a new listing pre-filled from this one, without its date
   seatCap: number;
   sights: SightOption[];
+  planner?: boolean; // the plan shows what other clubs have on the chosen day
 }) {
   const router = useRouter();
   const t = useT();
@@ -207,6 +210,7 @@ export default function TourForm({
           <input id="end-date" type="date" min={date || (mode === "create" ? today : undefined)} value={endDate} onChange={(e) => setEndDate(e.target.value)} className={input} />
           <p className={hint}>{t("tourForm.endDateHint")}</p>
         </div>
+        {planner && date && <PlannerPanel date={date} endDate={endDate} regions={regions} exclude={initialTour?.id} />}
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
           <input id="cap" required type="number" min={1} max={10000} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />

@@ -2,6 +2,7 @@ import { inactiveAccountError } from "@/lib/admin";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseEmergency, type EmergencyParsed } from "@/lib/emergency";
 import {
   bookingCancelledEmail,
   clubCancellationEmail,
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
     action?: string;
     tour_id?: string;
     booking_id?: string;
+    emergency?: unknown; // { name, phone, remember } — optional
   };
 
   const supabase = await createClient();
@@ -57,6 +59,36 @@ export async function POST(req: Request) {
   const to = (profile as { email: string }).email;
   const admin = createAdminClient();
 
+  // The contact goes on the booking (the club running the hike sees it there)
+  // and, when asked, into the person's own saved contact for next time.
+  const storeEmergency = async (bookingId: string, parsed: Extract<EmergencyParsed, { ok: true }>) => {
+    await admin
+      .from("bookings")
+      .update({ emergency_contact_name: parsed.contact?.name ?? null, emergency_contact_phone: parsed.contact?.phone ?? null })
+      .eq("id", bookingId)
+      .eq("user_id", auth.user!.id);
+    if (parsed.contact && parsed.remember) {
+      await admin.from("emergency_contacts").upsert({ user_id: auth.user!.id, ...parsed.contact, updated_at: new Date().toISOString() });
+    }
+  };
+
+  /* ------------------------------------------------- emergency contact only */
+  // After a paid booking (created by the payment route), or to change it.
+  if (body.action === "emergency") {
+    const parsed = parseEmergency(body.emergency);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { data: own } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("id", body.booking_id ?? "")
+      .eq("user_id", auth.user.id)
+      .eq("status", "confirmed")
+      .maybeSingle();
+    if (!own) return NextResponse.json({ error: "Գրանցումը չի գտնվել։" }, { status: 404 });
+    await storeEmergency(own.id, parsed);
+    return NextResponse.json({ ok: true });
+  }
+
   /* ----------------------------------------------------------- cancellation */
   if (body.action === "cancel") {
     if (!body.booking_id) {
@@ -76,7 +108,7 @@ export async function POST(req: Request) {
     // The select above runs under RLS, so finding the row proves ownership.
     const { error } = await admin
       .from("bookings")
-      .update({ status: "cancelled" })
+      .update({ status: "cancelled", emergency_contact_name: null, emergency_contact_phone: null })
       .eq("id", body.booking_id)
       .eq("user_id", auth.user.id);
 
@@ -148,6 +180,9 @@ export async function POST(req: Request) {
   }
   const tour = tourRow as unknown as TourRow;
 
+  const emergency = parseEmergency(body.emergency);
+  if (!emergency.ok) return NextResponse.json({ error: emergency.error }, { status: 400 });
+
   // Paid tours are booked only by /api/payments/charge after the card clears.
   if (Number(tour.price) > 0) {
     return NextResponse.json(
@@ -199,6 +234,7 @@ export async function POST(req: Request) {
     }
     booking = data as { id: string };
   }
+  await storeEmergency(booking.id, emergency);
 
   const result = await sendEmail(
     bookingConfirmationEmail({

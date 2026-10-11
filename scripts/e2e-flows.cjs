@@ -877,6 +877,67 @@ async function main() {
           && (editOwn.data || []).length === 1 && /ակումբի արշավներին/.test(refusedApply.error?.message || '') && wrongKind.status === 400,
         `post=${noPost.status} receive=${noReceive.status} insert=${refusedPost.error ? 'refused' : 'ALLOWED'} self=${JSON.stringify(selfUnblock.data)} edit=${(editOwn.data || []).length} apply=${refusedApply.error ? refusedApply.error.message : 'ALLOWED'} wrong=${wrongKind.status}`);
 
+      // Emergency contact: optional, both fields or none, private.
+      const emTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Emergency', date: future(83), max_participants: 10 })).select('id').single()).data;
+      const emHalf = await api('/api/bookings', { tour_id: emTour.id, emergency: { name: 'Մայրիկ', phone: '' } }, indCookie);
+      const emBadPhone = await api('/api/bookings', { tour_id: emTour.id, emergency: { name: 'Մայրիկ', phone: 'call me' } }, indCookie);
+      const emBook = await api('/api/bookings', { tour_id: emTour.id, emergency: { name: 'Մայրիկ', phone: '+374 91 555555', remember: true } }, indCookie);
+      const emRow = (await admin.from('bookings').select('emergency_contact_name, emergency_contact_phone').eq('id', emBook.body?.booking?.id).single()).data;
+      const emSaved = (await admin.from('emergency_contacts').select('name, phone').eq('user_id', ids.ind).maybeSingle()).data;
+      await signIn('club');
+      const emClub = (await anon.from('bookings').select('emergency_contact_phone').eq('id', emBook.body?.booking?.id)).data || [];
+      const emClubSaved = (await anon.from('emergency_contacts').select('phone')).data || [];
+      await signIn('club2');
+      const emOther = (await anon.from('bookings').select('emergency_contact_phone').eq('id', emBook.body?.booking?.id)).data || [];
+      const emVisitor = (await visitor.from('bookings').select('emergency_contact_phone').eq('id', emBook.body?.booking?.id)).data || [];
+      const emCancel = await api('/api/bookings', { action: 'cancel', booking_id: emBook.body?.booking?.id }, indCookie);
+      const emAfter = (await admin.from('bookings').select('emergency_contact_name, emergency_contact_phone').eq('id', emBook.body?.booking?.id).single()).data;
+      await admin.from('emergency_contacts').delete().eq('user_id', ids.ind);
+      check('emergency contact: both fields or none; only the participant and the organising club can read it; cancelling removes it',
+        emHalf.status === 400 && emBadPhone.status === 400 && emBook.status === 200
+          && emRow?.emergency_contact_name === 'Մայրիկ' && emRow?.emergency_contact_phone === '+374 91 555555' && emSaved?.phone === '+374 91 555555'
+          && emClub[0]?.emergency_contact_phone === '+374 91 555555' && emClubSaved.length === 0 && emOther.length === 0 && emVisitor.length === 0
+          && emCancel.status === 200 && emAfter?.emergency_contact_name === null && emAfter?.emergency_contact_phone === null,
+        `half=${emHalf.status} bad=${emBadPhone.status} book=${emBook.status} ${JSON.stringify(emBook.body)} row=${JSON.stringify(emRow)} saved=${JSON.stringify(emSaved)} club=${emClub.length} clubSaved=${emClubSaved.length} other=${emOther.length} visitor=${emVisitor.length} after=${JSON.stringify(emAfter)}`);
+
+      // CSV export and the planner follow the club's plan; the page address is a slug.
+      const get = (route, cookie) => fetch(`http://localhost:${DEV_PORT}${route}`, { headers: cookie ? { Cookie: cookie } : {}, redirect: 'manual' });
+      const planOf = async (clubId) => {
+        const c = (await admin.from('clubs').select('tariff, plan_overrides').eq('id', clubId).single()).data;
+        return { ...((dbPackages.find((x) => x.id === c.tariff) || {}).config || {}), ...(c.plan_overrides || {}) };
+      };
+      const planA = await planOf(clubA);
+      const csv = await get('/api/club/registrants', clubCookie);
+      const csvText = Buffer.from(await csv.arrayBuffer());
+      const csvAnon = await get('/api/club/registrants', indCookie);
+      const csvOk = planA.registrants_csv_export
+        ? csv.status === 200 && csvText[0] === 0xef && csvText[1] === 0xbb && csvText[2] === 0xbf && csvText.toString('utf8').includes('E2E')
+        : csv.status === 403;
+      check('registrants CSV: only for the club, only with the plan flag, UTF-8 with BOM', csvOk && csvAnon.status === 401,
+        `flag=${planA.registrants_csv_export} status=${csv.status} individual=${csvAnon.status}`);
+
+      const plan = await get(`/api/planner?date=${future(83)}`, club2Cookie);
+      const planBody = await plan.json().catch(() => ({}));
+      const planB = await planOf(clubB);
+      const plannerOk = planB.planner_other_clubs
+        ? plan.status === 200 && (planBody.others || []).some((x) => x.id === emTour.id && x.club === 'E2E Club A') && !JSON.stringify(planBody).includes('@')
+        : plan.status === 403;
+      const plannerInd = await get(`/api/planner?date=${future(83)}`, indCookie);
+      check("planner: a club sees other clubs' published hikes on a day, nobody else does", plannerOk && plannerInd.status === 401,
+        `flag=${planB.planner_other_clubs} status=${plan.status} others=${(planBody.others || []).length} individual=${plannerInd.status}`);
+
+      const slugA = (await admin.from('clubs').select('slug').eq('id', clubA).single()).data?.slug;
+      const byId = await get(`/clubs/${clubA}`);
+      const bySlug = await get(`/clubs/${slugA}`);
+      await signIn('club');
+      const badSlug = await anon.from('clubs').update({ slug: 'Not A Slug!' }).eq('id', clubA).select('slug');
+      const takenSlug = await anon.from('clubs').update({ slug: (await admin.from('clubs').select('slug').eq('id', clubB).single()).data.slug }).eq('id', clubA).select('slug');
+      const newSlug = await anon.from('clubs').update({ slug: `e2e-club-${stamp}` }).eq('id', clubA).select('slug');
+      check('club page: a slug made from the name, the id link redirects to it, the club can change it to a free valid one',
+        /^e2e-club-a(-\d+)?$/.test(slugA || '') && [307, 308].includes(byId.status) && (byId.headers.get('location') || '').endsWith(`/clubs/${slugA}`) && bySlug.status === 200
+          && !!badSlug.error && !!takenSlug.error && newSlug.data?.[0]?.slug === `e2e-club-${stamp}`,
+        `slug=${slugA} id=${byId.status} ${byId.headers.get('location')} page=${bySlug.status} bad=${badSlug.error ? 'refused' : 'ALLOWED'} taken=${takenSlug.error ? 'refused' : 'ALLOWED'} new=${JSON.stringify(newSlug.data)}`);
+
       // Shared calendar and its feeds: public data only.
       const calPage = await fetch(`http://localhost:${DEV_PORT}/calendar?month=${future(78).slice(0, 7)}`);
       const calHtml = await calPage.text();

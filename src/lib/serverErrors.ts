@@ -5,6 +5,8 @@ import type { MessageKey, TFunction } from "@/i18n/translate";
 // unknown is shown as-is.
 const KNOWN: [string, MessageKey][] = [
   ["հաշիվը սառեցված", "errors.frozen"],
+  ["և՛ անունը, և՛ հեռախոսը", "errors.emergencyBoth"],
+  ["Արտակարգ կոնտակտի հեռախոսը կամ անունը", "errors.emergencyInvalid"],
   ["փաթեթը դեռ հասանելի չէ", "errors.planUnavailable"],
   ["փորձեր Ձեր հասցեից", "errors.ipBlocked"],
   ["ֆունկցիան ժամանակավորապես անջատված", "errors.paused"],

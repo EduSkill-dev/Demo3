@@ -25,6 +25,7 @@ export type ApplicationRow = {
     email: string;
     phone: string | null;
   } | null;
+  emergency: { name: string; phone: string } | null; // left by the participant, for this hike's organiser only
 };
 
 function ageFrom(birth: string | null, legacyAge: number | null): number | null {
@@ -73,6 +74,15 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
         ...(p?.gender ? ([[t("applications.gender"), p.gender === "female" ? t("auth.female") : t("auth.male")]] as [string, React.ReactNode][]) : []),
         [t("auth.email"), p?.email ? <a href={`mailto:${p.email}`} className="text-terracotta-500 hover:underline">{p.email}</a> : "—"],
         [t("auth.phone"), p?.phone ? <a href={`tel:${p.phone.replace(/\s/g, "")}`} className="text-terracotta-500 hover:underline">{p.phone}</a> : "—"],
+        ...(open.emergency
+          ? ([[
+              t("applications.emergency"),
+              <>
+                {open.emergency.name} ·{" "}
+                <a href={`tel:${open.emergency.phone.replace(/\s/g, "")}`} className="text-terracotta-500 hover:underline">{open.emergency.phone}</a>
+              </>,
+            ]] as [string, React.ReactNode][])
+          : []),
         [t("applications.tour"), open.tourTitle],
         [t("applications.tourDate"), fmt(open.tourDate)],
         [t("applications.applied"), fmt(open.createdAt, true)],

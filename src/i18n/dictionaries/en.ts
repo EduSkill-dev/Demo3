@@ -67,6 +67,8 @@ const en: DeepPartial<Dictionary> = {
     soon: "coming soon",
   },
   dashboard: {
+    pageLink: "Your page link:",
+    followers: "Followers: {count}",
     menu: "Sections",
   },
   packagesPage: {
@@ -276,6 +278,8 @@ const en: DeepPartial<Dictionary> = {
     full: "Full",
   },
   applications: {
+    exportCsv: "Export CSV",
+    emergency: "Emergency contact",
     notInPlan: "The list of sign-ups is not part of your package.",
     counter: "Applications: {used}/{max}",
     colTour: "Listing",
@@ -298,6 +302,10 @@ const en: DeepPartial<Dictionary> = {
     refundNote: "The participant cancelled. If they paid, contact them and refund the payment.",
   },
   clubData: {
+    slug: "Club page address",
+    slugHint: "Lowercase Latin letters, digits and hyphens only (3–40 characters). Old links keep working.",
+    slugInvalid: "The page address must be 3–40 characters: lowercase Latin letters, digits and hyphens (e.g. my-club).",
+    slugTaken: "This address is already taken. Choose another.",
     photo: "Club photo / logo",
     upload: "Upload photo",
     remove: "Remove",
@@ -458,6 +466,24 @@ const en: DeepPartial<Dictionary> = {
     allTours: "All hikes",
     noTours: "No hikes published yet.",
   },
+  share: {
+    button: "Share",
+    title: "Share the hike",
+    text: "Announcement text",
+    textHint: "Edit it as you like, then copy.",
+    copyText: "Copy the announcement",
+    link: "Link to the hike",
+    copyLink: "Copy link",
+    networksSoon: "The social network buttons will work soon.",
+    organiser: "Organiser",
+    signUp: "Sign up",
+  },
+  planner: {
+    title: "Other clubs on that day",
+    empty: "No other club has a hike on that day yet.",
+    sameRegion: "Already in the same region: {list}",
+    own: "You already have on that day: {list}",
+  },
   calendar: {
     title: "Hike calendar",
     short: "Calendar",
@@ -535,6 +561,8 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    emergencyBoth: "For the emergency contact fill in both the name and the phone, or leave both empty.",
+    emergencyInvalid: "The emergency contact name or phone is not valid.",
     planUnavailable: "This package is not available yet.",
     ipBlocked: "Too many attempts from your address — please try again later.",
     paused: "This function is temporarily switched off — please try again a little later.",
@@ -566,6 +594,11 @@ const en: DeepPartial<Dictionary> = {
     network: "Could not reach the server. Please try again.",
   },
   signup: {
+    emergencyTitle: "Emergency contact (optional)",
+    emergencyName: "Name",
+    emergencyPhone: "Phone",
+    emergencyRemember: "Remember in my profile",
+    emergencyHint: "Optional. Only the organiser of this hike sees it, to reach someone in an emergency.",
     editOwn: "Edit the listing",
     seatsLeft: "Free places: {free}/{cap}",
     closed: "Sign-up closed",

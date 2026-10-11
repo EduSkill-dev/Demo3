@@ -7,12 +7,16 @@ import { createClient } from "@/lib/supabase/client";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useFormatDate, useT } from "@/i18n/client";
 import CountBadge from "@/components/ui/CountBadge";
-import type { TourStatus } from "@/types/database";
+import type { Difficulty, TourStatus } from "@/types/database";
+import SharePanel from "./SharePanel";
 
 export type ListingRow = {
   id: string;
   title: string;
   date: string;
+  endDate: string | null;
+  difficulty: Difficulty;
+  overnight: boolean;
   regions: string[];
   status: TourStatus;
   adminHidden: boolean;
@@ -25,12 +29,23 @@ export type ListingRow = {
 // The club's listings: Place · Applications A/B (+ unread badge) · Date ·
 // Region · Edit / Hide / Delete. A tour with participants is cancelled
 // rather than deleted, so they hear about it.
-export default function AnnouncementsTable({ rows, canRepublish } : { rows: ListingRow[]; canRepublish: boolean }) {
+export default function AnnouncementsTable({
+  rows,
+  canRepublish,
+  clubName,
+  shareNetworks,
+}: {
+  rows: ListingRow[];
+  canRepublish: boolean;
+  clubName: string;
+  shareNetworks: boolean; // the plan's share_buttons
+}) {
   const t = useT();
   const fmt = useFormatDate();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<ListingRow | null>(null);
 
   const upcoming = rows.filter((r) => !r.past);
   const past = rows.filter((r) => r.past).reverse();
@@ -59,7 +74,7 @@ export default function AnnouncementsTable({ rows, canRepublish } : { rows: List
 
   const table = (list: ListingRow[], kind: "upcoming" | "past") => (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
             <th className="px-4 py-3">{t("announcements.colPlace")}</th>
@@ -112,6 +127,12 @@ export default function AnnouncementsTable({ rows, canRepublish } : { rows: List
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   {r.status !== "cancelled" && (
                     <div className="flex justify-end gap-3 font-semibold">
+                      {/* Only a listing that visitors can see is worth sharing. */}
+                      {r.status === "active" && !r.adminHidden && (
+                        <button data-view type="button" onClick={() => setSharing(r)} className="text-spruce-500 hover:text-spruce-900 dark:text-spruce-300">
+                          {t("share.button")}
+                        </button>
+                      )}
                       <Link href={`/dashboard/listings/${r.id}/edit`} className="text-terracotta-500 hover:text-terracotta-700">
                         {t("common.edit")}
                       </Link>
@@ -159,6 +180,14 @@ export default function AnnouncementsTable({ rows, canRepublish } : { rows: List
     <div className="space-y-6">
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {table(upcoming, "upcoming")}
+      {sharing && (
+        <SharePanel
+          tour={{ id: sharing.id, title: sharing.title, date: sharing.date, endDate: sharing.endDate, regions: sharing.regions, difficulty: sharing.difficulty, overnight: sharing.overnight, left: Math.max(0, sharing.cap - sharing.taken) }}
+          clubName={clubName}
+          networks={shareNetworks}
+          onClose={() => setSharing(null)}
+        />
+      )}
       {past.length > 0 && (
         <details className="group">
           <summary className="cursor-pointer select-none text-sm font-semibold text-muted hover:text-ink">

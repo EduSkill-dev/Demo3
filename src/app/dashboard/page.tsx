@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import { getMyClub } from "@/lib/myClub";
 import { getT } from "@/i18n/server";
 import type { Tour } from "@/types/database";
@@ -32,6 +34,9 @@ export default async function AnnouncementsPage() {
       id: tour.id,
       title: tour.title,
       date: tour.date,
+      endDate: tour.end_date,
+      difficulty: tour.difficulty,
+      overnight: tour.overnight,
       regions: tour.regions,
       status: tour.status,
       adminHidden: tour.admin_hidden,
@@ -44,8 +49,21 @@ export default async function AnnouncementsPage() {
 
   const canAdd = limits.used < limits.maxListings && !club.posting_blocked;
 
+  // How many people follow (bookmarked) the club. Counted on the server:
+  // a club cannot read who they are.
+  const { count: followers } = await createAdminClient().from("favorite_clubs").select("user_id", { count: "exact", head: true }).eq("club_id", club.id);
+  const pagePath = `/clubs/${club.slug ?? club.id}`;
+
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+        <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-semibold text-ink">{t("dashboard.pageLink")}</span>
+          <Link href={pagePath} className="break-all text-terracotta-500 hover:text-terracotta-700">{pagePath}</Link>
+          <CopyLinkButton href={pagePath} label={t("share.copyLink")} copiedLabel={t("calendar.copied")} className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink hover:border-spruce-500" />
+        </p>
+        <p className="whitespace-nowrap font-semibold text-ink">{t("dashboard.followers", { count: followers ?? 0 })}</p>
+      </div>
       {!limits.pkg && (
         <div className="rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 p-4 text-sm text-ink">
           {t("announcements.noPackage")}{" "}
@@ -88,7 +106,7 @@ export default async function AnnouncementsPage() {
         )}
       </div>
 
-      <AnnouncementsTable rows={rows} canRepublish={canAdd} />
+      <AnnouncementsTable rows={rows} canRepublish={canAdd} clubName={club.name} shareNetworks={limits.config.share_buttons} />
     </div>
   );
 }

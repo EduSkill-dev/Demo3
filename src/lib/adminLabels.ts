@@ -87,6 +87,8 @@ export const TEXT_SECTIONS: { title: string; sections: [string, string][] }[] = 
       ["about", "Մեր մասին"],
       ["toursPage", "Արշավներ"],
       ["calendar", "Արշավների օրացույց"],
+      ["share", "Արշավով կիսվելը"],
+      ["planner", "Պլանավորիչ"],
       ["tour", "Արշավի էջ"],
       ["signup", "Արշավի ամրագրում"],
       ["clubsPage", "Ակումբներ"],

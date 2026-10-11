@@ -24,7 +24,7 @@ export default async function NewTourPage({ searchParams }: { searchParams: { fr
   return (
     <div>
       <h2 className="mb-6 font-serif text-xl font-semibold text-heading">{t("announcements.newTitle")}</h2>
-      <TourForm mode="create" template={template} clubId={mine.club.id} seatCap={mine.limits.maxPerTour} sights={await getSightOptions()} />
+      <TourForm mode="create" template={template} clubId={mine.club.id} seatCap={mine.limits.maxPerTour} sights={await getSightOptions()} planner={mine.limits.config.planner_other_clubs} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_CANCEL_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
+import { parseEmergency } from "@/lib/emergency";
 import { useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
 
@@ -48,6 +49,11 @@ export default function TourSignup({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPay, setShowPay] = useState(false);
+  // Optional emergency contact, pre-filled from the one saved earlier.
+  const [emName, setEmName] = useState("");
+  const [emPhone, setEmPhone] = useState("");
+  const [emRemember, setEmRemember] = useState(false);
+  const emergency = { name: emName, phone: emPhone, remember: emRemember };
 
   useEffect(() => {
     (async () => {
@@ -55,7 +61,8 @@ export default function TourSignup({
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return setReady(true);
       setSignedIn(true);
-      const [{ data: profile }, { data: row }] = await Promise.all([
+      const [{ data: saved }, { data: profile }, { data: row }] = await Promise.all([
+        supabase.from("emergency_contacts").select("name, phone").eq("user_id", auth.user.id).maybeSingle(),
         supabase.from("profiles").select("role").eq("id", auth.user.id).single(),
         supabase.from("bookings").select("id, status").eq("tour_id", tourId).eq("user_id", auth.user.id).maybeSingle(),
       ]);
@@ -66,6 +73,12 @@ export default function TourSignup({
         setOwnsTour((own as { id?: string } | null)?.id === clubId);
       }
       setBooking((row as BookingRow) ?? null);
+      const contact = saved as { name: string; phone: string } | null;
+      if (contact) {
+        setEmName(contact.name);
+        setEmPhone(contact.phone);
+        setEmRemember(true);
+      }
       setReady(true);
     })();
   }, [tourId, clubId]);
@@ -80,6 +93,8 @@ export default function TourSignup({
   async function book() {
     setError(null);
     if (!signedIn) return router.push(`/login?next=/tours/${tourId}`);
+    const checked = parseEmergency(emergency);
+    if (!checked.ok) return setError(serverErrorMessage(t, checked.error));
     // A paid hike is paid first; the charge route then creates the booking.
     if (price > 0) return setShowPay(true);
 
@@ -87,7 +102,7 @@ export default function TourSignup({
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tour_id: tourId }),
+      body: JSON.stringify({ tour_id: tourId, emergency }),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string; booking?: { id: string } };
     setBusy(false);
@@ -96,9 +111,20 @@ export default function TourSignup({
     router.refresh();
   }
 
-  function onPaid(data: ChargeResponse) {
+  async function onPaid(data: ChargeResponse) {
     setShowPay(false);
-    if (data.booking?.id) setBooking({ id: data.booking.id, status: "confirmed" });
+    if (data.booking?.id) {
+      setBooking({ id: data.booking.id, status: "confirmed" });
+      // The payment route made the booking; the contact follows it.
+      if (emName.trim() || emPhone.trim()) {
+        const res = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "emergency", booking_id: data.booking.id, emergency }),
+        });
+        if (!res.ok) setError(serverErrorMessage(t, ((await res.json().catch(() => ({}))) as { error?: string }).error));
+      }
+    }
     router.refresh();
   }
 
@@ -117,6 +143,25 @@ export default function TourSignup({
     setBooking({ ...booking, status: "cancelled" });
     router.refresh();
   }
+
+  const field =
+    "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
+  const emergencyFields = !full && !closed && role === "individual" && (
+    <details className="group mb-3 rounded-xl border border-line bg-sand/50 px-3 py-2.5" open={!!(emName || emPhone) || undefined}>
+      <summary className="cursor-pointer select-none text-sm font-semibold text-ink">{t("signup.emergencyTitle")}</summary>
+      <div className="mt-2.5 space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input aria-label={t("signup.emergencyName")} placeholder={t("signup.emergencyName")} maxLength={80} autoComplete="off" value={emName} onChange={(e) => setEmName(e.target.value)} className={field} />
+          <input aria-label={t("signup.emergencyPhone")} placeholder={t("signup.emergencyPhone")} type="tel" maxLength={20} pattern="[+0-9 \(\)\-]{6,20}" autoComplete="off" value={emPhone} onChange={(e) => setEmPhone(e.target.value)} className={field} />
+        </div>
+        <label className="flex items-center gap-2 text-xs text-ink">
+          <input type="checkbox" checked={emRemember} onChange={(e) => setEmRemember(e.target.checked)} className="accent-spruce-500" />
+          {t("signup.emergencyRemember")}
+        </label>
+        <p className="text-xs text-muted">{t("signup.emergencyHint")}</p>
+      </div>
+    </details>
+  );
 
   const primary =
     "w-full rounded-full bg-spruce-500 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:bg-spruce-500/50";
@@ -180,6 +225,8 @@ export default function TourSignup({
             {t("signup.loginToBook")}
           </button>
         ) : (
+          <>
+          {emergencyFields}
           <button type="button" onClick={book} disabled={busy || full || closed} className={primary}>
             {busy
               ? t("signup.booking")
@@ -193,6 +240,7 @@ export default function TourSignup({
                       ? t("signup.bookAndPay", { price: formatAmd(price) })
                       : t("signup.book")}
           </button>
+          </>
         )}
       </div>
 

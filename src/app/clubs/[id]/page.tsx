@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicTours } from "@/lib/publicTours";
 import { planConfigOf } from "@/lib/plans/server";
@@ -26,9 +26,13 @@ type Review = {
   author_photo_url: string | null;
 };
 
-async function getClub(id: string) {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The address is the club's slug; an old /clubs/<id> link still finds it.
+async function getClub(key: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from("clubs").select("*").eq("id", id).maybeSingle();
+  const byId = UUID.test(key);
+  const { data } = await supabase.from("clubs").select("*").eq(byId ? "id" : "slug", byId ? key : decodeURIComponent(key).toLowerCase()).maybeSingle();
   return data as Club | null;
 }
 
@@ -46,6 +50,9 @@ export default async function ClubDetailPage({
 }) {
   const club = await getClub(params.id);
   if (!club) notFound();
+  if (club.slug && params.id !== club.slug) {
+    redirect(`/clubs/${club.slug}${searchParams.back ? `?back=${encodeURIComponent(searchParams.back)}` : ""}`);
+  }
 
   const [t, fmt] = await Promise.all([getT(), getFormatDate()]);
   const supabase = await createClient();

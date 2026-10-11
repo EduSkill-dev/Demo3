@@ -24,7 +24,7 @@ export default async function EditTourPage({ params }: { params: { id: string } 
   return (
     <div>
       <h2 className="mb-6 font-serif text-xl font-semibold text-heading">{t("announcements.editTitle")}</h2>
-      <TourForm mode="edit" clubId={mine.club.id} initialTour={tour} seatCap={mine.limits.maxPerTour} sights={await getSightOptions()} />
+      <TourForm mode="edit" clubId={mine.club.id} initialTour={tour} seatCap={mine.limits.maxPerTour} sights={await getSightOptions()} planner={mine.limits.config.planner_other_clubs} />
     </div>
   );
 }
