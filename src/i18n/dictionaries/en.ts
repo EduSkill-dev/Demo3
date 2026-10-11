@@ -561,6 +561,7 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    requestsBlocked: "Leaving custom hike requests has been switched off by an administrator.",
     emergencyBoth: "For the emergency contact fill in both the name and the phone, or leave both empty.",
     emergencyInvalid: "The emergency contact name or phone is not valid.",
     planUnavailable: "This package is not available yet.",

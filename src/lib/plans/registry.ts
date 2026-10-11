@@ -29,7 +29,6 @@ export const PLAN_FEATURES = [
   { key: "dashboard_registrants_list", group: "tools", type: "boolean", label: "Գրանցվածների ցանկը վահանակում", default: true },
   { key: "dashboard_comments_tab", group: "tools", type: "boolean", label: "Մեկնաբանությունների բաժինը վահանակում", help: "Ակումբն ինքը տեսնում է իր ստացած մեկնաբանությունները։", default: false },
   { key: "registrants_csv_export", group: "tools", type: "boolean", label: "Գրանցվածների CSV արտահանում", default: false },
-  { key: "waitlist", group: "later", type: "boolean", label: "Սպասման ցանկ", default: false },
   { key: "planner_other_clubs", group: "tools", type: "boolean", label: "Պլանավորիչ (ուրիշ ակումբների արշավները նույն օրը)", default: true },
   { key: "share_buttons", group: "tools", type: "boolean", label: "Տարածման կոճակներ", default: true },
   { key: "monthly_report", group: "later", type: "boolean", label: "Ամսական հաշվետվություն", default: false },

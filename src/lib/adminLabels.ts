@@ -30,6 +30,7 @@ export const ACCOUNT_LIMITS = {
   post: { role: "club", label: "Նոր հայտարարություններ", short: "Հրապարակում" },
   receive: { role: "club", label: "Նոր հայտերի ընդունում", short: "Հայտեր" },
   book: { role: "individual", label: "Արշավների ամրագրում", short: "Ամրագրում" },
+  request: { role: "individual", label: "Անհատական հայտի ստեղծում", short: "Հայտի ստեղծում" },
 } as const;
 export type AccountLimit = keyof typeof ACCOUNT_LIMITS;
 

@@ -1001,6 +1001,22 @@ async function main() {
       await signIn('ind2');
       const stillEdits = await anon.from('profiles').update({ first_name: 'Ազատ' }).eq('id', ids.ind2).select('id');
       await act({ action: 'account.setLimit', userId: ids.ind2, limit: 'book', blocked: false }, admCookie);
+      const reqBody = { action: 'create', people: 3, dateFrom: future(60), dateTo: future(61), regions: ['kotayk'], terrains: [] };
+      const noRequest = await act({ action: 'account.setLimit', userId: ids.ind2, limit: 'request', blocked: true }, admCookie);
+      const refusedRequest = await api('/api/requests', reqBody, ind2Fresh);
+      await signIn('ind2');
+      await anon.from('profiles').update({ requests_blocked: false }).eq('id', ids.ind2);
+      const stillBlocked = (await admin.from('profiles').select('requests_blocked').eq('id', ids.ind2).single()).data?.requests_blocked;
+      await act({ action: 'account.setLimit', userId: ids.ind2, limit: 'request', blocked: false }, admCookie);
+      const allowedRequest = await api('/api/requests', reqBody, ind2Fresh);
+      const reqPage = await fetch(`http://localhost:${DEV_PORT}/admin/requests`, { headers: { Cookie: superCookie } });
+      const reqHtml = await reqPage.text();
+      if (allowedRequest.body?.id) await admin.from('tour_requests').delete().eq('id', allowedRequest.body.id);
+      check('admin: an individual can lose just custom requests, cannot switch it back, and requests are listed for admins',
+        noRequest.status === 200 && refusedRequest.status === 403 && stillBlocked === true && allowedRequest.status === 200
+          && reqPage.status === 200 && reqHtml.includes(email('ind2')),
+        `limit=${noRequest.status} refused=${refusedRequest.status} self=${stillBlocked} allowed=${allowedRequest.status} ${JSON.stringify(allowedRequest.body)} page=${reqPage.status}`);
+
       check('admin: an individual can lose just the ability to sign up',
         noBook.status === 200 && refusedBook.status >= 400 && (stillEdits.data || []).length === 1,
         `limit=${noBook.status} book=${refusedBook.status} ${JSON.stringify(refusedBook.body)} edit=${(stillEdits.data || []).length}`);

@@ -13,6 +13,7 @@ export interface Profile {
   role: "individual" | "club" | "admin";
   status: "active" | "frozen" | "blocked"; // set by admins only
   booking_blocked: boolean; // an admin switched off signing up for hikes
+  requests_blocked: boolean; // an admin switched off leaving custom hike requests
   first_name: string | null;
   last_name: string | null;
   age: number | null; // legacy; birth_date replaces it

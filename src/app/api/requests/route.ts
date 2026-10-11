@@ -36,9 +36,9 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const { viewer, db } = ctx;
     if (viewer.role !== "individual") return fail("Պատվեր կարող են թողնել միայն անհատները։", 403);
     if (!viewer.emailConfirmed) return fail("Ամրագրելու համար նախ հաստատեք Ձեր էլ. հասցեն։", 403);
-    const { data: profile } = await db.from("profiles").select("booking_blocked").eq("id", viewer.id).maybeSingle();
-    if ((profile as { booking_blocked?: boolean } | null)?.booking_blocked) {
-      return fail("Արշավներին գրանցվելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։", 403);
+    const { data: profile } = await db.from("profiles").select("requests_blocked").eq("id", viewer.id).maybeSingle();
+    if ((profile as { requests_blocked?: boolean } | null)?.requests_blocked) {
+      return fail("Անհատական հայտ թողնելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։", 403);
     }
 
     const people = int(body.people);
