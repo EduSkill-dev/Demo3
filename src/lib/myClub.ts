@@ -1,12 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Club } from "@/types/database";
-import { PACKAGES, activePackage, type PackageId } from "@/lib/catalog";
+import { activePackage, type PackageId } from "@/lib/catalog";
+import { getPlans } from "@/lib/plans/server";
+import { clubConfig, type PlanConfig } from "@/lib/plans/registry";
 
 export type ClubLimits = {
   pkg: PackageId | null;
   used: number; // upcoming active + hidden tours (what counts toward the cap)
   maxListings: number;
   maxPerTour: number;
+  planName: string; // "" without an active plan
+  config: PlanConfig; // everything the club may do: its plan plus its own changes
 };
 
 // The signed-in club's own row and its current package limits (server only).
@@ -29,13 +33,18 @@ export async function getMyClub(): Promise<{ club: Club; limits: ClubLimits } | 
     .gte("date", new Date().toISOString().slice(0, 10));
 
   const pkg = activePackage(club as Club);
+  const plans = await getPlans();
+  const plan = pkg ? plans[pkg] : null;
+  const config = clubConfig(plans, club as Club);
   return {
     club: club as Club,
     limits: {
       pkg,
       used: count ?? 0,
-      maxListings: pkg ? PACKAGES[pkg].maxListings : 0,
-      maxPerTour: pkg ? PACKAGES[pkg].maxPerTour : 0,
+      maxListings: config.max_active_tours,
+      maxPerTour: config.max_participants_per_tour,
+      planName: plan?.name ?? "",
+      config,
     },
   };
 }

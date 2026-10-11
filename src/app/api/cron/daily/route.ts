@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { EXPIRY_REMINDER_DAYS, PACKAGES, activePackage } from "@/lib/catalog";
+import { EXPIRY_REMINDER_DAYS, activePackage } from "@/lib/catalog";
+import { getPlans } from "@/lib/plans/server";
 import { newsletterDigestEmail, packageExpiryEmail, sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
   }
 
   const admin = createAdminClient();
+  const plans = await getPlans();
   const now = new Date();
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
 
@@ -53,7 +55,7 @@ export async function GET(req: Request) {
       packageExpiryEmail({
         to,
         clubName: club.name,
-        packageName: PACKAGES[pkg].name,
+        packageName: plans[pkg].name,
         endsAt: club.package_ends_at.slice(0, 10),
         daysLeft,
       })

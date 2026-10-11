@@ -1,6 +1,8 @@
 import { STATUS_LABELS, type AccountLimit, type AccountStatus } from "@/lib/adminLabels";
 import AccountActions, { LimitSwitches } from "./AccountActions";
 import SearchBox from "./SearchBox";
+import ClubPlanEditor from "./ClubPlanEditor";
+import type { Plans, PlanOverrides } from "@/lib/plans/registry";
 
 export type AccountRow = {
   userId: string;
@@ -10,6 +12,8 @@ export type AccountRow = {
   status: AccountStatus;
   joined: string; // already formatted
   extra?: [string, string?]; // e.g. the club's package and, under it, until when
+  planId?: string | null; // the club's active plan, for the plan window
+  overrides?: PlanOverrides; // what this club has apart from its plan
   limits: { key: AccountLimit; blocked: boolean }[]; // functions an admin can force off
 };
 
@@ -29,11 +33,13 @@ export default function AccountsTable({
   title,
   nameHeader,
   extraHeader,
+  plans,
   rows,
 }: {
   title: string;
   nameHeader: string;
   extraHeader?: string;
+  plans?: Plans; // given = the plan can be changed here (super admin)
   rows: AccountRow[];
 }) {
   return (
@@ -76,7 +82,12 @@ export default function AccountsTable({
                 </td>
                 {extraHeader && (
                   <td className={`${td} text-center`}>
-                    <span className="block font-medium text-ink">{r.extra?.[0] ?? "—"}</span>
+                    <span className="flex items-center justify-center gap-1.5 font-medium text-ink">
+                      {r.extra?.[0] ?? "—"}
+                      {plans && (
+                        <ClubPlanEditor userId={r.userId} label={r.name || r.email} current={r.planId ?? null} until={r.extra?.[1]} overrides={r.overrides ?? {}} plans={plans} />
+                      )}
+                    </span>
                     {r.extra?.[1] && <span className="block text-xs text-muted">{r.extra[1]}</span>}
                   </td>
                 )}

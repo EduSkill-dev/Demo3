@@ -1,39 +1,12 @@
 // The platform's fixed lists and rules, in one place. Labels live in the
 // i18n dictionaries under the same keys (region.*, terrain.*, difficulty.*).
 //
-// PACKAGES mirrors the `packages` table (migration 0018) that the database
-// triggers read; the e2e suite fails if the two ever differ.
+// What each plan allows is NOT here: it lives in the database
+// (packages.config), is edited by the super admin, and is read through
+// src/lib/plans. Only the plan ids and the date rules are fixed.
 
 export const PACKAGE_IDS = ["start", "advanced", "pro"] as const;
 export type PackageId = (typeof PACKAGE_IDS)[number];
-
-export interface PackageInfo {
-  id: PackageId;
-  name: string;
-  maxListings: number; // upcoming active + hidden tours at once
-  maxPerTour: number; // applications per tour
-  priceAmd: number; // per month; 0 = free
-  showsRatings: boolean;
-  showsComments: boolean;
-  monthlyReport: boolean;
-  analytics: boolean;
-  rank: number; // higher = bigger package
-}
-
-export const PACKAGES: Record<PackageId, PackageInfo> = {
-  start: {
-    id: "start", name: "START", maxListings: 2, maxPerTour: 5, priceAmd: 0,
-    showsRatings: false, showsComments: false, monthlyReport: false, analytics: false, rank: 1,
-  },
-  advanced: {
-    id: "advanced", name: "Advanced", maxListings: 5, maxPerTour: 10, priceAmd: 20000,
-    showsRatings: true, showsComments: true, monthlyReport: true, analytics: false, rank: 2,
-  },
-  pro: {
-    id: "pro", name: "PRO", maxListings: 20, maxPerTour: 20, priceAmd: 40000,
-    showsRatings: true, showsComments: true, monthlyReport: true, analytics: true, rank: 3,
-  },
-};
 
 export function isPackageId(value: unknown): value is PackageId {
   return typeof value === "string" && (PACKAGE_IDS as readonly string[]).includes(value);
@@ -128,6 +101,7 @@ export type SubscriptionPlan =
 export function planSubscription(
   club: { tariff: string | null; package_ends_at: string | null },
   target: PackageId,
+  rank: Record<PackageId, number>, // which plan is bigger (from the plans table)
   now: Date = new Date()
 ): SubscriptionPlan {
   const current = activePackage(club, now.getTime());
@@ -140,7 +114,7 @@ export function planSubscription(
     if (daysLeft > RENEW_WINDOW_DAYS) return { ok: false, reason: "same_not_due" };
     return { ok: true, mode: "extend", periodStart: endsAt, periodEnd: addOneMonth(endsAt) };
   }
-  if (PACKAGES[target].rank > PACKAGES[current].rank) {
+  if (rank[target] > rank[current]) {
     return { ok: true, mode: "upgrade", periodStart: now, periodEnd: addOneMonth(now) };
   }
   return { ok: false, reason: "downgrade" };

@@ -60,6 +60,7 @@ const en: DeepPartial<Dictionary> = {
     perTour: "{count} applications per listing",
     ratingsVisible: "Rating and reviews are shown",
     commentsVisible: "Reviews are shown",
+    ratingOnly: "Rating is shown, reviews are not",
     ratingsHidden: "Club rating and reviews are hidden",
     monthlyReport: "Monthly report",
     analytics: "Analytics tools",
@@ -74,6 +75,7 @@ const en: DeepPartial<Dictionary> = {
     current: "Current package: {name}",
     until: "active until {date}",
     active: "Active",
+    comingSoon: "Coming soon",
     recommended: "Recommended",
     choose: "Choose {name}",
     extend: "Extend",
@@ -274,6 +276,7 @@ const en: DeepPartial<Dictionary> = {
     full: "Full",
   },
   applications: {
+    notInPlan: "The list of sign-ups is not part of your package.",
     counter: "Applications: {used}/{max}",
     colTour: "Listing",
     colApplication: "Application",
@@ -495,6 +498,7 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    planUnavailable: "This package is not available yet.",
     ipBlocked: "Too many attempts from your address — please try again later.",
     paused: "This function is temporarily switched off — please try again a little later.",
     bookingDisabled: "Signing up for hikes has been switched off by an administrator.",

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getAdmin } from "@/lib/admin";
 import { getFormatDate } from "@/i18n/server";
-import { PACKAGES, activePackage } from "@/lib/catalog";
+import { activePackage } from "@/lib/catalog";
+import { cleanOverrides } from "@/lib/plans/registry";
+import { getPlans } from "@/lib/plans/server";
 import type { AccountStatus } from "@/lib/adminLabels";
 import AccountsTable, { type AccountRow } from "@/components/admin/AccountsTable";
 
@@ -13,6 +15,7 @@ type Row = {
   package_ends_at: string | null;
   posting_blocked: boolean;
   applications_blocked: boolean;
+  plan_overrides: unknown;
   profiles: { id: string; email: string; status: AccountStatus; created_at: string } | null;
 };
 
@@ -21,9 +24,10 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
   if (!me || !can(me, "clubs")) redirect("/admin");
 
   const fmt = await getFormatDate();
+  const plans = await getPlans();
   const { data } = await createAdminClient()
     .from("clubs")
-    .select("name, phone, tariff, package_ends_at, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
+    .select("name, phone, tariff, package_ends_at, plan_overrides, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -43,10 +47,13 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
           { key: "post" as const, blocked: c.posting_blocked },
           { key: "receive" as const, blocked: c.applications_blocked },
         ],
-        extra: (pkg ? [PACKAGES[pkg].name, `մինչև ${fmt(c.package_ends_at!, "short")}`] : ["Փաթեթ չկա"]) as [string, string?],
+        extra: (pkg ? [plans[pkg].name, `մինչև ${fmt(c.package_ends_at!, "short")}`] : ["Փաթեթ չկա"]) as [string, string?],
+        planId: pkg,
+        overrides: pkg ? cleanOverrides(c.plan_overrides) : {},
       };
     })
     .filter((r) => !q || `${r.name} ${r.email} ${r.phone ?? ""}`.toLowerCase().includes(q));
 
-  return <AccountsTable title="Ակումբներ" nameHeader="Ակումբ" extraHeader="Փաթեթ" rows={rows} />;
+  // Only the super admin gives or takes away a plan.
+  return <AccountsTable title="Ակումբներ" nameHeader="Ակումբ" extraHeader="Փաթեթ" plans={me.isSuper ? plans : undefined} rows={rows} />;
 }

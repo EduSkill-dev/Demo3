@@ -2,7 +2,9 @@ import { getLikeCounts } from "@/lib/likes";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicTours } from "@/lib/publicTours";
-import { PACKAGES, activePackage } from "@/lib/catalog";
+import { activePackage } from "@/lib/catalog";
+import { getPlans } from "@/lib/plans/server";
+import { clubConfig } from "@/lib/plans/registry";
 import { getT } from "@/i18n/server";
 import ClubCard from "@/components/ClubCard";
 import type { Club } from "@/types/database";
@@ -21,6 +23,7 @@ export default async function ClubsPage() {
   ]);
 
   const list = (clubs ?? []) as Club[];
+  const plans = await getPlans();
   const likes = await getLikeCounts([], list.map((c) => c.id));
   const ratingOf = new Map(((ratings ?? []) as { club_id: string; average: number; count: number }[]).map((r) => [r.club_id, r]));
   const upcoming = new Map<string, number>();
@@ -38,7 +41,7 @@ export default async function ClubsPage() {
           {list.map((club) => {
             const pkg = activePackage(club);
             const r = ratingOf.get(club.id);
-            const rating = pkg && PACKAGES[pkg].showsRatings && r ? { average: Number(r.average), count: r.count } : null;
+            const rating = pkg && clubConfig(plans, club).public_show_rating && r ? { average: Number(r.average), count: r.count } : null;
             return <ClubCard key={club.id} club={club} rating={rating} upcoming={upcoming.get(club.id) ?? 0} likes={likes.clubs.get(club.id) ?? 0} t={t} />;
           })}
         </div>

@@ -28,6 +28,9 @@ export default async function ApplicationsPage() {
   if (!mine) redirect("/login");
   const { club, limits } = mine;
   const t = await getT();
+  if (limits.pkg && !limits.config.dashboard_registrants_list) {
+    return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("applications.notInPlan")}</p>;
+  }
   const supabase = await createClient();
 
   const { data: tourRows } = await supabase

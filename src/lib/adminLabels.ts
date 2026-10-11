@@ -68,6 +68,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.tour_opened": "Բացեց հայտարարությունը",
   "admin.text_saved": "Խմբագրեց կայքի տեքստը",
   "admin.sight_saved": "Խմբագրեց տեսարժան վայրերի ցանկը",
+  "admin.plan_saved": "Փոխեց փաթեթի կարգավորումները",
+  "admin.club_plan_set": "Փոխեց ակումբի փաթեթը",
   "admin.admin_created": "Ստեղծեց ադմին",
   "admin.admin_updated": "Փոխեց ադմինի թույլտվությունները",
   "admin.admin_password_reset": "Տվեց նոր մեկանգամյա գաղտնաբառ",

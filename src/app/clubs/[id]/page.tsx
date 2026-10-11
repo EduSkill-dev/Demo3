@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicTours } from "@/lib/publicTours";
-import { PACKAGES, activePackage } from "@/lib/catalog";
+import { planConfigOf } from "@/lib/plans/server";
 import { getFormatDate, getT } from "@/i18n/server";
 import type { Club, ClubGuide } from "@/types/database";
 import BackLink from "@/components/BackLink";
@@ -68,9 +68,12 @@ export default async function ClubDetailPage({
   // The package decides whether visitors see the rating and reviews; the club
   // itself always sees them (with a note when they are hidden).
   const likes = await getLikeCounts([], [club.id]);
-  const pkg = activePackage(club);
-  const publicRatings = !!pkg && PACKAGES[pkg].showsRatings;
-  const showReviews = publicRatings || isOwner;
+  // The plan decides what visitors see (rating, comments) and whether the
+  // club itself gets its comments; the club always sees its own rating.
+  const plan = await planConfigOf(club);
+  const publicRatings = plan.public_show_rating && plan.public_show_comments; // nothing is hidden from visitors
+  const showRating = plan.public_show_rating || isOwner;
+  const showReviews = plan.public_show_comments || (isOwner && plan.dashboard_comments_tab);
   const reviews = ((reviewRows ?? []) as Review[]).filter((r) => r.comment?.trim());
   const rating = summary as { average: number; count: number } | null;
 
@@ -93,7 +96,7 @@ export default async function ClubDetailPage({
         <div className="min-w-0 flex-1">
           <h1 className="font-serif text-3xl font-semibold text-heading">{club.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            {showReviews && rating && (
+            {showRating && rating && (
               <span className="font-semibold text-terracotta-500">
                 ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
               </span>

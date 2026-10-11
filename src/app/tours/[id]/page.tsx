@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PACKAGES, activePackage } from "@/lib/catalog";
+import { activePackage } from "@/lib/catalog";
+import { planConfigOf } from "@/lib/plans/server";
 import { getFormatDate, getT } from "@/i18n/server";
 import { getSightNames } from "@/lib/sights";
 import { getLikeCounts } from "@/lib/likes";
@@ -56,10 +57,11 @@ export default async function TourDetailPage({ params }: { params: { id: string 
 
   const club = tour.clubs;
   const pkg = activePackage(club);
+  const plan = await planConfigOf(club);
   // Closed (cap 0) when the tour is not active, an admin took it down or
   // switched the club's applications off, or the club's package lapsed.
-  const cap = pkg && tour.status === "active" && !tour.admin_hidden && !club?.applications_blocked ? Math.min(tour.max_participants, PACKAGES[pkg].maxPerTour) : 0;
-  const showReviews = !!pkg && PACKAGES[pkg].showsRatings;
+  const cap = pkg && tour.status === "active" && !tour.admin_hidden && !club?.applications_blocked ? Math.min(tour.max_participants, plan.max_participants_per_tour) : 0;
+  const showReviews = plan.public_show_comments;
   const reviews = ((reviewRows ?? []) as {
     id: string;
     score: number;

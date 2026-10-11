@@ -60,6 +60,7 @@ const ru: DeepPartial<Dictionary> = {
     perTour: "{count} заявок на каждое объявление",
     ratingsVisible: "Рейтинг и отзывы видны",
     commentsVisible: "Отзывы видны",
+    ratingOnly: "Рейтинг виден, отзывы — нет",
     ratingsHidden: "Рейтинг и отзывы клуба не показываются",
     monthlyReport: "Ежемесячный отчёт",
     analytics: "Инструменты аналитики",
@@ -74,6 +75,7 @@ const ru: DeepPartial<Dictionary> = {
     current: "Текущий пакет: {name}",
     until: "активен до {date}",
     active: "Активен",
+    comingSoon: "Скоро",
     recommended: "Рекомендуем",
     choose: "Выбрать {name}",
     extend: "Продлить",
@@ -274,6 +276,7 @@ const ru: DeepPartial<Dictionary> = {
     full: "Мест нет",
   },
   applications: {
+    notInPlan: "Список записавшихся не входит в ваш пакет.",
     counter: "Заявки: {used}/{max}",
     colTour: "Объявление",
     colApplication: "Заявка",
@@ -495,6 +498,7 @@ const ru: DeepPartial<Dictionary> = {
     onTour: "поход: {title}",
   },
   errors: {
+    planUnavailable: "Этот пакет пока недоступен.",
     ipBlocked: "Слишком много попыток с вашего адреса — попробуйте позже.",
     paused: "Эта функция временно отключена — попробуйте чуть позже.",
     bookingDisabled: "Запись на походы отключена администратором.",

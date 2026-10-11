@@ -182,15 +182,19 @@ async function main() {
   const ids = {};
   let newTourId = null;
   try {
-    // ---------- packages: catalog.ts and the packages table agree ----------
+    // ---------- plans live in the database; code holds no plan rule ----------
     const catalogSrc = fs.readFileSync(path.join(process.cwd(), 'src/lib/catalog.ts'), 'utf8');
+    check('catalog.ts holds no plan limits or prices', !/maxListings|maxPerTour|priceAmd/.test(catalogSrc));
     const dbPackages = (await admin.from('packages').select('*')).data || [];
     for (const id of ['start', 'advanced', 'pro']) {
-      const m = catalogSrc.match(new RegExp(`${id}: \\{[^}]*maxListings: (\\d+), maxPerTour: (\\d+), priceAmd: (\\d+)`));
-      const row = dbPackages.find((p) => p.id === id);
-      const same = m && row && +m[1] === row.max_listings && +m[2] === row.max_per_tour && +m[3] === row.price_amd;
-      check(`package ${id}: catalog.ts matches the packages table`, same,
-        `ts=${m ? m.slice(1).join('/') : 'missing'} db=${row ? [row.max_listings, row.max_per_tour, row.price_amd].join('/') : 'missing'}`);
+      const row = dbPackages.find((x) => x.id === id);
+      const c = row?.config || {};
+      const listings = (await admin.rpc('tariff_max_listings', { p_tariff: id })).data;
+      const perTour = (await admin.rpc('tariff_max_participants', { p_tariff: id })).data;
+      check(`plan ${id}: the limits the database enforces are the ones in its config`,
+        Number.isInteger(c.max_active_tours) && listings === c.max_active_tours && perTour === c.max_participants_per_tour
+          && typeof c.public_show_rating === 'boolean' && typeof c.dashboard_registrants_list === 'boolean',
+        `config=${c.max_active_tours}/${c.max_participants_per_tour} enforced=${listings}/${perTour}`);
     }
 
     // ---------- accounts ----------
@@ -872,6 +876,48 @@ async function main() {
         noPost.status === 200 && noReceive.status === 200 && !!refusedPost.error && selfUnblock.data?.[0]?.posting_blocked === true
           && (editOwn.data || []).length === 1 && /ակումբի արշավներին/.test(refusedApply.error?.message || '') && wrongKind.status === 400,
         `post=${noPost.status} receive=${noReceive.status} insert=${refusedPost.error ? 'refused' : 'ALLOWED'} self=${JSON.stringify(selfUnblock.data)} edit=${(editOwn.data || []).length} apply=${refusedApply.error ? refusedApply.error.message : 'ALLOWED'} wrong=${wrongKind.status}`);
+
+      // Plans: only the super admin edits them or hands them out.
+      const proRow = dbPackages.find((x) => x.id === 'pro');
+      const samePlan = { action: 'plan.save', id: 'pro', priceAmd: proRow.price_amd, isAvailable: proRow.is_available, config: proRow.config };
+      const planByAdmin = await act(samePlan, admCookie);
+      const planBadPrice = await act({ ...samePlan, priceAmd: proRow.price_amd + 50 }, superCookie);
+      const planMissingKey = await act({ ...samePlan, config: { max_active_tours: 3 } }, superCookie);
+      const planSaved = await act(samePlan, superCookie); // the same values back: nothing changes on the live site
+      const proAfter = (await admin.from('packages').select('price_amd, config').eq('id', 'pro').single()).data;
+      check('plans: only the super admin saves a plan, and only a complete, valid one',
+        planByAdmin.status === 403 && planBadPrice.status === 400 && planMissingKey.status === 400 && planSaved.status === 200
+          && proAfter.price_amd === proRow.price_amd && JSON.stringify(proAfter.config) === JSON.stringify(proRow.config),
+        `admin=${planByAdmin.status} price=${planBadPrice.status} partial=${planMissingKey.status} save=${planSaved.status} ${JSON.stringify(planSaved.body)}`);
+
+      const clubBefore = (await admin.from('clubs').select('tariff, package_ends_at, plan_overrides').eq('id', clubB).single()).data;
+      const giveByAdmin = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro' }, admCookie);
+      const giveBad = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'gold' }, superCookie);
+      const giveInd = await act({ action: 'club.setPlan', userId: ids.ind2, tariff: 'pro' }, superCookie);
+      const givePro = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro' }, superCookie);
+      const clubPro = (await admin.from('clubs').select('tariff, package_ends_at').eq('id', clubB).single()).data;
+      // One club gets what its plan does not have; the database limit follows.
+      const proCap = proRow.config.max_participants_per_tour;
+      const ownBad = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro', overrides: { max_participants_per_tour: -3 } }, superCookie);
+      const ownSet = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro', overrides: { max_participants_per_tour: proCap + 7, max_active_tours: proRow.config.max_active_tours } }, superCookie);
+      const ownRow = (await admin.from('clubs').select('package_ends_at, plan_overrides').eq('id', clubB).single()).data;
+      const ownCap = (await admin.rpc('club_max_participants', { p_club: clubB })).data;
+      await signIn('club2');
+      await anon.from('clubs').update({ plan_overrides: { max_participants_per_tour: 999 } }).eq('id', clubB);
+      const selfCap = (await admin.rpc('club_max_participants', { p_club: clubB })).data;
+      check('plans: one club can get more than its plan gives, only from the super admin, and only the difference is stored',
+        ownBad.status === 400 && ownSet.status === 200 && JSON.stringify(ownRow.plan_overrides) === JSON.stringify({ max_participants_per_tour: proCap + 7 })
+          && ownRow.package_ends_at === clubPro.package_ends_at && ownCap === proCap + 7 && selfCap === proCap + 7,
+        `bad=${ownBad.status} set=${ownSet.status} stored=${JSON.stringify(ownRow.plan_overrides)} cap=${ownCap} afterSelf=${selfCap}`);
+
+      const takeAway = await act({ action: 'club.setPlan', userId: ids.club2, tariff: null }, superCookie);
+      const clubNone = (await admin.from('clubs').select('tariff, package_ends_at, plan_overrides').eq('id', clubB).single()).data;
+      await admin.from('clubs').update(clubBefore).eq('id', clubB);
+      const proDays = clubPro.package_ends_at ? (new Date(clubPro.package_ends_at) - Date.now()) / 86400000 : 0;
+      check('plans: the super admin gives a club a plan for a month and can take it away',
+        giveByAdmin.status === 403 && giveBad.status === 400 && giveInd.status === 400 && givePro.status === 200
+          && clubPro.tariff === 'pro' && proDays > 27 && proDays < 32 && takeAway.status === 200 && clubNone.tariff === null && clubNone.package_ends_at === null && JSON.stringify(clubNone.plan_overrides) === '{}',
+        `admin=${giveByAdmin.status} bad=${giveBad.status} ind=${giveInd.status} give=${givePro.status} ${JSON.stringify(clubPro)} take=${takeAway.status} ${JSON.stringify(clubNone)}`);
 
       const noBook = await act({ action: 'account.setLimit', userId: ids.ind2, limit: 'book', blocked: true }, admCookie);
       const ind2Fresh = (await loginCookie(email('ind2'), PASSWORD)).cookie;

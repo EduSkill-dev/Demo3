@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PACKAGES, isPackageId } from "@/lib/catalog";
+import { planName } from "@/lib/plans/server";
 import { getT } from "@/i18n/server";
 import ReceiptView, { type ReceiptPayment } from "@/components/ReceiptView";
 import AutoPrint from "@/components/ui/AutoPrint";
@@ -42,7 +42,7 @@ export default async function ReceiptPage({
   const t = await getT();
   const item =
     p.kind === "subscription"
-      ? `${isPackageId(p.tariff) ? PACKAGES[p.tariff].name : "—"}${p.clubs ? ` · ${p.clubs.name}` : ""}`
+      ? `${await planName(p.tariff)}${p.clubs ? ` · ${p.clubs.name}` : ""}`
       : p.tours?.title ?? "—";
   const payer =
     p.kind === "subscription" && p.clubs

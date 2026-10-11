@@ -7,7 +7,8 @@ import { ACCOUNT_LIMITS, ADMIN_PERMS, type AccountLimit, type AccountStatus, typ
 import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
 import { SIGHTS_TAG } from "@/lib/sights";
-import { REGIONS } from "@/lib/catalog";
+import { REGIONS, addOneMonth, isPackageId } from "@/lib/catalog";
+import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
 import { DICTIONARIES } from "@/i18n/translate";
 import { isLocale } from "@/i18n/config";
 import { MIN_PASSWORD } from "@/lib/authErrors";
@@ -234,6 +235,106 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true });
+  },
+
+  // Super admin only: what a plan costs and allows. Every capability named in
+  // the registry must arrive with the right type; nothing else is stored.
+  async "plan.save"(ctx, body) {
+    if (!ctx.me.isSuper) return fail(FORBIDDEN, 403);
+    const id = str(body.id);
+    if (!isPackageId(id)) return fail("Անհայտ փաթեթ։");
+    const price = body.priceAmd;
+    if (typeof price !== "number" || !Number.isInteger(price) || price < 0 || price > 10_000_000 || price % 100 !== 0) {
+      return fail("Գինը պետք է լինի 100-ի բազմապատիկ՝ 0-ից 10 000 000 ֏։");
+    }
+    const raw = body.config && typeof body.config === "object" ? (body.config as Record<string, unknown>) : {};
+    const config: Record<string, number | boolean> = {};
+    for (const f of PLAN_FEATURES) {
+      const v = raw[f.key];
+      if (f.type === "number") {
+        if (typeof v !== "number" || !Number.isInteger(v) || v < f.min || v > MAX_PLAN_NUMBER) return fail(`«${f.label}»՝ նշեք ամբողջ թիվ ${f.min}-ից ${MAX_PLAN_NUMBER}։`);
+        config[f.key] = v;
+      } else {
+        if (typeof v !== "boolean") return fail(`«${f.label}»՝ արժեքը բացակայում է։`);
+        config[f.key] = v;
+      }
+    }
+
+    const { data, error } = await ctx.db
+      .from("packages")
+      .update({
+        price_amd: price,
+        is_available: body.isAvailable === true,
+        config,
+        // The older columns are kept equal to the config they were replaced by.
+        max_listings: config.max_active_tours,
+        max_per_tour: config.max_participants_per_tour,
+        shows_ratings: config.public_show_rating,
+        shows_comments: config.public_show_comments,
+        monthly_report: config.monthly_report,
+        analytics: config.analytics,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("name")
+      .maybeSingle();
+    if (error) return fail(error.message, 500);
+    if (!data) return fail("Փաթեթը չի գտնվել։", 404);
+    await logActivity({
+      actor: ctx.me.userId,
+      action: "admin.plan_saved",
+      targetType: "plan",
+      targetId: id,
+      targetLabel: (data as { name: string }).name,
+      meta: { price, available: body.isAvailable === true, ...config },
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true });
+  },
+
+  // Super admin only: a club's plan and what this one club gets on top of it.
+  //   tariff     a new plan runs a month from now; the same plan keeps its
+  //              end date; null takes the plan away.
+  //   overrides  (optional) the club's own values. Only those that differ
+  //              from the plan are kept, so the rest keeps following the plan.
+  // No payment is recorded — the log entry is the trace.
+  async "club.setPlan"(ctx, body) {
+    if (!ctx.me.isSuper) return fail(FORBIDDEN, 403);
+    const tariff = body.tariff === null || body.tariff === "" ? null : str(body.tariff);
+    if (tariff !== null && !isPackageId(tariff)) return fail("Անհայտ փաթեթ։");
+    const t = await targetAccount(ctx, str(body.userId));
+    if (t.error) return t.error;
+    if (t.account.role !== "club") return fail("Փաթեթ ունենում են միայն ակումբները։");
+
+    const { data: row } = await ctx.db.from("clubs").select("tariff, package_ends_at, plan_overrides").eq("owner_id", t.account.id).maybeSingle();
+    const club = row as { tariff: string | null; package_ends_at: string | null; plan_overrides: unknown } | null;
+    if (!club) return fail("Ակումբը չի գտնվել։", 404);
+    const running = club.tariff === tariff && !!club.package_ends_at && new Date(club.package_ends_at).getTime() > Date.now();
+    const until = !tariff ? null : running ? club.package_ends_at : addOneMonth(new Date()).toISOString();
+
+    let overrides: Record<string, number | boolean> = cleanOverrides(club.plan_overrides);
+    if (body.overrides !== undefined) {
+      const sent = body.overrides && typeof body.overrides === "object" ? (body.overrides as Record<string, unknown>) : {};
+      const wanted = cleanOverrides(sent) as Record<string, number | boolean>;
+      if (Object.keys(wanted).length !== Object.keys(sent).length) return fail("Ակումբի կարգավորումներում սխալ արժեք կա։");
+      const { data: planRow } = tariff ? await ctx.db.from("packages").select("config").eq("id", tariff).maybeSingle() : { data: null };
+      const base = resolveConfig((planRow as { config: unknown } | null)?.config) as Record<string, number | boolean>;
+      overrides = tariff ? Object.fromEntries(Object.entries(wanted).filter(([k, v]) => base[k] !== v)) : {};
+    }
+    if (!tariff) overrides = {};
+
+    const { error } = await ctx.db.from("clubs").update({ tariff, package_ends_at: until, plan_overrides: overrides }).eq("owner_id", t.account.id);
+    if (error) return fail(error.message, 500);
+    await logActivity({
+      actor: ctx.me.userId,
+      action: "admin.club_plan_set",
+      targetType: "account",
+      targetId: t.account.id,
+      targetLabel: t.label,
+      meta: { plan: tariff ?? "none", until, ...(Object.keys(overrides).length ? { own: overrides } : {}) },
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true, package_ends_at: until, overrides });
   },
 
   // Super admin only: a new admin with a one-time password, shown once.

@@ -36,6 +36,7 @@ export interface Club {
   focus: string[]; // ClubFocus keys
   posting_blocked: boolean; // an admin switched off adding listings
   applications_blocked: boolean; // an admin switched off new sign-ups
+  plan_overrides: Record<string, number | boolean>; // what the super admin changed for this club alone
   created_at: string;
 }
 

@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chargeTestCard } from "@/lib/mockPayment";
-import { PACKAGES, isPackageId, planSubscription, type PackageId } from "@/lib/catalog";
+import { PACKAGE_IDS, isPackageId, planSubscription, type PackageId } from "@/lib/catalog";
+import { getPlans } from "@/lib/plans/server";
 import {
   bookingConfirmationEmail,
   emailStatus,
@@ -73,6 +74,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Անհայտ փաթեթ։" }, { status: 400 });
     }
     const target = body.tariff;
+    const plans = await getPlans();
+    if (!plans[target].isAvailable) {
+      return NextResponse.json({ error: "Այս փաթեթը դեռ հասանելի չէ։" }, { status: 409 });
+    }
     const { data: club } = await supabase
       .from("clubs")
       .select("id, name, tariff, package_ends_at")
@@ -83,7 +88,8 @@ export async function POST(req: Request) {
     }
     const plan = planSubscription(
       club as { tariff: string | null; package_ends_at: string | null },
-      target
+      target,
+      Object.fromEntries(PACKAGE_IDS.map((id) => [id, plans[id].rank])) as Record<PackageId, number>
     );
     if (!plan.ok) {
       return NextResponse.json(
@@ -97,8 +103,8 @@ export async function POST(req: Request) {
       );
     }
     clubId = (club as { id: string }).id;
-    label = `Փաթեթ՝ ${PACKAGES[target].name}`;
-    amount = PACKAGES[target].priceAmd;
+    label = `Փաթեթ՝ ${plans[target].name}`;
+    amount = plans[target].priceAmd;
     nextTariff = target;
     period = { start: plan.periodStart, end: plan.periodEnd };
   } else {

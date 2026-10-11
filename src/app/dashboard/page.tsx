@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getMyClub } from "@/lib/myClub";
 import { getT } from "@/i18n/server";
-import { PACKAGES } from "@/lib/catalog";
 import type { Tour } from "@/types/database";
 import AnnouncementsTable, { type ListingRow } from "@/components/club/AnnouncementsTable";
 
@@ -67,7 +66,7 @@ export default async function AnnouncementsPage() {
       )}
       {limits.pkg && limits.used >= limits.maxListings && (
         <div className="rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 p-4 text-sm text-ink">
-          {t("announcements.atLimit", { name: PACKAGES[limits.pkg].name, max: limits.maxListings })}{" "}
+          {t("announcements.atLimit", { name: limits.planName, max: limits.maxListings })}{" "}
           <Link href="/dashboard/packages" className="font-semibold text-terracotta-700 underline dark:text-terracotta-300">
             {t("announcements.atLimitLink")}
           </Link>
