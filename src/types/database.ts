@@ -59,7 +59,8 @@ export interface Tour {
   title: string;
   description: string | null;
   regions: string[]; // Region keys
-  date: string; // ISO date
+  date: string; // ISO date (the first day)
+  end_date: string | null; // the last day of a hike that lasts several days
   max_participants: number;
   photo_urls: string[];
   status: TourStatus;

@@ -15,6 +15,7 @@ export type TourForDetails = Pick<
   | "overnight" | "difficulty" | "coordinator_phone" | "notes" | "meeting_point" | "meeting_time" | "price"
 > & {
   cancel_hours?: number | null;
+  end_date?: string | null;
   club?: { id: string; name: string; likes?: number } | null;
   sights?: string[];
   likes?: number; // shown (and likeable) when the page supplied the count
@@ -34,7 +35,7 @@ export default function TourDetails({
 }) {
   const t = useT();
   const fmt = useFormatDate();
-  const date = fmt(tour.date, "weekdayLong");
+  const date = fmt(tour.date, "weekdayLong") + (tour.end_date && tour.end_date > tour.date ? ` – ${fmt(tour.end_date, "weekdayLong")}` : "");
   const photos = tour.photo_urls ?? [];
   const [shown, setShown] = useState(0);
   const photo = photos[Math.min(shown, photos.length - 1)];

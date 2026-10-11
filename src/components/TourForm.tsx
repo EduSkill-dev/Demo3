@@ -45,6 +45,7 @@ export default function TourForm({
   const [regions, setRegions] = useState<string[]>(source?.regions ?? []);
   const [terrains, setTerrains] = useState<string[]>(source?.terrains ?? []);
   const [date, setDate] = useState(initialTour?.date ?? "");
+  const [endDate, setEndDate] = useState(initialTour?.end_date ?? "");
   const [difficulty, setDifficulty] = useState<Difficulty>(source?.difficulty ?? "medium");
   const [overnight, setOvernight] = useState(source?.overnight ?? false);
   const [sightIds, setSightIds] = useState<string[]>(source?.sight_ids ?? []);
@@ -81,6 +82,7 @@ export default function TourForm({
     if (regions.length === 0) return setError(t("tourForm.errRegion"));
     if (terrains.length === 0) return setError(t("tourForm.errTerrain"));
     if (mode === "create" && date < today) return setError(t("tourForm.errDate"));
+    if (endDate && endDate < date) return setError(t("tourForm.errEndDate"));
     if (!Number.isInteger(Number(maxParticipants)) || Number(maxParticipants) < 1) return setError(t("tourForm.errCapacity"));
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError(t("tourForm.errPrice"));
 
@@ -107,6 +109,7 @@ export default function TourForm({
       regions,
       terrains,
       date,
+      end_date: endDate && endDate > date ? endDate : null,
       difficulty,
       overnight,
       sight_ids: sightIds,
@@ -198,6 +201,11 @@ export default function TourForm({
         <div>
           <label htmlFor="date" className={label}>{t("tourForm.date")}</label>
           <input id="date" required type="date" min={mode === "create" ? today : undefined} value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+        </div>
+        <div>
+          <label htmlFor="end-date" className={label}>{t("tourForm.endDate")}</label>
+          <input id="end-date" type="date" min={date || (mode === "create" ? today : undefined)} value={endDate} onChange={(e) => setEndDate(e.target.value)} className={input} />
+          <p className={hint}>{t("tourForm.endDateHint")}</p>
         </div>
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>

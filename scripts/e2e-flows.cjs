@@ -877,6 +877,21 @@ async function main() {
           && (editOwn.data || []).length === 1 && /ակումբի արշավներին/.test(refusedApply.error?.message || '') && wrongKind.status === 400,
         `post=${noPost.status} receive=${noReceive.status} insert=${refusedPost.error ? 'refused' : 'ALLOWED'} self=${JSON.stringify(selfUnblock.data)} edit=${(editOwn.data || []).length} apply=${refusedApply.error ? refusedApply.error.message : 'ALLOWED'} wrong=${wrongKind.status}`);
 
+      // Shared calendar and its feeds: public data only.
+      const calPage = await fetch(`http://localhost:${DEV_PORT}/calendar?month=${future(78).slice(0, 7)}`);
+      const calHtml = await calPage.text();
+      const feed = await fetch(`http://localhost:${DEV_PORT}/calendar.ics`);
+      const feedText = await feed.text();
+      const oneFeed = await fetch(`http://localhost:${DEV_PORT}/tours/${tourId}/calendar.ics`);
+      const oneText = await oneFeed.text();
+      const badFeed = await fetch(`http://localhost:${DEV_PORT}/tours/not-an-id/calendar.ics`);
+      check('calendar: the page and the .ics feeds work and carry no personal data',
+        calPage.status === 200 && /calendar.ics/.test(calHtml)
+          && feed.status === 200 && (feed.headers.get('content-type') || '').includes('text/calendar') && feedText.startsWith('BEGIN:VCALENDAR\r\n') && feedText.includes(`UID:tour-${tourId}@culmen.am`)
+          && oneFeed.status === 200 && (oneText.match(/BEGIN:VEVENT/g) || []).length === 1 && /DTSTART;VALUE=DATE:\d{8}/.test(oneText)
+          && !/example\.com|\+374|Երկրորդ/.test(feedText) && feedText.split('\r\n').every((l) => Buffer.byteLength(l) <= 75) && badFeed.status === 404,
+        `page=${calPage.status} feed=${feed.status} one=${oneFeed.status} events=${(oneText.match(/BEGIN:VEVENT/g) || []).length} bad=${badFeed.status}`);
+
       // Plans: only the super admin edits them or hands them out.
       const proRow = dbPackages.find((x) => x.id === 'pro');
       const samePlan = { action: 'plan.save', id: 'pro', priceAmd: proRow.price_amd, isAvailable: proRow.is_available, config: proRow.config };

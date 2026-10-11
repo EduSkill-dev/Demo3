@@ -20,6 +20,8 @@ export const NAV_LINKS = [
 ] as const;
 
 function isActive(pathname: string, href: string) {
+  // The shared calendar is part of the hikes section.
+  if (href === "/tours" && pathname === "/calendar") return true;
   return pathname === href || pathname.startsWith(href + "/");
 }
 

@@ -9,6 +9,7 @@ import { getLikeCounts } from "@/lib/likes";
 export type PublicClubInfo = {
   id: string;
   name: string;
+  photo: string | null;
   likes: number; // hearts from people who hiked with the club
   // Present only when the club's package shows ratings to the public.
   rating: { average: number; count: number } | null;
@@ -25,21 +26,30 @@ export type PublicTour = Tour & {
 // Tours the public may see and book: active, not in the past, run by a club
 // whose package has not lapsed (an expired club's tours drop off the site
 // until it renews). Soonest first. Optionally only one club's tours.
-export async function getPublicTours(opts: { clubId?: string } = {}): Promise<PublicTour[]> {
+//   range   (calendar, feeds) every hike that touches these days instead —
+//           past ones included; "to" may be left out.
+//   tourId  just this hike, whatever its date.
+export async function getPublicTours(
+  opts: { clubId?: string; range?: { from: string; to?: string }; tourId?: string } = {}
+): Promise<PublicTour[]> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   let query = supabase
     .from("tours")
-    .select("*, clubs(id, name, tariff, package_ends_at, plan_overrides, applications_blocked)")
+    .select("*, clubs(id, name, photo_url, tariff, package_ends_at, plan_overrides, applications_blocked)")
     .eq("status", "active")
     .eq("admin_hidden", false)
-    .gte("date", today)
     .order("date", { ascending: true });
+  if (opts.tourId) query = query.eq("id", opts.tourId);
+  else if (opts.range) {
+    query = query.or(`date.gte.${opts.range.from},end_date.gte.${opts.range.from}`);
+    if (opts.range.to) query = query.lte("date", opts.range.to);
+  } else query = query.gte("date", today);
   if (opts.clubId) query = query.eq("club_id", opts.clubId);
   const { data } = await query;
 
   type Row = Tour & {
-    clubs: { id: string; name: string; tariff: string | null; package_ends_at: string | null; plan_overrides: unknown; applications_blocked: boolean } | null;
+    clubs: { id: string; name: string; photo_url: string | null; tariff: string | null; package_ends_at: string | null; plan_overrides: unknown; applications_blocked: boolean } | null;
   };
   const rows = ((data ?? []) as Row[]).filter((t) => t.clubs && activePackage(t.clubs));
   if (rows.length === 0) return [];
@@ -64,6 +74,7 @@ export async function getPublicTours(opts: { clubId?: string } = {}): Promise<Pu
       club: {
         id: clubs!.id,
         name: clubs!.name,
+        photo: clubs!.photo_url,
         likes: likes.clubs.get(clubs!.id) ?? 0,
         rating: clubConfig(plans, clubs).public_show_rating && r ? { average: Number(r.average), count: r.count } : null,
       },
