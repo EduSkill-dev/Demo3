@@ -91,6 +91,7 @@ export const TEXT_SECTIONS: { title: string; sections: [string, string][] }[] = 
       ["faq", "Հաճախ տրվող հարցեր"],
       ["legal", "Պայմաններ, գաղտնիություն, օգնություն"],
       ["requests", "Անհատական պատվերներ"],
+      ["custom", "Անհատական արշավի հրավեր"],
       ["sights", "Տեսարժան վայրերի ընտրիչ"],
     ],
   },

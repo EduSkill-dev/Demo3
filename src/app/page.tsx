@@ -4,6 +4,7 @@ import { getT } from "@/i18n/server";
 import { REGIONS } from "@/lib/catalog";
 import { SPOTLIGHT } from "@/lib/spotlight";
 import TourGrid from "@/components/tour/TourGrid";
+import CustomTourCta from "@/components/requests/CustomTourCta";
 
 const field =
   "w-full rounded-xl border border-[#E6D9C2] bg-white px-3 py-2.5 text-sm text-spruce-900 focus:border-terracotta-500 focus:outline-none";
@@ -101,6 +102,9 @@ export default async function HomePage() {
         </div>
         <div className="mt-6">
           {tours.length === 0 ? <p className="text-muted">{t("home.noTours")}</p> : <TourGrid tours={tours} backHref="/" />}
+        </div>
+        <div className="mt-12">
+          <CustomTourCta />
         </div>
       </section>
     </main>

@@ -11,7 +11,9 @@ type Flow = "signup" | "recovery" | "email_change";
 //     already confirmed, and the code signs in only the browser that asked
 // The route the link points at says which flow it is, because default
 // links carry no type.
-export async function handleAuthRedirect(request: NextRequest, flow: Flow) {
+// `afterSignup` is where a freshly confirmed sign-up continues (default:
+// the "confirmed" page).
+export async function handleAuthRedirect(request: NextRequest, flow: Flow, afterSignup = "/auth/confirmed") {
   const url = request.nextUrl;
   const tokenHash = url.searchParams.get("token_hash");
   const type = (url.searchParams.get("type") as EmailOtpType | null) ?? null;
@@ -45,5 +47,5 @@ export async function handleAuthRedirect(request: NextRequest, flow: Flow) {
     return go("/auth/confirmed?status=email");
   }
 
-  return go("/auth/confirmed");
+  return go(afterSignup);
 }

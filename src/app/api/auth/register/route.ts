@@ -47,7 +47,8 @@ export async function POST(req: Request) {
     email,
     password,
     options: {
-      emailRedirectTo: `${new URL(req.url).origin}/auth/confirm`,
+      // Signing up in order to request a custom hike: the link continues there.
+      emailRedirectTo: `${new URL(req.url).origin}${b.then === "request" && role === "individual" ? "/auth/confirm-request" : "/auth/confirm"}`,
       data:
         role === "club"
           ? { role, club_name: clubName, phone }

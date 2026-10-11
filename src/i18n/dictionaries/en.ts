@@ -613,6 +613,16 @@ const en: DeepPartial<Dictionary> = {
     q7: "Can I bring a child?",
     a7: "It depends on the hike's difficulty. If in doubt, ask the organising club.",
   },
+  custom: {
+    title: "Order your own custom hike",
+    text: "Could not find the right hike? Say where, when and how many of you want to go, and clubs will send their offers.",
+    button: "Order a hike",
+    needAccountTitle: "You need an account to order",
+    needAccountText: "An account lets you see the clubs’ offers and choose who you want to do your custom hike with.",
+    step1: "Sign up below and confirm your email address.",
+    step2: "The link in the email takes you to the request form: describe what you want.",
+    step3: "Receive the clubs’ offers and pick the best one.",
+  },
   requests: {
     navLabel: "Requests",
     title: "Custom requests",

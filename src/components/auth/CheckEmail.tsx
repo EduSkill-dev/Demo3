@@ -7,7 +7,7 @@ import { authErrorMessage, confirmUrl } from "@/lib/authErrors";
 import AuthCard from "./AuthCard";
 
 // "We sent you a link" — shown right after signing up, with a resend button.
-export default function CheckEmail({ email }: { email: string }) {
+export default function CheckEmail({ email, confirmPath }: { email: string; confirmPath?: string }) {
   const t = useT();
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export default function CheckEmail({ email }: { email: string }) {
     const { error: err } = await createClient().auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: confirmUrl() },
+      options: { emailRedirectTo: confirmPath ? `${window.location.origin}${confirmPath}` : confirmUrl() },
     });
     if (err) {
       setState("idle");

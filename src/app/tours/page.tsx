@@ -1,3 +1,4 @@
+import CustomTourCta from "@/components/requests/CustomTourCta";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
@@ -25,6 +26,9 @@ export default async function ToursPage() {
         <Suspense>
           <ToursExplorer tours={tours} clubs={(clubs ?? []) as { id: string; name: string }[]} />
         </Suspense>
+      </div>
+      <div className="mt-12">
+        <CustomTourCta />
       </div>
     </main>
   );
