@@ -76,7 +76,12 @@ export const toOfferView = (o: OfferRow): OfferView => ({
   createdAt: o.created_at,
 });
 
-export const MAX_OPEN_REQUESTS = 3; // per person, so the list stays real
+export const MAX_OPEN_REQUESTS = 5; // per person, so the list stays real
+// Cancelling again and again is noise for the clubs: after this many
+// cancellations within the window, the person can neither cancel nor leave
+// a new request until the window has passed.
+export const MAX_REQUEST_CANCELS = 10;
+export const CANCEL_WINDOW_HOURS = 24;
 
 // A request's free text must not carry ways to reach the author: contacts
 // open only once an offer is accepted. This catches the usual forms (phone

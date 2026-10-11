@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/viewer";
 import { getT } from "@/i18n/server";
 import { getSightNames } from "@/lib/sights";
-import { MAX_OPEN_REQUESTS, REQUEST_COLUMNS, toOfferView, toRequestView, type OfferRow, type RequestRow } from "@/lib/requests";
+import { CANCEL_WINDOW_HOURS, MAX_OPEN_REQUESTS, MAX_REQUEST_CANCELS, REQUEST_COLUMNS, toOfferView, toRequestView, type OfferRow, type RequestRow } from "@/lib/requests";
 import MyRequests, { type MyRequest } from "@/components/requests/MyRequests";
 
 type Raw = RequestRow & {
@@ -32,12 +32,21 @@ export default async function AccountRequestsPage() {
       .map((o) => ({ ...toOfferView(o), club: o.clubs! })),
   }));
   const open = rows.filter((r) => r.request.status === "open").length;
+  const { count: cancels } = await supabase
+    .from("tour_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", viewer.id)
+    .eq("status", "closed")
+    .gte("closed_at", new Date(Date.now() - CANCEL_WINDOW_HOURS * 3600_000).toISOString());
+  const paused = (cancels ?? 0) >= MAX_REQUEST_CANCELS;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-muted">{t("requests.myIntro")}</p>
-        {open < MAX_OPEN_REQUESTS ? (
+        {paused ? (
+          <span className="max-w-sm text-xs text-red-600">{t("errors.requestsPaused")}</span>
+        ) : open < MAX_OPEN_REQUESTS ? (
           <Link href="/account/requests/new" className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
             {t("requests.newButton")}
           </Link>

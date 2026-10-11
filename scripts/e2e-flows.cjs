@@ -1011,7 +1011,28 @@ async function main() {
       const allowedRequest = await api('/api/requests', reqBody, ind2Fresh);
       const reqPage = await fetch(`http://localhost:${DEV_PORT}/admin/requests`, { headers: { Cookie: superCookie } });
       const reqHtml = await reqPage.text();
-      if (allowedRequest.body?.id) await admin.from('tour_requests').delete().eq('id', allowedRequest.body.id);
+      // (the request allowed above is the first of the five)
+      // 5 open requests at most; 10 cancellations in 24 h pause cancelling and new requests.
+      const reqs = [];
+      for (let i = 0; i < 6; i++) reqs.push(await api('/api/requests', reqBody, ind2Fresh));
+      const openIds = reqs.filter((r) => r.status === 200).map((r) => r.body.id);
+      const firstClose = await api('/api/requests', { action: 'close', requestId: openIds[0] }, ind2Fresh);
+      const closedRow = (await admin.from('tour_requests').select('status, closed_at').eq('id', openIds[0]).single()).data;
+      // Nine more cancellations "earlier today", written straight into the table.
+      const old = (await admin.from('tour_requests').insert(Array.from({ length: 9 }, () => ({
+        user_id: ids.ind2, people: 2, date_from: future(60), date_to: future(60), regions: ['kotayk'], status: 'closed', closed_at: new Date(Date.now() - 3600000).toISOString(),
+      }))).select('id')).data || [];
+      const eleventh = await api('/api/requests', { action: 'close', requestId: openIds[1] }, ind2Fresh);
+      const pausedCreate = await api('/api/requests', reqBody, ind2Fresh);
+      await admin.from('tour_requests').update({ closed_at: new Date(Date.now() - 25 * 3600000).toISOString() }).in('id', old.map((x) => x.id));
+      const afterWindow = await api('/api/requests', { action: 'close', requestId: openIds[1] }, ind2Fresh);
+      await admin.from('tour_requests').delete().eq('user_id', ids.ind2);
+      check('requests: at most 5 open; the 10th cancellation in 24 h pauses cancelling and new requests until the window passes',
+        reqs.slice(0, 4).every((r) => r.status === 200) && reqs[4].status >= 400 && reqs[5].status >= 400 && openIds.length === 4
+          && firstClose.status === 200 && closedRow?.status === 'closed' && !!closedRow?.closed_at
+          && eleventh.status === 429 && pausedCreate.status === 429 && afterWindow.status === 200,
+        `reqs=${reqs.map((r) => r.status).join(',')} close=${firstClose.status} 11th=${eleventh.status} create=${pausedCreate.status} ${JSON.stringify(pausedCreate.body)} later=${afterWindow.status}`);
+
       check('admin: an individual can lose just custom requests, cannot switch it back, and requests are listed for admins',
         noRequest.status === 200 && refusedRequest.status === 403 && stillBlocked === true && allowedRequest.status === 200
           && reqPage.status === 200 && reqHtml.includes(email('ind2')),

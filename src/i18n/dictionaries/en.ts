@@ -561,6 +561,8 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    requestsPaused: "You cancelled 10 requests in the last 24 hours, so new requests are paused for now. Please try again later.",
+    requestCancelLimit: "You can cancel at most 10 requests a day.",
     requestsBlocked: "Leaving custom hike requests has been switched off by an administrator.",
     emergencyBoth: "For the emergency contact fill in both the name and the phone, or leave both empty.",
     emergencyInvalid: "The emergency contact name or phone is not valid.",

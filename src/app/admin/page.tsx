@@ -19,7 +19,7 @@ export default async function AdminHomePage() {
     count(db.from("tours").select("id", head).eq("status", "active").gte("date", today)),
     count(db.from("tours").select("id", head).eq("admin_hidden", true)),
     count(db.from("profiles").select("id", head).neq("status", "active")),
-    count(db.from("tour_requests").select("id", head)),
+    count(db.from("tour_requests").select("id", head).neq("status", "closed")),
   ]);
 
   // Each card opens its section when this admin may manage it. Frozen and

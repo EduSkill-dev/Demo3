@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewer, type Viewer } from "@/lib/viewer";
 import { clientIp, logActivity } from "@/lib/admin";
 import { REGIONS, TERRAINS, activePackage } from "@/lib/catalog";
-import { MAX_OPEN_REQUESTS, hasContactDetails } from "@/lib/requests";
+import { CANCEL_WINDOW_HOURS, MAX_OPEN_REQUESTS, MAX_REQUEST_CANCELS, hasContactDetails } from "@/lib/requests";
 import { newOfferEmail, offerAcceptedEmail, sendEmail } from "@/lib/email";
 
 // Custom tour requests and the clubs' offers:
@@ -31,6 +31,18 @@ async function ownRequest({ viewer, db }: Ctx, id: string) {
   return r && r.user_id === viewer.id ? r : null;
 }
 
+// True while the person has used up the cancellations of the last 24 hours.
+async function cancelLimitReached({ viewer, db }: Ctx): Promise<boolean> {
+  const since = new Date(Date.now() - CANCEL_WINDOW_HOURS * 3600_000).toISOString();
+  const { count } = await db
+    .from("tour_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", viewer.id)
+    .eq("status", "closed")
+    .gte("closed_at", since);
+  return (count ?? 0) >= MAX_REQUEST_CANCELS;
+}
+
 const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> = {
   async create(ctx, body) {
     const { viewer, db } = ctx;
@@ -39,6 +51,10 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const { data: profile } = await db.from("profiles").select("requests_blocked").eq("id", viewer.id).maybeSingle();
     if ((profile as { requests_blocked?: boolean } | null)?.requests_blocked) {
       return fail("Անհատական հայտ թողնելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։", 403);
+    }
+
+    if (await cancelLimitReached(ctx)) {
+      return fail(`Վերջին ${CANCEL_WINDOW_HOURS} ժամում չեղարկել եք ${MAX_REQUEST_CANCELS} հայտ, ուստի նոր հայտ թողնելը ժամանակավորապես անջատված է։ Փորձեք ավելի ուշ։`, 429);
     }
 
     const people = int(body.people);
@@ -92,8 +108,9 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const r = await ownRequest(ctx, str(body.requestId));
     if (!r) return fail("Պատվերը չի գտնվել։", 404);
     if (r.status !== "open") return fail("Պատվերն արդեն փակ է։");
+    if (await cancelLimitReached(ctx)) return fail(`Մեկ օրում կարելի է չեղարկել առավելագույնը ${MAX_REQUEST_CANCELS} հայտ։`, 429);
     await ctx.db.from("tour_offers").update({ status: "declined" }).eq("request_id", r.id).eq("status", "pending");
-    const { error } = await ctx.db.from("tour_requests").update({ status: "closed" }).eq("id", r.id);
+    const { error } = await ctx.db.from("tour_requests").update({ status: "closed", closed_at: new Date().toISOString() }).eq("id", r.id);
     if (error) return fail(error.message, 500);
     await logActivity({ actor: ctx.viewer.id, action: "request.closed", targetType: "request", targetId: r.id, ip: ctx.ip });
     return NextResponse.json({ ok: true });

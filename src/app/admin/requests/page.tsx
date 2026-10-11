@@ -65,7 +65,9 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
     club: r.tour_offers.find((o) => o.status === "accepted")?.clubs?.name ?? null,
   }));
   const found = all.filter((r) => !q || `${r.name} ${r.profiles?.email ?? ""}`.toLowerCase().includes(q));
-  const rows = found.filter((r) => !only || r.state === only);
+  // Cancelled requests are noise in the everyday list: they show only when asked for.
+  const live = found.filter((r) => r.state !== "cancelled");
+  const rows = only ? found.filter((r) => r.state === only) : live;
   const href = (state: State | null) => {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
@@ -83,7 +85,7 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
         <SearchBox placeholder="Փնտրել ըստ անվան կամ էլ. հասցեի" keep={{ state: only ?? undefined }} />
       </div>
       <div className="mb-4 flex flex-wrap gap-1.5">
-        <Link href={href(null)} className={chip(!only)}>Բոլորը · {found.length}</Link>
+        <Link href={href(null)} title="Բոլորը, բացի չեղարկվածներից" className={chip(!only)}>Բոլորը · {live.length}</Link>
         {(Object.keys(STATES) as State[]).map((s) => (
           <Link key={s} href={href(s)} title={STATES[s].hint} className={chip(only === s)}>
             {STATES[s].label} · {found.filter((r) => r.state === s).length}
@@ -141,7 +143,7 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-xs text-muted">Վիճակի վրա պահեք մկնիկը՝ բացատրությունը տեսնելու համար։ Հայտերն այստեղ միայն դիտվում են։</p>
+      <p className="mt-2 text-xs text-muted">Վիճակի վրա պահեք մկնիկը՝ բացատրությունը տեսնելու համար։ Չեղարկված հայտերը երևում են միայն իրենց ֆիլտրով։ Հայտերն այստեղ միայն դիտվում են։</p>
     </div>
   );
 }
