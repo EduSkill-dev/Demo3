@@ -5,3 +5,9 @@ node_modules
 tsconfig.tsbuildinfo
 .next-check
 .next-e2e
+
+# Cloudflare trial
+.open-next
+.dev.vars
+.wrangler
+.cf-dry
