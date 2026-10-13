@@ -5,6 +5,16 @@ import { NextResponse, type NextRequest } from "next/server";
 // cannot write cookies themselves) and keeps each dashboard to its own role:
 // /account is for individuals, /dashboard is for clubs, /admin is for admins.
 export async function middleware(request: NextRequest) {
+  // One address for the site: www.… goes to the bare domain (a sign-in
+  // cookie belongs to one host, so two addresses would mean two sessions).
+  const host = request.headers.get("host") ?? "";
+  if (host.startsWith("www.")) {
+    const url = request.nextUrl.clone();
+    url.host = host.slice(4);
+    url.port = "";
+    return NextResponse.redirect(url, 308);
+  }
+
   // An auth email whose redirect target was not allowed falls back to the
   // site root; send its token on to the route that verifies it.
   const { pathname: requestedPath, searchParams } = request.nextUrl;
