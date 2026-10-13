@@ -1,9 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  // The Culmen site on Cloudflare Workers (built by @opennextjs/cloudflare).
   "name": "app",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-09-23",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "bolbol.am", "custom_domain": true },
+    { "pattern": "www.bolbol.am", "custom_domain": true }
+  ]
 }
