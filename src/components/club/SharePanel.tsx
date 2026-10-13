@@ -26,11 +26,13 @@ export default function SharePanel({
   tour,
   clubName,
   networks,
+  blocked,
   onClose,
 }: {
   tour: ShareTour;
   clubName: string;
-  networks: ShareNetwork[]; // the social networks this club may share to
+  networks: ShareNetwork[]; // the social networks the platform has switched on
+  blocked: string[]; // of those, the ones closed for this club: shown, but inactive
   onClose: () => void;
 }) {
   const t = useT();
@@ -87,7 +89,7 @@ export default function SharePanel({
           <h3 className="text-sm font-semibold text-ink">{t("share.link")}</h3>
           <p className="mt-0.5 break-all text-xs text-muted">{url}</p>
           <div className="mt-3">
-            <ShareButtons url={`/tours/${tour.id}`} text={`${tour.title} · ${clubName}`} networks={networks} />
+            <ShareButtons url={`/tours/${tour.id}`} text={`${tour.title} · ${clubName}`} networks={networks} blocked={blocked} />
           </div>
         </section>
       </div>

@@ -107,7 +107,7 @@ export default async function AnnouncementsPage() {
         )}
       </div>
 
-      <AnnouncementsTable rows={rows} canRepublish={canAdd} clubName={club.name} shareNetworks={limits.config.share_buttons ? await getShareNetworks() : []} />
+      <AnnouncementsTable rows={rows} canRepublish={canAdd} clubName={club.name} shareNetworks={limits.config.share_buttons ? await getShareNetworks() : []} shareBlocked={club.share_blocked ?? []} />
     </div>
   );
 }

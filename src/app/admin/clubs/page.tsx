@@ -5,6 +5,8 @@ import { getFormatDate } from "@/i18n/server";
 import { activePackage } from "@/lib/catalog";
 import { cleanOverrides } from "@/lib/plans/registry";
 import { getPlans } from "@/lib/plans/server";
+import { getShareNetworks } from "@/lib/siteSettings";
+import { SHARE_NETWORK_IDS } from "@/lib/share";
 import type { AccountStatus } from "@/lib/adminLabels";
 import AccountsTable, { type AccountRow } from "@/components/admin/AccountsTable";
 
@@ -16,6 +18,7 @@ type Row = {
   posting_blocked: boolean;
   applications_blocked: boolean;
   plan_overrides: unknown;
+  share_blocked: string[] | null;
   profiles: { id: string; email: string; status: AccountStatus; created_at: string } | null;
 };
 
@@ -27,7 +30,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
   const plans = await getPlans();
   const { data } = await createAdminClient()
     .from("clubs")
-    .select("name, phone, tariff, package_ends_at, plan_overrides, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
+    .select("name, phone, tariff, package_ends_at, plan_overrides, share_blocked, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -49,11 +52,12 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
         ],
         extra: (pkg ? [plans[pkg].name, `մինչև ${fmt(c.package_ends_at!, "short")}`] : ["Փաթեթ չկա"]) as [string, string?],
         planId: pkg,
+        shareBlocked: SHARE_NETWORK_IDS.filter((id) => (c.share_blocked ?? []).includes(id)),
         overrides: pkg ? cleanOverrides(c.plan_overrides) : {},
       };
     })
     .filter((r) => !q || `${r.name} ${r.email} ${r.phone ?? ""}`.toLowerCase().includes(q));
 
   // Only the super admin gives or takes away a plan.
-  return <AccountsTable title="Ակումբներ" nameHeader="Ակումբ" extraHeader="Փաթեթ" plans={me.isSuper ? plans : undefined} rows={rows} />;
+  return <AccountsTable title="Ակումբներ" nameHeader="Ակումբ" extraHeader="Փաթեթ" plans={me.isSuper ? plans : undefined} shareNetworks={await getShareNetworks()} rows={rows} />;
 }

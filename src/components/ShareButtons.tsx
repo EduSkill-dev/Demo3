@@ -8,8 +8,20 @@ import { SHARE_NETWORKS, shareHref, type ShareNetwork } from "@/lib/share";
 const pill = "flex h-11 items-center justify-center rounded-full border-2 border-spruce-900 px-4 text-sm font-semibold text-ink hover:bg-sand dark:border-line";
 
 // Sharing a hike: copy its link, or send it to one of the social networks
-// the admins switched on (`networks`; none = only the copy button).
-export default function ShareButtons({ url, text = "", networks }: { url: string; text?: string; networks: ShareNetwork[] }) {
+// the admins switched on (`networks`; none = only the copy button). A
+// network an admin closed for this club (`blocked`) keeps its button, but
+// the button is inactive.
+export default function ShareButtons({
+  url,
+  text = "",
+  networks,
+  blocked = [],
+}: {
+  url: string;
+  text?: string;
+  networks: ShareNetwork[];
+  blocked?: string[];
+}) {
   const t = useT();
   const [note, setNote] = useState<string | null>(null);
 
@@ -34,13 +46,20 @@ export default function ShareButtons({ url, text = "", networks }: { url: string
     <div>
       <div className="flex flex-wrap gap-2">
         <CopyLinkButton href={url} label={t("share.copyLink")} copiedLabel={t("calendar.copied")} className={pill} />
-        {SHARE_NETWORKS.filter((n) => networks.includes(n.id)).map((n) => (
-          <button key={n.id} data-view type="button" onClick={() => share(n.id)} className={pill}>
-            {n.name}
-          </button>
-        ))}
+        {SHARE_NETWORKS.filter((n) => networks.includes(n.id)).map((n) =>
+          blocked.includes(n.id) ? (
+            <button key={n.id} type="button" disabled aria-disabled="true" title={t("share.closedForClub")} className={`${pill} cursor-not-allowed opacity-45 hover:bg-transparent`}>
+              {n.name}
+            </button>
+          ) : (
+            <button key={n.id} data-view type="button" onClick={() => share(n.id)} className={pill}>
+              {n.name}
+            </button>
+          )
+        )}
       </div>
       {note && <p className="mt-2 text-xs text-muted" aria-live="polite">{note}</p>}
+      {networks.some((id) => blocked.includes(id)) && <p className="mt-2 text-xs text-muted">{t("share.closedForClub")}</p>}
     </div>
   );
 }

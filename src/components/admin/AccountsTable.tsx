@@ -2,6 +2,8 @@ import { STATUS_LABELS, type AccountLimit, type AccountStatus } from "@/lib/admi
 import AccountActions, { LimitSwitches } from "./AccountActions";
 import SearchBox from "./SearchBox";
 import ClubPlanEditor from "./ClubPlanEditor";
+import ClubShareEditor from "./ClubShareEditor";
+import type { ShareNetwork } from "@/lib/share";
 import type { Plans, PlanOverrides } from "@/lib/plans/registry";
 
 export type AccountRow = {
@@ -14,6 +16,7 @@ export type AccountRow = {
   extra?: [string, string?]; // e.g. the club's package and, under it, until when
   planId?: string | null; // the club's active plan, for the plan window
   overrides?: PlanOverrides; // what this club has apart from its plan
+  shareBlocked?: ShareNetwork[]; // clubs: social networks closed for this club
   limits: { key: AccountLimit; blocked: boolean }[]; // functions an admin can force off
 };
 
@@ -34,12 +37,14 @@ export default function AccountsTable({
   nameHeader,
   extraHeader,
   plans,
+  shareNetworks,
   rows,
 }: {
   title: string;
   nameHeader: string;
   extraHeader?: string;
   plans?: Plans; // given = the plan can be changed here (super admin)
+  shareNetworks?: ShareNetwork[]; // clubs list: what the platform has switched on
   rows: AccountRow[];
 }) {
   return (
@@ -96,7 +101,12 @@ export default function AccountsTable({
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
                 </td>
                 <td className={`${td} text-center`}>
-                  <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
+                  <div className="flex items-start justify-center gap-1.5">
+                    <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
+                    {shareNetworks && r.shareBlocked && (
+                      <ClubShareEditor userId={r.userId} label={r.name || r.email} blocked={r.shareBlocked} platform={shareNetworks} />
+                    )}
+                  </div>
                 </td>
                 <td className={td}>
                   <AccountActions userId={r.userId} status={r.status} label={r.name || r.email} />

@@ -965,6 +965,19 @@ async function main() {
           && JSON.stringify(shareAfter) === JSON.stringify(shareBefore) && (shareDirect.data || []).length === 0,
         `admin=${shareByAdmin.status} bad=${shareBad.status} save=${shareSame.status} direct=${(shareDirect.data || []).length}`);
 
+      // …and one club can have single networks closed.
+      const closeBad = await act({ action: 'club.setShare', userId: ids.club, blocked: ['myspace'] }, superCookie);
+      const closeInd = await act({ action: 'club.setShare', userId: ids.ind2, blocked: [] }, superCookie);
+      const closeTwo = await act({ action: 'club.setShare', userId: ids.club, blocked: ['viber', 'facebook'] }, superCookie);
+      await signIn('club');
+      await anon.from('clubs').update({ share_blocked: [] }).eq('id', clubA);
+      const shareRow = (await admin.from('clubs').select('share_blocked').eq('id', clubA).single()).data?.share_blocked;
+      const reopen = await act({ action: 'club.setShare', userId: ids.club, blocked: [] }, superCookie);
+      check('sharing: an admin closes single networks for one club; the club cannot reopen them itself',
+        closeBad.status === 400 && closeInd.status === 400 && closeTwo.status === 200
+          && JSON.stringify(shareRow) === JSON.stringify(['facebook', 'viber']) && reopen.status === 200,
+        `bad=${closeBad.status} ind=${closeInd.status} set=${closeTwo.status} row=${JSON.stringify(shareRow)} reopen=${reopen.status}`);
+
       // Plans: only the super admin edits them or hands them out.
       const proRow = dbPackages.find((x) => x.id === 'pro');
       const samePlan = { action: 'plan.save', id: 'pro', priceAmd: proRow.price_amd, isAvailable: proRow.is_available, config: proRow.config };

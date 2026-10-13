@@ -474,6 +474,7 @@ const en: DeepPartial<Dictionary> = {
     copyText: "Copy the announcement",
     link: "Link to the hike",
     copyLink: "Copy link",
+    closedForClub: "Sharing on the networks with greyed-out buttons has been switched off for your club by an administrator.",
     instagramCopied: "Link copied. Paste it in Instagram (for example in a story or your profile link).",
     organiser: "Organiser",
     signUp: "Sign up",

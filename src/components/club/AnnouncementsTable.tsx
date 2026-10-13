@@ -35,11 +35,13 @@ export default function AnnouncementsTable({
   canRepublish,
   clubName,
   shareNetworks,
+  shareBlocked,
 }: {
   rows: ListingRow[];
   canRepublish: boolean;
   clubName: string;
   shareNetworks: ShareNetwork[]; // switched on by the admins, and only with the plan's share_buttons
+  shareBlocked: string[]; // of those, the ones an admin closed for this club
 }) {
   const t = useT();
   const fmt = useFormatDate();
@@ -186,6 +188,7 @@ export default function AnnouncementsTable({
           tour={{ id: sharing.id, title: sharing.title, date: sharing.date, endDate: sharing.endDate, regions: sharing.regions, difficulty: sharing.difficulty, overnight: sharing.overnight, left: Math.max(0, sharing.cap - sharing.taken) }}
           clubName={clubName}
           networks={shareNetworks}
+          blocked={shareBlocked}
           onClose={() => setSharing(null)}
         />
       )}

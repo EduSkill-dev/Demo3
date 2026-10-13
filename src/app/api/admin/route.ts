@@ -7,7 +7,7 @@ import { ACCOUNT_LIMITS, ADMIN_PERMS, type AccountLimit, type AccountStatus, typ
 import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
 import { SIGHTS_TAG } from "@/lib/sights";
-import { SHARE_NETWORKS } from "@/lib/share";
+import { SHARE_NETWORKS, SHARE_NETWORK_IDS } from "@/lib/share";
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
 import { REGIONS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
@@ -258,6 +258,30 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true });
+  },
+
+  // The social networks closed for one club: its buttons stay visible there
+  // but do not work. (What the platform shows at all is share.save.)
+  async "club.setShare"(ctx, body) {
+    const t = await targetAccount(ctx, str(body.userId));
+    if (t.error) return t.error;
+    if (t.account.role !== "club") return fail("Այս կարգավորումը միայն ակումբների համար է։");
+    if (!Array.isArray(body.blocked) || (body.blocked as unknown[]).some((x) => !(SHARE_NETWORK_IDS as unknown[]).includes(x))) {
+      return fail("Անհայտ սոց. ցանց։");
+    }
+    const blocked = SHARE_NETWORK_IDS.filter((id) => (body.blocked as unknown[]).includes(id));
+    const { error } = await ctx.db.from("clubs").update({ share_blocked: blocked }).eq("owner_id", t.account.id);
+    if (error) return fail(error.message, 500);
+    await logActivity({
+      actor: ctx.me.userId,
+      action: "admin.club_share_set",
+      targetType: "account",
+      targetId: t.account.id,
+      targetLabel: t.label,
+      meta: { closed: blocked.length ? SHARE_NETWORKS.filter((n) => blocked.includes(n.id)).map((n) => n.name).join(", ") : "ոչ մեկը" },
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true, blocked });
   },
 
   // Super admin only: what a plan costs and allows. Every capability named in

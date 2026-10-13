@@ -70,6 +70,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.text_saved": "Խմբագրեց կայքի տեքստը",
   "admin.sight_saved": "Խմբագրեց տեսարժան վայրերի ցանկը",
   "admin.share_saved": "Փոխեց սոց. ցանցերում կիսվելու կարգավորումները",
+  "admin.club_share_set": "Փոխեց ակումբի կիսվելու հնարավորությունը",
   "admin.plan_saved": "Փոխեց փաթեթի կարգավորումները",
   "admin.club_plan_set": "Փոխեց ակումբի փաթեթը",
   "admin.admin_created": "Ստեղծեց ադմին",
