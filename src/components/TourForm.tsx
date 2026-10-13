@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage } from "@/lib/storage";
+import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import type { Tour } from "@/types/database";
 import { CANCEL_HOUR_OPTIONS, DEFAULT_CANCEL_HOURS, DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
 import SightPicker, { type SightOption } from "@/components/SightPicker";
@@ -277,7 +277,7 @@ export default function TourForm({
         <input
           id="photos"
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={IMAGE_ACCEPT}
           multiple
           onChange={handleFiles}
           disabled={previews.length >= MAX_PHOTOS}

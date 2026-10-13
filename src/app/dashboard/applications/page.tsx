@@ -14,6 +14,7 @@ type Raw = {
   tour_id: string;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  attended: boolean | null;
   profiles: {
     first_name: string | null;
     last_name: string | null;
@@ -46,7 +47,7 @@ export default async function ApplicationsPage() {
   const { data } = tours.size
     ? await supabase
         .from("bookings")
-        .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, profiles(first_name, last_name, birth_date, age, gender, email, phone)")
+        .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, attended, profiles(first_name, last_name, birth_date, age, gender, email, phone)")
         .in("tour_id", [...tours.keys()])
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -65,6 +66,7 @@ export default async function ApplicationsPage() {
       tourDate: tour.date,
       cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
       person: b.profiles,
+      attended: b.attended,
       emergency: b.emergency_contact_name && b.emergency_contact_phone ? { name: b.emergency_contact_name, phone: b.emergency_contact_phone } : null,
     };
   });

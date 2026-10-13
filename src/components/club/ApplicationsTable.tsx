@@ -25,6 +25,7 @@ export type ApplicationRow = {
     email: string;
     phone: string | null;
   } | null;
+  attended: boolean | null; // the club's roll call: true came, false did not, null not marked
   emergency: { name: string; phone: string } | null; // left by the participant, for this hike's organiser only
 };
 
@@ -44,6 +45,22 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
   const router = useRouter();
   const [open, setOpen] = useState<ApplicationRow | null>(null);
   const [read, setRead] = useState<Set<string>>(new Set());
+  const [marks, setMarks] = useState<Record<string, boolean | null>>({});
+  const [markError, setMarkError] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
+  const attendedOf = (r: ApplicationRow) => (r.id in marks ? marks[r.id] : r.attended);
+
+  // The roll call: only for confirmed sign-ups, from the day of the hike on.
+  async function mark(r: ApplicationRow, value: boolean) {
+    const next = attendedOf(r) === value ? null : value; // pressing the same mark again clears it
+    setMarkError(null);
+    setMarks((m) => ({ ...m, [r.id]: next }));
+    const { error } = await createClient().rpc("mark_attendance", { p_booking: r.id, p_attended: next });
+    if (error) {
+      setMarks((m) => ({ ...m, [r.id]: r.attended }));
+      setMarkError(error.message);
+    }
+  }
 
   const fmt = (iso: string, withTime = false) => fmtDate(iso, withTime ? "dateTime" : "short");
 
@@ -97,13 +114,16 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
 
   return (
     <>
+      <p className="mb-2 text-xs text-muted">{t("applications.attendanceHint")}</p>
+      {markError && <p className="mb-2 text-sm text-red-600">{markError}</p>}
       <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[560px] text-sm">
+        <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-4 py-3">{t("applications.colTour")}</th>
               <th className="px-4 py-3">{t("applications.colApplication")}</th>
               <th className="px-4 py-3">{t("applications.colDate")}</th>
+              <th className="px-4 py-3 text-center">{t("applications.colAttendance")}</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -123,6 +143,34 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
                   </td>
                   <td className="px-4 py-3">{r.seq}/{r.cap}</td>
                   <td className="whitespace-nowrap px-4 py-3">{fmt(r.createdAt, true)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-center font-normal">
+                    {r.status === "confirmed" && r.tourDate <= today ? (
+                      <span className="inline-flex gap-1.5">
+                        {([true, false] as const).map((v) => {
+                          const on = attendedOf(r) === v;
+                          return (
+                            <button
+                              key={String(v)}
+                              type="button"
+                              aria-pressed={on}
+                              onClick={() => mark(r, v)}
+                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                on
+                                  ? v
+                                    ? "border-green-600 bg-green-600 text-white"
+                                    : "border-red-600 bg-red-600 text-white"
+                                  : "border-line bg-surface text-ink hover:border-spruce-500"
+                              }`}
+                            >
+                              {v ? t("applications.came") : t("applications.absent")}
+                            </button>
+                          );
+                        })}
+                      </span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button data-view type="button" onClick={() => view(r)} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
                       {t("common.view")}

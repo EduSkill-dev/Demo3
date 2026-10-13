@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMyClub } from "@/lib/myClub";
@@ -8,7 +9,7 @@ import { addDays, isDay } from "@/lib/calendar";
 // have on the chosen day(s), and the club's own hikes on them. Published
 // listings only — never a draft of another club, never a participant.
 //   ?date=YYYY-MM-DD [&end=YYYY-MM-DD] [&exclude=<own tour id being edited>]
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   const mine = await getMyClub();
   if (!mine) return NextResponse.json({ error: "Մուտք գործեք որպես ակումբ։" }, { status: 401 });
   if (!mine.limits.config.planner_other_clubs) return NextResponse.json({ error: "Պլանավորիչը Ձեր փաթեթում ներառված չէ։" }, { status: 403 });
@@ -40,3 +41,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ others, own }, { headers: { "Cache-Control": "no-store" } });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const GET = withErrorReport("club", handleGET);

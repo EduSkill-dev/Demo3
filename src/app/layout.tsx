@@ -8,6 +8,7 @@ import { getSiteTexts } from "@/lib/siteTexts";
 import { getViewer } from "@/lib/viewer";
 import FrozenGuard from "@/components/layout/FrozenGuard";
 import InputGuard from "@/components/layout/InputGuard";
+import ErrorReporter from "@/components/ErrorReporter";
 import { FavoritesProvider } from "@/components/FavoritesProvider";
 import "./globals.css";
 
@@ -41,6 +42,7 @@ export default async function RootLayout({
       <body className="flex min-h-screen flex-col bg-stone font-sans text-[18px] leading-normal text-ink">
         <I18nProvider locale={locale} overrides={overrides}>
           <InputGuard />
+          <ErrorReporter />
           <SiteHeader />
           {/* The header stays usable (language, theme, log out); a frozen
               account can only look at everything below it. */}

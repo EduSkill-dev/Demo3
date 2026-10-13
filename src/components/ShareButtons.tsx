@@ -26,7 +26,9 @@ export default function ShareButtons({
   const [note, setNote] = useState<string | null>(null);
 
   async function share(network: ShareNetwork) {
-    const full = url.startsWith("/") ? window.location.origin + url : url;
+    // The link says where it was shared, so the club's report can count it.
+    const base = url.startsWith("/") ? window.location.origin + url : url;
+    const full = `${base}${base.includes("?") ? "&" : "?"}ref=${network}`;
     setNote(null);
     if (network === "instagram") {
       // No share address: the link goes to the clipboard, Instagram opens.
@@ -45,7 +47,7 @@ export default function ShareButtons({
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <CopyLinkButton href={url} label={t("share.copyLink")} copiedLabel={t("calendar.copied")} className={pill} />
+        <CopyLinkButton href={`${url}${url.includes("?") ? "&" : "?"}ref=link`} label={t("share.copyLink")} copiedLabel={t("calendar.copied")} className={pill} />
         {SHARE_NETWORKS.filter((n) => networks.includes(n.id)).map((n) =>
           blocked.includes(n.id) ? (
             <button key={n.id} type="button" disabled aria-disabled="true" title={t("share.closedForClub")} className={`${pill} cursor-not-allowed opacity-45 hover:bg-transparent`}>

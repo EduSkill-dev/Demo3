@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getPublicTours } from "@/lib/publicTours";
 import { getT } from "@/i18n/server";
 import { REGIONS } from "@/lib/catalog";
-import { SPOTLIGHT } from "@/lib/spotlight";
+import { getSpotlight } from "@/lib/spotlight";
 import TourGrid from "@/components/tour/TourGrid";
 import CustomTourCta from "@/components/requests/CustomTourCta";
 
@@ -11,6 +11,7 @@ const field =
 
 export default async function HomePage() {
   const t = await getT();
+  const spotlight = await getSpotlight();
   const all = await getPublicTours();
   const tours = all.slice(0, 6);
   // The clubs that have something to book right now, for the hero's filter.
@@ -59,34 +60,58 @@ export default async function HomePage() {
               club of the month (see src/lib/spotlight.ts). */}
           <div className="space-y-4">
             <article className="flex items-center gap-5 rounded-[28px] bg-card p-4 text-spruce-900 shadow-xl">
-              <img
-                src={SPOTLIGHT.hiker.photo}
-                alt={SPOTLIGHT.hiker.name}
-                className="h-36 w-36 shrink-0 rounded-[20px] object-cover sm:h-52 sm:w-52"
-              />
+              {spotlight.hiker?.photo ? (
+                <img src={spotlight.hiker.photo} alt={spotlight.hiker.name} className="h-36 w-36 shrink-0 rounded-[20px] object-cover sm:h-52 sm:w-52" />
+              ) : (
+                <span className="flex h-36 w-36 shrink-0 items-center justify-center rounded-[20px] bg-spruce-100 text-spruce-700 sm:h-52 sm:w-52" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" className="h-16 w-16 sm:h-24 sm:w-24" fill="currentColor">
+                    <path d="M13 7 3 26h12Z" opacity=".55" />
+                    <path d="M20 12 11 26h18Z" />
+                  </svg>
+                </span>
+              )}
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-snug text-terracotta-500">
                   🏅 {t("home.hikerLabel")}
                 </p>
-                <p className="mt-2 text-2xl font-bold leading-tight sm:text-[26px]">{SPOTLIGHT.hiker.name}</p>
-                <p className="mt-2 text-sm text-[#5B6B66]">{t("home.hikerStat", { count: SPOTLIGHT.hiker.hikes })}</p>
+                {spotlight.hiker ? (
+                  <>
+                    <p className="mt-2 text-2xl font-bold leading-tight sm:text-[26px]">{spotlight.hiker.name}</p>
+                    <p className="mt-2 text-sm text-[#5B6B66]">{t("home.hikerStat", { count: spotlight.hiker.hikes })}</p>
+                  </>
+                ) : (
+                  <p className="mt-2 text-base font-semibold leading-snug text-[#5B6B66]">{t("home.hikerEmpty")}</p>
+                )}
               </div>
             </article>
 
             <article className="flex items-center gap-5 rounded-[28px] bg-card p-4 text-spruce-900 shadow-xl">
-              <img
-                src={SPOTLIGHT.club.photo}
-                alt={SPOTLIGHT.club.name}
-                className="h-24 w-24 shrink-0 rounded-full object-contain sm:h-28 sm:w-28"
-              />
+              {spotlight.club?.photo ? (
+                <img src={spotlight.club.photo} alt={spotlight.club.name} className="h-24 w-24 shrink-0 rounded-full object-contain sm:h-28 sm:w-28" />
+              ) : (
+                <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-spruce-100 text-spruce-700 sm:h-28 sm:w-28" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" className="h-12 w-12" fill="currentColor">
+                    <path d="M13 7 3 26h12Z" opacity=".55" />
+                    <path d="M20 12 11 26h18Z" />
+                  </svg>
+                </span>
+              )}
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-snug text-terracotta-500">
                   🏆 {t("home.clubLabel")}
                 </p>
-                <p className="mt-1.5 text-xl font-bold leading-tight">{SPOTLIGHT.club.name}</p>
-                <p className="mt-1 text-sm text-[#5B6B66]">
-                  {t("home.clubStat", { hikes: SPOTLIGHT.club.hikes, people: SPOTLIGHT.club.people })}
-                </p>
+                {spotlight.club ? (
+                  <>
+                    <p className="mt-1.5 text-xl font-bold leading-tight">
+                      <Link href={spotlight.club.href} className="hover:underline">{spotlight.club.name}</Link>
+                    </p>
+                    <p className="mt-1 text-sm text-[#5B6B66]">
+                      {t("home.clubStat", { hikes: spotlight.club.hikes, people: spotlight.club.people })}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1.5 text-base font-semibold leading-snug text-[#5B6B66]">{t("home.clubEmpty")}</p>
+                )}
               </div>
             </article>
           </div>

@@ -55,6 +55,24 @@ export default function TourSignup({
   const [emRemember, setEmRemember] = useState(false);
   const emergency = { name: emName, phone: emPhone, remember: emRemember };
 
+  // A shared link carries ?ref=<network>. It is remembered for this hike
+  // while the tab is open, so signing in on the way does not lose it.
+  const sourceOf = () => {
+    try {
+      return sessionStorage.getItem(`ref:${tourId}`);
+    } catch {
+      return null;
+    }
+  };
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get("ref");
+      if (ref) sessionStorage.setItem(`ref:${tourId}`, ref.slice(0, 20));
+    } catch {
+      /* private mode */
+    }
+  }, [tourId]);
+
   useEffect(() => {
     (async () => {
       const supabase = createClient();
@@ -102,7 +120,7 @@ export default function TourSignup({
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tour_id: tourId, emergency }),
+      body: JSON.stringify({ tour_id: tourId, emergency, source: sourceOf() }),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string; booking?: { id: string } };
     setBusy(false);
@@ -115,6 +133,10 @@ export default function TourSignup({
     setShowPay(false);
     if (data.booking?.id) {
       setBooking({ id: data.booking.id, status: "confirmed" });
+      const source = sourceOf();
+      if (source) {
+        fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "source", booking_id: data.booking.id, source }) }).catch(() => {});
+      }
       // The payment route made the booking; the contact follows it.
       if (emName.trim() || emPhone.trim()) {
         const res = await fetch("/api/bookings", {

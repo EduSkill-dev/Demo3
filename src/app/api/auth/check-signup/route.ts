@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -6,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // confirmation email goes out): is this phone number, or this club name,
 // already registered? The database refuses duplicates either way (migration
 // 0034); this is what lets the form say so in plain words.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const limited = await tooMany(req, "signup-check", 40, 60);
   if (limited) return limited;
 
@@ -21,3 +22,6 @@ export async function POST(req: Request) {
   ]);
   return NextResponse.json({ phoneTaken: phoneCheck.data === true, nameTaken: nameCheck.data === true });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("auth", handlePOST);

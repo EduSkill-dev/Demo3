@@ -40,6 +40,7 @@ export interface Club {
   applications_blocked: boolean; // an admin switched off new sign-ups
   plan_overrides: Record<string, number | boolean>; // what the super admin changed for this club alone
   share_blocked: string[]; // social networks an admin closed for this club (lib/share ids)
+  report_items: string[] | null; // monthly report lines set for this club (null = the plan's list)
   created_at: string;
 }
 

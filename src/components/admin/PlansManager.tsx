@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PACKAGE_IDS } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, PLAN_GROUPS, type Plan, type PlanGroup, type Plans } from "@/lib/plans/registry";
 import { adminAction, adminButton, adminInput } from "./adminApi";
+import { REPORT_GROUPS, REPORT_ITEMS, REPORT_KEYS, cleanReportItems, type ReportGroup, type ReportItem } from "@/lib/report/items";
 
 // One card per plan. The fields are built from PLAN_FEATURES, so a capability
 // added to the registry shows up here by itself.
@@ -33,6 +34,7 @@ function PlanCard({ plan, clubs }: { plan: Plan; clubs: number }) {
   const [available, setAvailable] = useState(plan.isAvailable);
   const [config, setConfig] = useState<Record<string, number | boolean>>({ ...plan.config });
   const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState<ReportItem[]>(cleanReportItems(plan.reportItems) ?? REPORT_KEYS);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +47,7 @@ function PlanCard({ plan, clubs }: { plan: Plan; clubs: number }) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await adminAction({ action: "plan.save", id: plan.id, priceAmd: Number(price), isAvailable: available, config });
+    const res = await adminAction({ action: "plan.save", id: plan.id, priceAmd: Number(price), isAvailable: available, config, reportItems: report });
     setBusy(false);
     if (res.error !== null) return setError(res.error);
     setSaved(true);
@@ -140,6 +142,32 @@ function PlanCard({ plan, clubs }: { plan: Plan; clubs: number }) {
           )}
         </section>
       ))}
+
+      <details className="mt-4 border-t border-line pt-4">
+        <summary className={`${heading} cursor-pointer select-none`}>
+          Ամսական հաշվետվության տողերը ({report.length}/{REPORT_KEYS.length})
+        </summary>
+        <p className="mt-2 text-xs text-muted">Այս փաթեթի ակումբների հաշվետվության լռելյայն կազմը։ Առանձին ակումբի համար փոխվում է «Ակումբներ» բաժնում։</p>
+        {(Object.keys(REPORT_GROUPS) as ReportGroup[]).map((g) => (
+          <div key={g} className="mt-3 space-y-2">
+            <p className="text-xs font-semibold text-ink">{REPORT_GROUPS[g]}</p>
+            {REPORT_ITEMS.filter((i) => i.group === g).map((i) => (
+              <label key={i.key} className="flex items-start gap-2.5 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={report.includes(i.key)}
+                  onChange={(e) => {
+                    setReport((cur) => (e.target.checked ? REPORT_KEYS.filter((k) => k === i.key || cur.includes(k)) : cur.filter((k) => k !== i.key)));
+                    touch();
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-spruce-500"
+                />
+                {i.label}
+              </label>
+            ))}
+          </div>
+        ))}
+      </details>
 
       <div className="mt-5 flex items-center gap-3">
         <button type="submit" disabled={busy} className={adminButton}>

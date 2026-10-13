@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,7 +8,7 @@ import { notifyBlocked } from "@/lib/admin";
 // blocked account gets no link — it is told so on the page and by email.
 // Everything else answers { blocked: false }, whether or not the address has
 // an account, so the page cannot be used to find out who is registered.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const limited = await tooMany(req, "forgot", 10, 60);
   if (limited) return limited;
 
@@ -22,3 +23,6 @@ export async function POST(req: Request) {
   await notifyBlocked(p.id);
   return NextResponse.json({ blocked: true });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("auth", handlePOST);

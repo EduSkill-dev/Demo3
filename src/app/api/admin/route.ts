@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -8,6 +9,7 @@ import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
 import { SIGHTS_TAG } from "@/lib/sights";
 import { SHARE_NETWORKS, SHARE_NETWORK_IDS } from "@/lib/share";
+import { REPORT_KEYS, cleanReportItems } from "@/lib/report/items";
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
 import { REGIONS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
@@ -60,6 +62,12 @@ async function targetAdmin({ db }: Ctx, userId: string) {
 
 const cleanPerms = (v: unknown): AdminPerm[] =>
   ADMIN_PERMS.filter((k) => Array.isArray(v) && (v as unknown[]).includes(k));
+
+// A list of report lines as stored: null when it is every line (or not a list).
+const reportList = (v: unknown) => {
+  const items = cleanReportItems(v);
+  return items && items.length < REPORT_KEYS.length ? items : null;
+};
 
 const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> = {
   // Freeze, block or re-activate an individual's or a club's account.
@@ -284,6 +292,42 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     return NextResponse.json({ ok: true, blocked });
   },
 
+  // Opens an automatic block (an address, or a paused form) before its time.
+  async "block.remove"(ctx, body) {
+    const kind = str(body.kind);
+    const key = str(body.key);
+    if (!kind || !key) return fail("Նշեք՝ ինչը բացել։");
+    const { data, error } = await ctx.db.from("security_blocks").delete().eq("kind", kind).eq("key", key).select("kind");
+    if (error) return fail(error.message, 500);
+    if (!(data ?? []).length) return fail("Այս արգելքն արդեն չկա։", 404);
+    // The counters that caused it start again from zero.
+    if (kind === "ip") await ctx.db.from("rate_hits").delete().like("key", `%${key}%`);
+    await logActivity({ actor: ctx.me.userId, action: "admin.block_removed", targetType: "block", targetLabel: `${kind}: ${key}`, ip: ctx.ip });
+    return NextResponse.json({ ok: true });
+  },
+
+  // Which lines of the monthly report one club sees. items: null puts the
+  // club back on its plan's list.
+  async "club.setReport"(ctx, body) {
+    const t = await targetAccount(ctx, str(body.userId));
+    if (t.error) return t.error;
+    if (t.account.role !== "club") return fail("Այս կարգավորումը միայն ակումբների համար է։");
+    if (body.items !== null && !Array.isArray(body.items)) return fail("Նշեք հաշվետվության տողերը։");
+    const items = body.items === null ? null : cleanReportItems(body.items);
+    const { error } = await ctx.db.from("clubs").update({ report_items: items }).eq("owner_id", t.account.id);
+    if (error) return fail(error.message, 500);
+    await logActivity({
+      actor: ctx.me.userId,
+      action: "admin.club_report_set",
+      targetType: "account",
+      targetId: t.account.id,
+      targetLabel: t.label,
+      meta: items === null ? { reset: true } : { lines: items.length },
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true, items });
+  },
+
   // Super admin only: what a plan costs and allows. Every capability named in
   // the registry must arrive with the right type; nothing else is stored.
   async "plan.save"(ctx, body) {
@@ -312,6 +356,8 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       .update({
         price_amd: price,
         is_available: body.isAvailable === true,
+        // The report's default lines: all of them is stored as "no list".
+        ...(body.reportItems === undefined ? {} : { report_items: reportList(body.reportItems) }),
         config,
         // The older columns are kept equal to the config they were replaced by.
         max_listings: config.max_active_tours,
@@ -497,7 +543,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   },
 };
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const me = await getAdmin();
   if (!me) return fail("Մուտք գործեք որպես ադմին։", 401);
 
@@ -510,3 +556,6 @@ export async function POST(req: Request) {
 
   return handler({ me, ip: clientIp(req), db: createAdminClient() }, body);
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("admin", handlePOST);

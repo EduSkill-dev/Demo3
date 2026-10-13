@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EXPIRY_REMINDER_DAYS, activePackage } from "@/lib/catalog";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 //      platform news (registered accounts unless switched off, plus visitors
 //      who subscribed)
 // Vercel Cron sends "Authorization: Bearer $CRON_SECRET"; anyone else is refused.
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -122,3 +123,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ ok: true, reminders, digest: { tours: tours.length, sent: digests } });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const GET = withErrorReport("cron", handleGET);

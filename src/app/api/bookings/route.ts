@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { inactiveAccountError } from "@/lib/admin";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -26,12 +27,13 @@ type TourRow = {
 // trusted place: the browser never sees an email key, and a failed send never
 // loses the booking. Reads use the caller's session (RLS); writes use the
 // service role, because browsers may no longer write bookings directly.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     action?: string;
     tour_id?: string;
     booking_id?: string;
     emergency?: unknown; // { name, phone, remember } — optional
+    source?: unknown; // the ?ref= of the link that brought them, if any
   };
 
   const supabase = await createClient();
@@ -71,6 +73,19 @@ export async function POST(req: Request) {
       await admin.from("emergency_contacts").upsert({ user_id: auth.user!.id, ...parsed.contact, updated_at: new Date().toISOString() });
     }
   };
+
+  // Only the networks we hand out links for; anything else counts as Culmen itself.
+  const SOURCES = ["facebook", "instagram", "whatsapp", "viber", "telegram", "link"];
+  const source = typeof body.source === "string" && SOURCES.includes(body.source) ? body.source : null;
+
+  /* ----------------------------------------------------- source of a paid one */
+  // The payment route created the booking; the page adds where the person came from.
+  if (body.action === "source") {
+    if (source) {
+      await admin.from("bookings").update({ source }).eq("id", body.booking_id ?? "").eq("user_id", auth.user.id).is("source", null);
+    }
+    return NextResponse.json({ ok: true });
+  }
 
   /* ------------------------------------------------- emergency contact only */
   // After a paid booking (created by the payment route), or to change it.
@@ -212,7 +227,7 @@ export async function POST(req: Request) {
     }
     const { error: updateError } = await admin
       .from("bookings")
-      .update({ status: "confirmed" })
+      .update({ status: "confirmed", source, attended: null })
       .eq("id", existing.id);
     if (updateError) {
       return NextResponse.json(
@@ -224,7 +239,7 @@ export async function POST(req: Request) {
   } else {
     const { data, error } = await admin
       .from("bookings")
-      .insert({ tour_id: tour.id, user_id: auth.user.id, status: "confirmed" })
+      .insert({ tour_id: tour.id, user_id: auth.user.id, status: "confirmed", source })
       .select("id")
       .single();
 
@@ -255,3 +270,6 @@ export async function POST(req: Request) {
     email: emailStatus(result),
   });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("bookings", handlePOST);

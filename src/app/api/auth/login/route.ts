@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { tooMany } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ import { clientIp, logActivity } from "@/lib/admin";
 //     account (same password), and
 //   * a blocked account is turned away even before its ban is noticed.
 // The session cookie is set by the server client.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const limited = await tooMany(req, "login", 30, 10);
   if (limited) return limited;
 
@@ -66,3 +67,6 @@ export async function POST(req: Request) {
   const target = p?.role === "admin" ? "/admin" : p?.role === "club" ? "/dashboard" : "/account";
   return NextResponse.json({ ok: true, role: p?.role ?? null, target });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("auth", handlePOST);

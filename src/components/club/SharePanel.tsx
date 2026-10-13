@@ -37,7 +37,7 @@ export default function SharePanel({
 }) {
   const t = useT();
   const words = dateWords(t);
-  const url = `${typeof window === "undefined" ? "" : window.location.origin}/tours/${tour.id}`;
+  const url = `${typeof window === "undefined" ? "" : window.location.origin}/tours/${tour.id}?ref=link`;
   const many = tour.endDate && tour.endDate > tour.date;
   const [text, setText] = useState(() =>
     [

@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { getPublicTours } from "@/lib/publicTours";
 import { createClient } from "@/lib/supabase/server";
 import { getT } from "@/i18n/server";
@@ -5,7 +6,7 @@ import { addDays, todayInYerevan } from "@/lib/calendar";
 import { buildIcs, icsResponse, siteOrigin } from "@/lib/ics";
 
 // One club's published hikes as a calendar feed.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+async function handleGET(req: Request, { params }: { params: { id: string } }) {
   // By id, or by the club's slug.
   let clubId = params.id;
   if (!/^[0-9a-f-]{36}$/i.test(clubId)) {
@@ -24,3 +25,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const name = tours[0] ? `Culmen · ${tours[0].club.name}` : undefined;
   return icsResponse(buildIcs(tours, siteOrigin(req), labels, name), "culmen-club.ics");
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const GET = withErrorReport("calendar", handleGET);

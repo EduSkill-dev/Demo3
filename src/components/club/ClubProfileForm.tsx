@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage, removeStored } from "@/lib/storage";
+import { uploadImage, removeStored, IMAGE_ACCEPT } from "@/lib/storage";
 import { CLUB_FOCUS } from "@/lib/catalog";
 import { useT } from "@/i18n/client";
 import type { Club } from "@/types/database";
@@ -81,7 +81,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
               {busy === "photo" ? "..." : t("clubData.upload")}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT}
                 className="sr-only"
                 disabled={busy === "photo"}
                 onChange={(e) => {

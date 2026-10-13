@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { bookingRefusedByAdmin, inactiveAccountError } from "@/lib/admin";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ type TourRow = {
 // in src/lib/mockPayment.ts; swapping in a real provider means replacing that
 // one call and keeping the rest of this route. Payments, tariff changes and
 // bookings are written with the service role: browsers cannot write them.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as Body;
   const kind = body.kind === "booking" ? "booking" : "subscription";
 
@@ -295,3 +296,6 @@ export async function POST(req: Request) {
           : "failed",
   });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("payments", handlePOST);

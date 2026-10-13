@@ -1,9 +1,10 @@
+import { withErrorReport } from "@/lib/errors";
 import { getPublicTours } from "@/lib/publicTours";
 import { getT } from "@/i18n/server";
 import { buildIcs, icsResponse, siteOrigin } from "@/lib/ics";
 
 // One hike, for the "add to my calendar" button.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+async function handleGET(req: Request, { params }: { params: { id: string } }) {
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) return new Response("Not found", { status: 404 });
   const t = await getT();
   const labels = {
@@ -16,3 +17,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (tours.length === 0) return new Response("Not found", { status: 404 });
   return icsResponse(buildIcs(tours, siteOrigin(req), labels), "culmen-hike.ics");
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const GET = withErrorReport("calendar", handleGET);

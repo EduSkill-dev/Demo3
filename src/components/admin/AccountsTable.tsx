@@ -3,6 +3,8 @@ import AccountActions, { LimitSwitches } from "./AccountActions";
 import SearchBox from "./SearchBox";
 import ClubPlanEditor from "./ClubPlanEditor";
 import ClubShareEditor from "./ClubShareEditor";
+import ClubReportEditor from "./ClubReportEditor";
+import type { ReportItem } from "@/lib/report/items";
 import type { ShareNetwork } from "@/lib/share";
 import type { Plans, PlanOverrides } from "@/lib/plans/registry";
 
@@ -17,6 +19,7 @@ export type AccountRow = {
   planId?: string | null; // the club's active plan, for the plan window
   overrides?: PlanOverrides; // what this club has apart from its plan
   shareBlocked?: ShareNetwork[]; // clubs: social networks closed for this club
+  reportItems?: ReportItem[] | null; // clubs: the report lines set for this club (null = the plan's)
   limits: { key: AccountLimit; blocked: boolean }[]; // functions an admin can force off
 };
 
@@ -38,6 +41,7 @@ export default function AccountsTable({
   extraHeader,
   plans,
   shareNetworks,
+  planReports,
   rows,
 }: {
   title: string;
@@ -45,6 +49,7 @@ export default function AccountsTable({
   extraHeader?: string;
   plans?: Plans; // given = the plan can be changed here (super admin)
   shareNetworks?: ShareNetwork[]; // clubs list: what the platform has switched on
+  planReports?: Record<string, { name: string; items: ReportItem[] }>; // clubs list: each plan's default report
   rows: AccountRow[];
 }) {
   return (
@@ -105,6 +110,15 @@ export default function AccountsTable({
                     <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
                     {shareNetworks && r.shareBlocked && (
                       <ClubShareEditor userId={r.userId} label={r.name || r.email} blocked={r.shareBlocked} platform={shareNetworks} />
+                    )}
+                    {planReports && r.planId && planReports[r.planId] && (
+                      <ClubReportEditor
+                        userId={r.userId}
+                        label={r.name || r.email}
+                        planName={planReports[r.planId].name}
+                        planItems={planReports[r.planId].items}
+                        clubItems={r.reportItems ?? null}
+                      />
                     )}
                   </div>
                 </td>

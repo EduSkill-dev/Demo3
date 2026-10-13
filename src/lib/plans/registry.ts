@@ -47,6 +47,7 @@ export type Plan = {
   isAvailable: boolean; // false = shown as "coming soon", cannot be chosen
   rank: number; // higher = bigger plan
   config: PlanConfig;
+  reportItems: string[] | null; // the monthly report's default lines (null = all); see lib/report/items
 };
 export type Plans = Record<PackageId, Plan>;
 

@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -6,7 +7,7 @@ import { newTourEmail, sendEmail } from "@/lib/email";
 // The database trigger already wrote one notification row per follower; this
 // route turns those rows into emails — exactly once each, because it only
 // picks rows where emailed_at is still null and stamps them as it goes.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { tour_id?: string };
   if (!body.tour_id) {
     return NextResponse.json({ error: "Արշավի համարը պարտադիր է։" }, { status: 400 });
@@ -85,3 +86,6 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, total: rows?.length ?? 0, sent, skipped, failed });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("tours", handlePOST);

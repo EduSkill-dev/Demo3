@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMyClub } from "@/lib/myClub";
@@ -8,6 +9,8 @@ type Row = {
   created_at: string;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  attended: boolean | null;
+  source: string | null;
   tours: { title: string; date: string } | null;
   profiles: { first_name: string | null; last_name: string | null; birth_date: string | null; age: number | null; gender: string | null; email: string; phone: string | null } | null;
 };
@@ -33,7 +36,7 @@ function cell(value: string | number | null | undefined): string {
 // registrants_csv_export. Reads run under the club's session (RLS), so a
 // club can never export somebody else's hikes.
 //   ?tour=<id>  one hike; without it, all of the club's hikes.
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   const mine = await getMyClub();
   if (!mine) return NextResponse.json({ error: "Մուտք գործեք որպես ակումբ։" }, { status: 401 });
   const { config } = mine.limits;
@@ -50,13 +53,13 @@ export async function GET(req: Request) {
   const { data } = ids.length
     ? await supabase
         .from("bookings")
-        .select("seq, status, created_at, emergency_contact_name, emergency_contact_phone, tours(title, date), profiles(first_name, last_name, birth_date, age, gender, email, phone)")
+        .select("seq, status, created_at, emergency_contact_name, emergency_contact_phone, attended, source, tours(title, date), profiles(first_name, last_name, birth_date, age, gender, email, phone)")
         .in("tour_id", ids)
         .order("created_at", { ascending: true })
     : { data: [] };
   const rows = ((data ?? []) as unknown as Row[]).sort((a, b) => (a.tours?.date ?? "").localeCompare(b.tours?.date ?? "") || a.seq - b.seq);
 
-  const header = ["Արշավ", "Ամսաթիվ", "Հայտի համար", "Անուն", "Ազգանուն", "Հեռախոս", "Էլ. հասցե", "Տարիք", "Սեռ", "Կարգավիճակ", "Գրանցվել է", "Արտակարգ կոնտակտ", "Արտակարգ կոնտակտի հեռախոս"];
+  const header = ["Արշավ", "Ամսաթիվ", "Հայտի համար", "Անուն", "Ազգանուն", "Հեռախոս", "Էլ. հասցե", "Տարիք", "Սեռ", "Կարգավիճակ", "Գրանցվել է", "Արտակարգ կոնտակտ", "Արտակարգ կոնտակտի հեռախոս", "Ներկայություն", "Որտեղից է եկել"];
   const lines = rows.map((r) =>
     [
       r.tours?.title,
@@ -72,6 +75,8 @@ export async function GET(req: Request) {
       r.created_at.slice(0, 16).replace("T", " "),
       r.emergency_contact_name,
       r.emergency_contact_phone,
+      r.attended === true ? "Եկավ" : r.attended === false ? "Չեկավ" : "",
+      r.source ?? "Culmen",
     ]
       .map(cell)
       .join(",")
@@ -86,3 +91,6 @@ export async function GET(req: Request) {
     },
   });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const GET = withErrorReport("club", handleGET);

@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewer, type Viewer } from "@/lib/viewer";
@@ -263,7 +264,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   },
 };
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const viewer = await getViewer();
   if (!viewer) return fail("Մուտք գործիր։", 401);
   if (viewer.frozen) return fail("Ձեր հաշիվը սառեցված է․ գործողությունները ժամանակավորապես անհասանելի են։", 403);
@@ -274,3 +275,6 @@ export async function POST(req: Request) {
   if (!handler) return fail("Անհայտ գործողություն։");
   return handler({ viewer, db: createAdminClient(), ip: clientIp(req) }, body);
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("requests", handlePOST);

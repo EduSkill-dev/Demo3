@@ -4,7 +4,7 @@ import PasswordInput from "@/components/ui/PasswordInput";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage, removeStored } from "@/lib/storage";
+import { uploadImage, removeStored, IMAGE_ACCEPT } from "@/lib/storage";
 import { MIN_PASSWORD, authErrorMessage, confirmUrl } from "@/lib/authErrors";
 import { useT } from "@/i18n/client";
 import type { Profile } from "@/types/database";
@@ -132,7 +132,7 @@ export default function ProfileSettings({
               {busy === "photo" ? "..." : t("account.changePhoto")}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT}
                 className="sr-only"
                 disabled={busy === "photo"}
                 onChange={(e) => {

@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,7 +13,7 @@ const fail = (code: string, message: string, status = 400) => NextResponse.json(
 // paused when it is being flooded (see guardPublic), and so that a taken
 // phone number or club name is refused before the account exists and before
 // any confirmation email is sent.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const limited = await guardPublic(req, "register");
   if (limited) return limited;
 
@@ -60,3 +61,6 @@ export async function POST(req: Request) {
   if (data.user && data.user.identities?.length === 0) return fail("email_exists", "", 409);
   return NextResponse.json({ ok: true, session: !!data.session });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("auth", handlePOST);

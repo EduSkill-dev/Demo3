@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { clientIp, inactiveAccountError, logActivity } from "@/lib/admin";
@@ -5,7 +6,7 @@ import { deleteIndividual } from "@/lib/accountDeletion";
 
 // "Delete my account" for individuals; see deleteIndividual for what happens
 // to their bookings. A frozen account cannot delete itself.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
@@ -39,3 +40,6 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ ok: true, cancelled: result.cancelled });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("account", handlePOST);

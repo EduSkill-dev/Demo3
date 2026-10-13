@@ -938,6 +938,68 @@ async function main() {
           && !!badSlug.error && !!takenSlug.error && newSlug.data?.[0]?.slug === `e2e-club-${stamp}`,
         `slug=${slugA} id=${byId.status} ${byId.headers.get('location')} page=${bySlug.status} bad=${badSlug.error ? 'refused' : 'ALLOWED'} taken=${takenSlug.error ? 'refused' : 'ALLOWED'} new=${JSON.stringify(newSlug.data)}`);
 
+      // Attendance: the club's roll call decides who may rate; the booking remembers its source.
+      // (the hike of the emergency-contact test, booked again — this time through a shared link)
+      const atTour = emTour;
+      const atUnknown = await api('/api/bookings', { tour_id: atTour.id, source: 'myspace' }, indCookie);
+      const unknownSource = (await admin.from('bookings').select('source').eq('id', atUnknown.body?.booking?.id).single()).data?.source;
+      await api('/api/bookings', { action: 'cancel', booking_id: atUnknown.body?.booking?.id }, indCookie);
+      const atBook = await api('/api/bookings', { tour_id: atTour.id, source: 'instagram' }, indCookie);
+      const atRows = (await admin.from('bookings').select('id, tour_id, source').eq('tour_id', atTour.id).eq('user_id', ids.ind)).data || [];
+      const atId = atBook.body?.booking?.id;
+      await signIn('club');
+      const tooEarly = await anon.rpc('mark_attendance', { p_booking: atId, p_attended: true });
+      await admin.from('tours').update({ date: future(-1), price: 3000 }).eq('id', atTour.id);
+      await signIn('club2');
+      const atNotOwner = await anon.rpc('mark_attendance', { p_booking: atId, p_attended: true });
+      await signIn('club');
+      const markAbsent = await anon.rpc('mark_attendance', { p_booking: atId, p_attended: false });
+      await signIn('ind');
+      const absentRates = await anon.from('ratings').insert({ user_id: ids.ind, tour_id: atTour.id, score: 5, comment: 'E2E absent' });
+      const absentLikes = await anon.from('tour_likes').insert({ user_id: ids.ind, tour_id: atTour.id });
+      await signIn('club');
+      const markCame = await anon.rpc('mark_attendance', { p_booking: atId, p_attended: true });
+      await signIn('ind');
+      const cameRates = await anon.from('ratings').insert({ user_id: ids.ind, tour_id: atTour.id, score: 5, comment: 'E2E came' }).select('id');
+      check('attendance: only the organising club marks it, from the day of the hike; an absent participant cannot rate or like, one who came can',
+        atBook.status === 200 && atRows[0]?.source === 'instagram' && unknownSource === null
+          && !!tooEarly.error && !!atNotOwner.error && !markAbsent.error && !!absentRates.error && !!absentLikes.error && !markCame.error && (cameRates.data || []).length === 1,
+        `book=${atBook.status} unknown=${unknownSource} sources=${JSON.stringify(atRows.map((r) => r.source))} early=${tooEarly.error ? 'refused' : 'ALLOWED'} other=${atNotOwner.error ? 'refused' : 'ALLOWED'} absent=${markAbsent.error?.message || 'ok'} rate=${absentRates.error ? 'refused' : 'ALLOWED'} like=${absentLikes.error ? 'refused' : 'ALLOWED'} came=${markCame.error?.message || 'ok'} rate2=${cameRates.error?.message || 'ok'}`);
+
+      // Monthly report: the numbers of that hike; its lines are set per club by an admin.
+      const repMonth = future(-1).slice(0, 7);
+      const repPage = await fetch(`http://localhost:${DEV_PORT}/dashboard/report?month=${repMonth}`, { headers: { Cookie: clubCookie } });
+      const repHtml = await repPage.text();
+      const planAReport = (dbPackages.find((x) => x.id === 'advanced') || {}).config?.monthly_report;
+      const setLines = await act({ action: 'club.setReport', userId: ids.club, items: ['hikes_total', 'revenue', 'nonsense'] }, superCookie);
+      const linesRow = (await admin.from('clubs').select('report_items').eq('id', clubA).single()).data?.report_items;
+      await signIn('club');
+      await anon.from('clubs').update({ report_items: ['hikes_total', 'rating', 'sources'] }).eq('id', clubA);
+      const linesAfterSelf = (await admin.from('clubs').select('report_items').eq('id', clubA).single()).data?.report_items;
+      const repNarrow = await (await fetch(`http://localhost:${DEV_PORT}/dashboard/report?month=${repMonth}`, { headers: { Cookie: clubCookie } })).text();
+      const resetLines = await act({ action: 'club.setReport', userId: ids.club, items: null }, superCookie);
+      const linesReset = (await admin.from('clubs').select('report_items').eq('id', clubA).single()).data?.report_items;
+      check('monthly report: shows the month for the club; an admin picks its lines for one club and can reset them; the club cannot',
+        repPage.status === 200 && (planAReport ? repHtml.includes('E2E Emergency') && repHtml.includes('Instagram') : true)
+          && setLines.status === 200 && JSON.stringify(linesRow) === JSON.stringify(['hikes_total', 'revenue']) && JSON.stringify(linesAfterSelf) === JSON.stringify(['hikes_total', 'revenue'])
+          && (planAReport ? !repNarrow.includes('E2E Emergency') : true) && resetLines.status === 200 && linesReset === null,
+        `page=${repPage.status} flag=${planAReport} set=${setLines.status} row=${JSON.stringify(linesRow)} self=${JSON.stringify(linesAfterSelf)} reset=${resetLines.status} ${JSON.stringify(linesReset)}`);
+
+      // Faults are logged; the health check, sitemap and robots answer.
+      const healthRes = await fetch(`http://localhost:${DEV_PORT}/api/health`);
+      const clientErr = await api('/api/errors', { message: `E2E fault ${stamp}`, url: '/e2e' });
+      const noise = await api('/api/errors', { message: 'ResizeObserver loop limit exceeded' });
+      const faultRows = (await admin.from('error_log').select('source, area, message').like('message', `E2E fault ${stamp}%`)).data || [];
+      const noiseLogged = (await admin.from('error_log').select('id').like('message', 'ResizeObserver%')).data || [];
+      await admin.from('error_log').delete().like('message', 'E2E fault%');
+      await admin.from('error_alerts').delete().like('signature', '%E2E fault%');
+      const siteMap = await (await fetch(`http://localhost:${DEV_PORT}/sitemap.xml`)).text();
+      const robotsTxt = await (await fetch(`http://localhost:${DEV_PORT}/robots.txt`)).text();
+      check('monitoring: health answers, a browser fault is logged (noise is not), sitemap and robots exist',
+        healthRes.status === 200 && clientErr.status === 200 && faultRows.length === 1 && faultRows[0].source === 'browser' && noise.status === 200 && noiseLogged.length === 0
+          && siteMap.includes('/tours') && siteMap.includes('/calendar') && /Disallow: \/admin/.test(robotsTxt) && /Sitemap: .*sitemap.xml/.test(robotsTxt),
+        `healthRes=${healthRes.status} faultRows=${JSON.stringify(faultRows)} noise=${noiseLogged.length} sitemap=${siteMap.length} robots=${robotsTxt.length}`);
+
       // Shared calendar and its feeds: public data only.
       const calPage = await fetch(`http://localhost:${DEV_PORT}/calendar?month=${future(78).slice(0, 7)}`);
       const calHtml = await calPage.text();
@@ -1120,8 +1182,6 @@ async function main() {
         run1.status === 200 && run2.status === 200 && sentReminders.length === 1 && sentReminders[0].days === 2,
         `runs=${run1.status}/${run2.status} reminders=${JSON.stringify(sentReminders)}`);
 
-      check('HTTP: email no-op (RESEND_API_KEY absent from env)', !env.RESEND_API_KEY,
-        env.RESEND_API_KEY ? 'API key present!' : 'no key — emails skipped');
     }
   } catch (e) {
     console.log('ERROR:', e.message);

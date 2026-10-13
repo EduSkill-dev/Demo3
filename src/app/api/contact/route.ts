@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { guardPublic } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,7 +13,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 //   * signed in  — the account's verified address is used, forwarded at once;
 //   * a visitor  — stored unconfirmed, and a link is emailed to the address;
 //     /contact/confirm forwards the message when that link is opened.
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     message?: string;
     email?: string;
@@ -60,3 +61,6 @@ export async function POST(req: Request) {
     : ({ ok: false, skipped: true, reason: "no owner inbox" } as const);
   return NextResponse.json({ ok: true, confirmed: true, email: emailStatus(result) });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("contact", handlePOST);

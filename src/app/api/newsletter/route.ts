@@ -1,3 +1,4 @@
+import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emailStatus, newsletterConfirmEmail, sendEmail } from "@/lib/email";
@@ -17,7 +18,7 @@ const FROZEN = "Ձեր հաշիվը սառեցված է․ գործողությ�
 //     instead of mailing the link over and over.
 // The answer's `state` tells the form what to say:
 //   subscribed | already | sent | pending | account
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { email?: string; website?: string };
   if (body.website) return NextResponse.json({ ok: true, state: "sent" }); // honeypot: bots fill every field
 
@@ -80,3 +81,6 @@ export async function POST(req: Request) {
   );
   return NextResponse.json({ ok: true, state: "sent", email: emailStatus(result) });
 }
+
+// A crash or a 5xx answer here is logged and the admins are told.
+export const POST = withErrorReport("newsletter", handlePOST);
