@@ -953,6 +953,18 @@ async function main() {
           && !/example\.com|\+374|Երկրորդ/.test(feedText) && feedText.split('\r\n').every((l) => Buffer.byteLength(l) <= 75) && badFeed.status === 404,
         `page=${calPage.status} feed=${feed.status} one=${oneFeed.status} events=${(oneText.match(/BEGIN:VEVENT/g) || []).length} bad=${badFeed.status}`);
 
+      // Social sharing: one switch per network, kept by admins who manage pages.
+      const shareBefore = (await admin.from('site_settings').select('value').eq('key', 'share_networks').single()).data.value;
+      const shareByAdmin = await act({ action: 'share.save', networks: shareBefore }, admCookie); // this admin has no "pages"
+      const shareBad = await act({ action: 'share.save', networks: { facebook: true } }, superCookie);
+      const shareSame = await act({ action: 'share.save', networks: shareBefore }, superCookie); // same values: the live site does not change
+      const shareAfter = (await admin.from('site_settings').select('value').eq('key', 'share_networks').single()).data.value;
+      const shareDirect = await visitor.from('site_settings').select('key');
+      check('sharing: the networks are switched by admins with the pages permission, never from a browser',
+        shareByAdmin.status === 403 && shareBad.status === 400 && shareSame.status === 200
+          && JSON.stringify(shareAfter) === JSON.stringify(shareBefore) && (shareDirect.data || []).length === 0,
+        `admin=${shareByAdmin.status} bad=${shareBad.status} save=${shareSame.status} direct=${(shareDirect.data || []).length}`);
+
       // Plans: only the super admin edits them or hands them out.
       const proRow = dbPackages.find((x) => x.id === 'pro');
       const samePlan = { action: 'plan.save', id: 'pro', priceAmd: proRow.price_amd, isAvailable: proRow.is_available, config: proRow.config };

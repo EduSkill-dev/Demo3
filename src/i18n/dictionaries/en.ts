@@ -474,7 +474,7 @@ const en: DeepPartial<Dictionary> = {
     copyText: "Copy the announcement",
     link: "Link to the hike",
     copyLink: "Copy link",
-    networksSoon: "The social network buttons will work soon.",
+    instagramCopied: "Link copied. Paste it in Instagram (for example in a story or your profile link).",
     organiser: "Organiser",
     signUp: "Sign up",
   },

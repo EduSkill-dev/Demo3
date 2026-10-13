@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
+import { getShareNetworks } from "@/lib/siteSettings";
 import { getMyClub } from "@/lib/myClub";
 import { getT } from "@/i18n/server";
 import type { Tour } from "@/types/database";
@@ -106,7 +107,7 @@ export default async function AnnouncementsPage() {
         )}
       </div>
 
-      <AnnouncementsTable rows={rows} canRepublish={canAdd} clubName={club.name} shareNetworks={limits.config.share_buttons} />
+      <AnnouncementsTable rows={rows} canRepublish={canAdd} clubName={club.name} shareNetworks={limits.config.share_buttons ? await getShareNetworks() : []} />
     </div>
   );
 }

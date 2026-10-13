@@ -6,6 +6,7 @@ import { dateWords, dayAndMonth, dayInWords } from "@/lib/calendar";
 import Modal from "@/components/ui/Modal";
 import ShareButtons from "@/components/ShareButtons";
 import type { Difficulty } from "@/types/database";
+import type { ShareNetwork } from "@/lib/share";
 
 export type ShareTour = {
   id: string;
@@ -19,7 +20,8 @@ export type ShareTour = {
 };
 
 // "Share" for one active listing: a ready announcement text the club can
-// edit and copy, the hike's link, and the social buttons.
+// edit and copy, the hike's link, and a button for each social network the
+// admins switched on.
 export default function SharePanel({
   tour,
   clubName,
@@ -28,7 +30,7 @@ export default function SharePanel({
 }: {
   tour: ShareTour;
   clubName: string;
-  networks: boolean; // the plan's share_buttons
+  networks: ShareNetwork[]; // the social networks this club may share to
   onClose: () => void;
 }) {
   const t = useT();
@@ -85,9 +87,8 @@ export default function SharePanel({
           <h3 className="text-sm font-semibold text-ink">{t("share.link")}</h3>
           <p className="mt-0.5 break-all text-xs text-muted">{url}</p>
           <div className="mt-3">
-            <ShareButtons url={`/tours/${tour.id}`} networks={networks} />
+            <ShareButtons url={`/tours/${tour.id}`} text={`${tour.title} · ${clubName}`} networks={networks} />
           </div>
-          {networks && <p className="mt-2 text-xs text-muted">{t("share.networksSoon")}</p>}
         </section>
       </div>
     </Modal>

@@ -1,26 +1,46 @@
 "use client";
 
+import { useState } from "react";
 import { useT } from "@/i18n/client";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
+import { SHARE_NETWORKS, shareHref, type ShareNetwork } from "@/lib/share";
 
-export const SHARE_NETWORKS = ["Facebook", "Instagram", "WhatsApp", "Viber", "Telegram"] as const;
+const pill = "flex h-11 items-center justify-center rounded-full border-2 border-spruce-900 px-4 text-sm font-semibold text-ink hover:bg-sand dark:border-line";
 
-const pill = "flex h-11 items-center justify-center rounded-full border-2 border-spruce-900 px-4 text-sm font-semibold text-ink dark:border-line";
-
-// Sharing a hike: the link can be copied right away; the social networks are
-// buttons only for now (how each one should post is still to be decided).
-// `networks` is the club's plan flag (share_buttons).
-export default function ShareButtons({ url, networks = true }: { url: string; networks?: boolean }) {
+// Sharing a hike: copy its link, or send it to one of the social networks
+// the admins switched on (`networks`; none = only the copy button).
+export default function ShareButtons({ url, text = "", networks }: { url: string; text?: string; networks: ShareNetwork[] }) {
   const t = useT();
+  const [note, setNote] = useState<string | null>(null);
+
+  async function share(network: ShareNetwork) {
+    const full = url.startsWith("/") ? window.location.origin + url : url;
+    setNote(null);
+    if (network === "instagram") {
+      // No share address: the link goes to the clipboard, Instagram opens.
+      try {
+        await navigator.clipboard.writeText(full);
+        setNote(t("share.instagramCopied"));
+      } catch {
+        window.prompt(t("share.copyLink"), full);
+      }
+    }
+    const target = shareHref(network, full, text);
+    if (target.startsWith("http")) window.open(target, "_blank", "noopener,noreferrer");
+    else window.location.href = target; // an app link (Viber)
+  }
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <CopyLinkButton href={url} label={t("share.copyLink")} copiedLabel={t("calendar.copied")} className={`${pill} hover:bg-sand`} />
-      {networks &&
-        SHARE_NETWORKS.map((name) => (
-          <button key={name} type="button" disabled aria-disabled="true" title={t("packagesPage.comingSoon")} className={`${pill} cursor-not-allowed opacity-50`}>
-            {name}
+    <div>
+      <div className="flex flex-wrap gap-2">
+        <CopyLinkButton href={url} label={t("share.copyLink")} copiedLabel={t("calendar.copied")} className={pill} />
+        {SHARE_NETWORKS.filter((n) => networks.includes(n.id)).map((n) => (
+          <button key={n.id} data-view type="button" onClick={() => share(n.id)} className={pill}>
+            {n.name}
           </button>
         ))}
+      </div>
+      {note && <p className="mt-2 text-xs text-muted" aria-live="polite">{note}</p>}
     </div>
   );
 }

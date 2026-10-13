@@ -9,6 +9,7 @@ import { useFormatDate, useT } from "@/i18n/client";
 import CountBadge from "@/components/ui/CountBadge";
 import type { Difficulty, TourStatus } from "@/types/database";
 import SharePanel from "./SharePanel";
+import type { ShareNetwork } from "@/lib/share";
 
 export type ListingRow = {
   id: string;
@@ -38,7 +39,7 @@ export default function AnnouncementsTable({
   rows: ListingRow[];
   canRepublish: boolean;
   clubName: string;
-  shareNetworks: boolean; // the plan's share_buttons
+  shareNetworks: ShareNetwork[]; // switched on by the admins, and only with the plan's share_buttons
 }) {
   const t = useT();
   const fmt = useFormatDate();

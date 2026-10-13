@@ -7,6 +7,8 @@ import { ACCOUNT_LIMITS, ADMIN_PERMS, type AccountLimit, type AccountStatus, typ
 import { deleteClub, deleteIndividual } from "@/lib/accountDeletion";
 import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
 import { SIGHTS_TAG } from "@/lib/sights";
+import { SHARE_NETWORKS } from "@/lib/share";
+import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
 import { REGIONS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
 import { DICTIONARIES } from "@/i18n/translate";
@@ -232,6 +234,27 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       targetType: "sight",
       targetLabel: row.name_hy,
       meta: row.active ? {} : { hidden: true },
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true });
+  },
+
+  // On which social networks a hike's link can be shared from the site.
+  async "share.save"(ctx, body) {
+    if (!can(ctx.me, "pages")) return fail(FORBIDDEN, 403);
+    const sent = body.networks && typeof body.networks === "object" ? (body.networks as Record<string, unknown>) : null;
+    if (!sent || SHARE_NETWORKS.some((n) => typeof sent[n.id] !== "boolean")) return fail("Նշեք յուրաքանչյուր ցանցի վիճակը։");
+    const value = Object.fromEntries(SHARE_NETWORKS.map((n) => [n.id, sent[n.id] === true]));
+    const { error } = await ctx.db
+      .from("site_settings")
+      .upsert({ key: SHARE_NETWORKS_KEY, value, updated_by: ctx.me.userId, updated_at: new Date().toISOString() });
+    if (error) return fail(error.message, 500);
+    await logActivity({
+      actor: ctx.me.userId,
+      action: "admin.share_saved",
+      targetType: "setting",
+      targetLabel: SHARE_NETWORKS.filter((n) => value[n.id]).map((n) => n.name).join(", ") || "բոլորն անջատված են",
+      meta: value,
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true });

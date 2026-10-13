@@ -474,7 +474,7 @@ const ru: DeepPartial<Dictionary> = {
     copyText: "Скопировать объявление",
     link: "Ссылка на поход",
     copyLink: "Скопировать ссылку",
-    networksSoon: "Кнопки соцсетей скоро заработают.",
+    instagramCopied: "Ссылка скопирована. Вставьте её в Instagram (например, в сторис или в ссылку профиля).",
     organiser: "Организатор",
     signUp: "Записаться",
   },
