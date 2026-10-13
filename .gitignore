@@ -5,3 +5,8 @@ node_modules
 tsconfig.tsbuildinfo
 .next-check
 .next-e2e
+
+# Cloudflare trial (local build output and a copy of the secrets)
+.open-next
+.dev.vars
+.wrangler
