@@ -129,6 +129,11 @@ const en: DeepPartial<Dictionary> = {
     menu: "Menu",
   },
   auth: {
+    withGoogle: "Continue with Google",
+    or: "or",
+    completeTitle: "Complete your details",
+    completeText: "One step left: these details are needed to book hikes.",
+    completeButton: "Save and continue",
     loginTitle: "Log in",
     email: "Email",
     password: "Password",
@@ -604,6 +609,8 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    oauthFailed: "Signing in with Google did not work. Please try again.",
+    profileIncomplete: "Please complete your details first (first name, surname, birth date, gender, phone).",
     pageTitle: "Something went wrong",
     pageText: "The page could not be shown. We have been notified and will fix it.",
     tryAgain: "Try again",

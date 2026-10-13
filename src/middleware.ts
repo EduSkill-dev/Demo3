@@ -1,3 +1,4 @@
+import { COMPLETE_PATH, isExternalAccount, missingProfileFields, type ProfileFields } from "@/lib/profileComplete";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -68,7 +69,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, status")
+    .select("role, status, first_name, last_name, birth_date, age, gender, phone")
     .eq("id", user.id)
     .single();
   const role = (profile as { role?: string } | null)?.role;
@@ -77,6 +78,11 @@ export async function middleware(request: NextRequest) {
   if ((profile as { status?: string } | null)?.status === "blocked") {
     await supabase.auth.signOut({ scope: "local" });
     return redirect("/login");
+  }
+
+  // Came in through Google and has not added the rest yet: one page only.
+  if (wantsAccount && path !== COMPLETE_PATH && isExternalAccount(user) && missingProfileFields(profile as ProfileFields | null).length > 0) {
+    return redirect(COMPLETE_PATH);
   }
 
   const home = role === "individual" ? "/account" : role === "club" ? "/dashboard" : role === "admin" ? "/admin" : "/";

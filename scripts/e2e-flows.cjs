@@ -1000,6 +1000,25 @@ async function main() {
           && siteMap.includes('/tours') && siteMap.includes('/calendar') && /Disallow: \/admin/.test(robotsTxt) && /Sitemap: .*sitemap.xml/.test(robotsTxt),
         `healthRes=${healthRes.status} faultRows=${JSON.stringify(faultRows)} noise=${noiseLogged.length} sitemap=${siteMap.length} robots=${robotsTxt.length}`);
 
+      // Google sign-in: such an account finishes its profile before it can book.
+      const gUser = await admin.auth.admin.createUser({ email: email('google'), password: PASSWORD, email_confirm: true, app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Գուգլ Օգտատեր' } });
+      ids.google = gUser.data.user.id;
+      const gCookie = await cookieFor('google');
+      const gProfile = (await admin.from('profiles').select('role, first_name, phone').eq('id', ids.google).single()).data;
+      const gBook = await api('/api/bookings', { tour_id: tourId }, gCookie);
+      const gAccount = await fetch(`http://localhost:${DEV_PORT}/account`, { headers: { Cookie: gCookie }, redirect: 'manual' });
+      const gComplete = await fetch(`http://localhost:${DEV_PORT}/account/complete`, { headers: { Cookie: gCookie }, redirect: 'manual' });
+      await admin.from('profiles').update({ first_name: 'Գուգլ', last_name: 'Օգտատեր', birth_date: '1990-01-01', gender: 'male', phone: '+374 77 ' + String(stamp).slice(-6) }).eq('id', ids.google);
+      const gBook2 = await api('/api/bookings', { tour_id: tourId }, gCookie);
+      const gAccount2 = await fetch(`http://localhost:${DEV_PORT}/account`, { headers: { Cookie: gCookie }, redirect: 'manual' });
+      if (gBook2.body?.booking?.id) await api('/api/bookings', { action: 'cancel', booking_id: gBook2.body.booking.id }, gCookie);
+      const noCode = await fetch(`http://localhost:${DEV_PORT}/auth/callback`, { redirect: 'manual' });
+      check('google sign-in: a new account is an individual with missing details, is sent to finish them, and only then can book',
+        gProfile?.role === 'individual' && !gProfile?.phone && gBook.status === 409 && gBook.body?.code === 'profile_incomplete'
+          && [307, 308].includes(gAccount.status) && (gAccount.headers.get('location') || '').includes('/account/complete') && gComplete.status === 200
+          && gBook2.status === 200 && gAccount2.status === 200 && (noCode.headers.get('location') || '').includes('/login?error=oauth'),
+        `profile=${JSON.stringify(gProfile)} book=${gBook.status} account=${gAccount.status} ${gAccount.headers.get('location')} complete=${gComplete.status} book2=${gBook2.status} ${JSON.stringify(gBook2.body)} account2=${gAccount2.status} nocode=${noCode.headers.get('location')}`);
+
       // Shared calendar and its feeds: public data only.
       const calPage = await fetch(`http://localhost:${DEV_PORT}/calendar?month=${future(78).slice(0, 7)}`);
       const calHtml = await calPage.text();

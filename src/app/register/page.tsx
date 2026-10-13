@@ -6,6 +6,7 @@ import { useT } from "@/i18n/client";
 import AuthCard from "@/components/auth/AuthCard";
 import CheckEmail from "@/components/auth/CheckEmail";
 import IndividualRegisterForm from "@/components/auth/IndividualRegisterForm";
+import GoogleButton, { AuthDivider } from "@/components/auth/GoogleButton";
 
 export default function RegisterPage() {
   const t = useT();
@@ -43,6 +44,10 @@ export default function RegisterPage() {
 
   return (
     <AuthCard title={t("auth.individualTitle")} wide>
+      <div className="mx-auto max-w-sm">
+        <GoogleButton next="/account" />
+      </div>
+      <AuthDivider />
       <IndividualRegisterForm onSent={setSentTo} />
     </AuthCard>
   );

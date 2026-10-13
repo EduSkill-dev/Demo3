@@ -129,6 +129,11 @@ const ru: DeepPartial<Dictionary> = {
     menu: "Меню",
   },
   auth: {
+    withGoogle: "Продолжить с Google",
+    or: "или",
+    completeTitle: "Заполните свои данные",
+    completeText: "Остался один шаг: эти данные нужны для записи на походы.",
+    completeButton: "Сохранить и продолжить",
     loginTitle: "Вход",
     email: "Эл. почта",
     password: "Пароль",
@@ -604,6 +609,8 @@ const ru: DeepPartial<Dictionary> = {
     onTour: "поход: {title}",
   },
   errors: {
+    oauthFailed: "Не удалось войти через Google. Попробуйте ещё раз.",
+    profileIncomplete: "Сначала заполните свои данные (имя, фамилия, дата рождения, пол, телефон).",
     pageTitle: "Что-то пошло не так",
     pageText: "Не удалось показать страницу. Мы уже знаем об этом и исправим.",
     tryAgain: "Попробовать снова",

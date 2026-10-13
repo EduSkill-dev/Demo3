@@ -1,5 +1,6 @@
 import { withErrorReport } from "@/lib/errors";
 import { bookingRefusedByAdmin, inactiveAccountError } from "@/lib/admin";
+import { unfinishedProfileError } from "@/lib/profileGate";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -47,6 +48,8 @@ async function handlePOST(req: Request) {
 
   const inactive = await inactiveAccountError(auth.user.id);
   if (inactive) return NextResponse.json({ error: inactive }, { status: 403 });
+  const unfinished = await unfinishedProfileError(auth.user);
+  if (unfinished) return NextResponse.json({ error: unfinished, code: "profile_incomplete" }, { status: 409 });
 
   const { data: profile } = await supabase
     .from("profiles")

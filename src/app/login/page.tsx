@@ -1,12 +1,13 @@
 "use client";
 
 import PasswordInput from "@/components/ui/PasswordInput";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
 import { authErrorMessage, confirmUrl } from "@/lib/authErrors";
 import AuthCard, { authButton, authInput, authLabel } from "@/components/auth/AuthCard";
+import GoogleButton, { AuthDivider } from "@/components/auth/GoogleButton";
 
 // Only ever redirect to a path on this site (blocks //evil.com etc.).
 function safeNext(): string | null {
@@ -22,6 +23,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resent, setResent] = useState(false);
+
+  // Sent back from a sign-in with Google that did not go through.
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get("error");
+    if (reason === "oauth") setError(t("errors.oauthFailed"));
+    if (reason === "blocked") setError(t("auth.blocked"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +74,8 @@ export default function LoginPage() {
 
   return (
     <AuthCard title={t("auth.loginTitle")}>
+      <GoogleButton />
+      <AuthDivider />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className={authLabel}>{t("auth.email")}</label>

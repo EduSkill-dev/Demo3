@@ -122,7 +122,8 @@ export default function TourSignup({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tour_id: tourId, emergency, source: sourceOf() }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string; booking?: { id: string } };
+    const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string; booking?: { id: string } };
+    if (data.code === "profile_incomplete") return router.push(`/account/complete?next=/tours/${tourId}`);
     setBusy(false);
     if (!res.ok) return setError(serverErrorMessage(t, data.error));
     if (data.booking?.id) setBooking({ id: data.booking.id, status: "confirmed" });

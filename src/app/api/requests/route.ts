@@ -1,3 +1,4 @@
+import { unfinishedProfileError } from "@/lib/profileGate";
 import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -49,6 +50,10 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const { viewer, db } = ctx;
     if (viewer.role !== "individual") return fail("Պատվեր կարող են թողնել միայն անհատները։", 403);
     if (!viewer.emailConfirmed) return fail("Ամրագրելու համար նախ հաստատեք Ձեր էլ. հասցեն։", 403);
+    // An account that came in through Google finishes its profile first.
+    const { data: account } = await db.auth.admin.getUserById(viewer.id);
+    const unfinished = account.user ? await unfinishedProfileError(account.user) : null;
+    if (unfinished) return fail(unfinished, 409);
     const { data: profile } = await db.from("profiles").select("requests_blocked").eq("id", viewer.id).maybeSingle();
     if ((profile as { requests_blocked?: boolean } | null)?.requests_blocked) {
       return fail("Անհատական հայտ թողնելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։", 403);
