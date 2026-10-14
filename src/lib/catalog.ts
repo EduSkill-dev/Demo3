@@ -50,6 +50,12 @@ export const CLUB_FOCUS = [
 export type ClubFocus = (typeof CLUB_FOCUS)[number];
 
 export const DIFFICULTIES = ["easy", "medium", "hard", "prof"] as const;
+
+// What a club can tick under "what to bring". Labels: bring.<key>.
+export const BRING_ITEMS = [
+  "boots", "warm_clothes", "rain_jacket", "hat", "sunglasses", "sunscreen", "water", "food",
+  "backpack", "poles", "headlamp", "first_aid", "id_card", "cash", "swimsuit", "sleeping_bag", "tent", "mat",
+] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 
 export function isRegion(value: string): value is Region {

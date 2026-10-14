@@ -13,6 +13,7 @@ export type TourForDetails = Pick<
   Tour,
   | "id" | "title" | "description" | "regions" | "terrains" | "date" | "max_participants" | "photo_urls"
   | "overnight" | "difficulty" | "coordinator_phone" | "notes" | "meeting_point" | "meeting_time" | "price"
+> & Partial<Pick<Tour, "bring_items">
 > & {
   cancel_hours?: number | null;
   end_date?: string | null;
@@ -130,10 +131,17 @@ export default function TourDetails({
         ))}
       </dl>
 
-      {tour.notes && (
+      {((tour.bring_items ?? []).length > 0 || tour.notes) && (
         <div className="rounded-xl bg-sand/70 p-4">
           <p className="font-semibold text-heading">{t("tour.whatToBring")}</p>
-          <p className="mt-1 whitespace-pre-line text-ink">{tour.notes}</p>
+          {(tour.bring_items ?? []).length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {(tour.bring_items ?? []).map((k) => (
+                <li key={k} className="rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-ink">{t(`bring.${k}`)}</li>
+              ))}
+            </ul>
+          )}
+          {tour.notes && <p className="mt-2 whitespace-pre-line text-ink">{tour.notes}</p>}
         </div>
       )}
 

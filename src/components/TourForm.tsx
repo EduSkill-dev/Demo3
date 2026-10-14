@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import type { Tour } from "@/types/database";
-import { CANCEL_HOUR_OPTIONS, DEFAULT_CANCEL_HOURS, DIFFICULTIES, REGIONS, TERRAINS, type Difficulty } from "@/lib/catalog";
+import { BRING_ITEMS, CANCEL_HOUR_OPTIONS, DEFAULT_CANCEL_HOURS, DIFFICULTIES, type Difficulty } from "@/lib/catalog";
 import SightPicker, { type SightOption } from "@/components/SightPicker";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
 import PlannerPanel from "@/components/club/PlannerPanel";
+import { DIFFICULTY_COLORS } from "@/lib/calendar";
 
 const MAX_PHOTOS = 5;
 
@@ -18,12 +20,16 @@ const input =
 const label = "mb-1 block text-sm font-medium text-ink";
 const hint = "mt-1 text-xs text-muted";
 
-// Create / edit a listing. The club sets the hike's total size itself (it may
-// also take people elsewhere); `seatCap` is how many of those the platform
-// accepts under the package, shown as a hint. The database enforces the rules.
+// Create / edit a listing. The club picks the places the hike visits; the
+// regions, the kinds of place and the difficulty follow from them (the
+// hardest place sets the difficulty — the database writes the same, so the
+// two never disagree). The rest is the club's: dates, size, price, cancel
+// window, contact, meeting point and time, description, what to bring and
+// photos. `seatCap` is how many sign-ups the platform takes under the plan.
 export default function TourForm({
   mode,
   clubId,
+  clubPhone = "",
   initialTour,
   template,
   seatCap,
@@ -32,6 +38,7 @@ export default function TourForm({
 }: {
   mode: "create" | "edit";
   clubId: string;
+  clubPhone?: string; // the club's phone: the coordinator's number by default
   initialTour?: Tour;
   template?: Tour; // "publish again": a new listing pre-filled from this one, without its date
   seatCap: number;
@@ -44,31 +51,43 @@ export default function TourForm({
 
   const source = initialTour ?? template;
 
+  const [sightIds, setSightIds] = useState<string[]>(source?.sight_ids ?? []);
   const [title, setTitle] = useState(source?.title ?? "");
-  const [regions, setRegions] = useState<string[]>(source?.regions ?? []);
-  const [terrains, setTerrains] = useState<string[]>(source?.terrains ?? []);
+  const [titleTouched, setTitleTouched] = useState(!!source?.title);
   const [date, setDate] = useState(initialTour?.date ?? "");
   const [endDate, setEndDate] = useState(initialTour?.end_date ?? "");
-  const [difficulty, setDifficulty] = useState<Difficulty>(source?.difficulty ?? "medium");
   const [overnight, setOvernight] = useState(source?.overnight ?? false);
-  const [sightIds, setSightIds] = useState<string[]>(source?.sight_ids ?? []);
   const [cancelHours, setCancelHours] = useState(source?.cancel_hours ?? DEFAULT_CANCEL_HOURS);
-  const [maxParticipants, setMaxParticipants] = useState(
-    String(source?.max_participants ?? (seatCap || ""))
-  );
+  const [maxParticipants, setMaxParticipants] = useState(String(source?.max_participants ?? (seatCap || "")));
   const [price, setPrice] = useState(source?.price != null ? String(source.price) : "0");
-  const [coordinatorPhone, setCoordinatorPhone] = useState(source?.coordinator_phone ?? "");
+  const [coordinatorPhone, setCoordinatorPhone] = useState(source?.coordinator_phone ?? clubPhone);
   const [meetingPoint, setMeetingPoint] = useState(source?.meeting_point ?? "");
   const [meetingTime, setMeetingTime] = useState((source?.meeting_time ?? "").slice(0, 5));
   const [description, setDescription] = useState(source?.description ?? "");
+  const [bring, setBring] = useState<string[]>(source?.bring_items ?? []);
   const [notes, setNotes] = useState(source?.notes ?? "");
   const [savedPhotos, setSavedPhotos] = useState<string[]>(source?.photo_urls ?? []);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const toggle = (list: string[], set: (v: string[]) => void, key: string) =>
-    set(list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
+  // What the chosen places say about the hike.
+  const chosen = useMemo(() => sightIds.map((id) => sights.find((s) => s.id === id)).filter((s): s is SightOption => !!s), [sightIds, sights]);
+  const regions = useMemo(() => [...new Set(chosen.map((s) => s.region))], [chosen]);
+  const terrains = useMemo(() => [...new Set(chosen.map((s) => s.terrain).filter((x): x is string => !!x))], [chosen]);
+  const difficulty: Difficulty | null = useMemo(() => {
+    const levels = chosen.map((s) => DIFFICULTIES.indexOf((s.difficulty ?? "") as Difficulty)).filter((i) => i >= 0);
+    return levels.length ? DIFFICULTIES[Math.max(...levels)] : null;
+  }, [chosen]);
+  const suggestedTitle = chosen.map((s) => s.name).join(" – ");
+
+  function pickPlaces(ids: string[]) {
+    setSightIds(ids);
+    if (!titleTouched) {
+      const names = ids.map((id) => sights.find((s) => s.id === id)?.name).filter(Boolean);
+      setTitle(names.join(" – ").slice(0, 150));
+    }
+  }
 
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -82,12 +101,13 @@ export default function TourForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (regions.length === 0) return setError(t("tourForm.errRegion"));
-    if (terrains.length === 0) return setError(t("tourForm.errTerrain"));
+    if (chosen.length === 0) return setError(t("tourForm.errPlaces"));
     if (mode === "create" && date < today) return setError(t("tourForm.errDate"));
     if (endDate && endDate < date) return setError(t("tourForm.errEndDate"));
     if (!Number.isInteger(Number(maxParticipants)) || Number(maxParticipants) < 1) return setError(t("tourForm.errCapacity"));
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError(t("tourForm.errPrice"));
+    if (!coordinatorPhone.trim()) return setError(t("tourForm.errPhone"));
+    if (!meetingPoint.trim() || !meetingTime) return setError(t("tourForm.errMeeting"));
 
     setSaving(true);
     const supabase = createClient();
@@ -108,14 +128,16 @@ export default function TourForm({
 
     const payload = {
       club_id: clubId,
-      title: title.trim(),
+      title: (title.trim() || suggestedTitle).slice(0, 150),
+      // The database recomputes these three from the places; sent so the
+      // listing is right even before that.
       regions,
-      terrains,
+      terrains: terrains.length ? terrains : ["other"],
+      difficulty: difficulty ?? "medium",
+      sight_ids: sightIds,
       date,
       end_date: endDate && endDate > date ? endDate : null,
-      difficulty,
       overnight,
-      sight_ids: sightIds,
       cancel_hours: cancelHours,
       max_participants: Number(maxParticipants),
       coordinator_phone: coordinatorPhone.trim(),
@@ -123,6 +145,7 @@ export default function TourForm({
       meeting_time: meetingTime || null,
       price: Number(price) || 0,
       description: description.trim() || null,
+      bring_items: BRING_ITEMS.filter((k) => bring.includes(k)),
       notes: notes.trim() || null,
       photo_urls: photoUrls,
     };
@@ -150,7 +173,6 @@ export default function TourForm({
     router.refresh();
   }
 
-  const checkboxGrid = "grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-line bg-surface p-3 sm:grid-cols-3";
   const previews = [
     ...savedPhotos.map((url) => ({ key: url, src: url, remove: () => setSavedPhotos((c) => c.filter((u) => u !== url)) })),
     ...newFiles.map((f, i) => ({
@@ -159,47 +181,65 @@ export default function TourForm({
       remove: () => setNewFiles((c) => c.filter((_, idx) => idx !== i)),
     })),
   ];
+  const tag = "rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-ink";
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
       {mode === "create" && template && (
         <p className="rounded-lg border border-terracotta-500/40 bg-terracotta-500/10 p-3 text-sm text-ink">{t("tourForm.copyNotice")}</p>
       )}
-      <div>
-        <label htmlFor="title" className={label}>{t("tourForm.place")}</label>
-        <input id="title" required minLength={2} maxLength={150} placeholder={t("tourForm.placeHint")} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
-      </div>
 
-      <fieldset>
-        <legend className={label}>{t("tourForm.regions")}</legend>
-        <div className={checkboxGrid}>
-          {REGIONS.map((r) => (
-            <label key={r} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={regions.includes(r)} onChange={() => toggle(regions, setRegions, r)} className="accent-spruce-500" />
-              {t(`region.${r}`)}
-            </label>
-          ))}
+      {/* 1. Where: the places decide regions, kinds and difficulty. */}
+      <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+        <div>
+          <p className={label}>{t("tourForm.places")}</p>
+          <SightPicker sights={sights} value={sightIds} onChange={pickPlaces} />
+          <p className={hint}>
+            {t("tourForm.placesHint")}{" "}
+            <Link href="/help" className="font-semibold text-terracotta-700 underline dark:text-terracotta-300">{t("tourForm.placeMissing")}</Link>
+          </p>
         </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className={label}>{t("tourForm.terrains")}</legend>
-        <div className={checkboxGrid}>
-          {TERRAINS.map((k) => (
-            <label key={k} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={terrains.includes(k)} onChange={() => toggle(terrains, setTerrains, k)} className="accent-spruce-500" />
-              {t(`terrain.${k}`)}
-            </label>
-          ))}
+        {chosen.length > 0 && (
+          <dl className="grid gap-2 border-t border-line pt-3 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-xs text-muted">{t("tourForm.regions")}</dt>
+              <dd className="mt-1 flex flex-wrap gap-1.5">{regions.map((r) => <span key={r} className={tag}>{t(`region.${r}`)}</span>)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">{t("tourForm.terrains")}</dt>
+              <dd className="mt-1 flex flex-wrap gap-1.5">{terrains.map((k) => <span key={k} className={tag}>{t(`terrain.${k}`)}</span>)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">{t("tourForm.difficulty")}</dt>
+              <dd className="mt-1">
+                {difficulty && (
+                  <span className="rounded-lg px-2.5 py-1 text-xs font-semibold" style={{ background: DIFFICULTY_COLORS[difficulty].bg, color: DIFFICULTY_COLORS[difficulty].text }}>
+                    {t(`difficulty.${difficulty}`)}
+                  </span>
+                )}
+              </dd>
+            </div>
+            <p className="text-xs text-muted sm:col-span-3">{t("tourForm.autoTags")}</p>
+          </dl>
+        )}
+        <div>
+          <label htmlFor="title" className={label}>{t("tourForm.title")}</label>
+          <input
+            id="title"
+            maxLength={150}
+            placeholder={suggestedTitle || t("tourForm.placeHint")}
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setTitleTouched(true);
+            }}
+            className={input}
+          />
+          <p className={hint}>{t("tourForm.titleHint")}</p>
         </div>
-      </fieldset>
+      </section>
 
-      <div>
-        <p className={label}>{t("tourForm.sights")}</p>
-        <SightPicker sights={sights} value={sightIds} onChange={setSightIds} regions={regions} />
-        <p className={hint}>{t("tourForm.sightsHint")}</p>
-      </div>
-
+      {/* 2. When and how many. */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="date" className={label}>{t("tourForm.date")}</label>
@@ -211,22 +251,18 @@ export default function TourForm({
           <p className={hint}>{t("tourForm.endDateHint")}</p>
         </div>
         {planner && date && <PlannerPanel date={date} endDate={endDate} regions={regions} exclude={initialTour?.id} />}
+        <label className="flex items-center gap-2 text-sm font-medium text-ink sm:col-span-2">
+          <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-spruce-500" />
+          {t("tourForm.overnight")}
+        </label>
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
           <input id="cap" required type="number" min={1} max={10000} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
           {seatCap > 0 && <p className={hint}>{t("tourForm.capacityHint", { max: seatCap })}</p>}
         </div>
         <div>
-          <label htmlFor="difficulty" className={label}>{t("tourForm.difficulty")}</label>
-          <select id="difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className={input}>
-            {DIFFICULTIES.map((k) => (
-              <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
-            ))}
-          </select>
-        </div>
-        <div>
           <label htmlFor="price" className={label}>{t("tourForm.price")}</label>
-          <input id="price" type="number" min={0} step="100" value={price} onChange={(e) => setPrice(e.target.value)} className={input} />
+          <input id="price" required type="number" min={0} step="100" value={price} onChange={(e) => setPrice(e.target.value)} className={input} />
           <p className={hint}>{t("tourForm.priceHint")}</p>
         </div>
         <div className="sm:col-span-2">
@@ -240,23 +276,20 @@ export default function TourForm({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm font-medium text-ink">
-        <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-spruce-500" />
-        {t("tourForm.overnight")}
-      </label>
-
+      {/* 3. Meeting. */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="phone" className={label}>{t("tourForm.coordinatorPhone")}</label>
           <input id="phone" required type="tel" placeholder="+374 XX XXXXXX" value={coordinatorPhone} onChange={(e) => setCoordinatorPhone(e.target.value)} className={input} />
+          {clubPhone && coordinatorPhone === clubPhone && <p className={hint}>{t("tourForm.phoneFromClub")}</p>}
         </div>
         <div>
           <label htmlFor="mpoint" className={label}>{t("tourForm.meetingPoint")}</label>
-          <input id="mpoint" placeholder={t("tourForm.meetingPointHint")} value={meetingPoint} onChange={(e) => setMeetingPoint(e.target.value)} className={input} />
+          <input id="mpoint" required maxLength={200} placeholder={t("tourForm.meetingPointHint")} value={meetingPoint} onChange={(e) => setMeetingPoint(e.target.value)} className={input} />
         </div>
         <div>
           <label htmlFor="mtime" className={label}>{t("tourForm.meetingTime")}</label>
-          <input id="mtime" type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className={input} />
+          <input id="mtime" required type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className={input} />
         </div>
       </div>
       {mode === "edit" && <p className={hint}>{t("tourForm.changeNotice")}</p>}
@@ -265,10 +298,31 @@ export default function TourForm({
         <label htmlFor="desc" className={label}>{t("tourForm.description")}</label>
         <textarea id="desc" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className={input} />
       </div>
-      <div>
-        <label htmlFor="notes" className={label}>{t("tourForm.notes")}</label>
-        <textarea id="notes" rows={3} placeholder={t("tourForm.notesHint")} value={notes} onChange={(e) => setNotes(e.target.value)} className={input} />
-      </div>
+
+      {/* 4. What to bring: from the list, plus anything else in words. */}
+      <fieldset>
+        <legend className={label}>{t("tourForm.bring")}</legend>
+        <div className="flex flex-wrap gap-2">
+          {BRING_ITEMS.map((k) => {
+            const on = bring.includes(k);
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setBring((cur) => (on ? cur.filter((x) => x !== k) : [...cur, k]))}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                  on ? "border-spruce-500 bg-spruce-500 text-white" : "border-line bg-surface text-ink hover:border-spruce-500"
+                }`}
+              >
+                {on ? "✓ " : ""}
+                {t(`bring.${k}`)}
+              </button>
+            );
+          })}
+        </div>
+        <textarea id="notes" rows={2} placeholder={t("tourForm.bringMore")} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${input} mt-2`} />
+      </fieldset>
 
       <div>
         <label htmlFor="photos" className={label}>

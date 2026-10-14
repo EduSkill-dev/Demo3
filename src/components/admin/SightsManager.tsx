@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { REGIONS } from "@/lib/catalog";
+import { DIFFICULTIES, REGIONS, TERRAINS } from "@/lib/catalog";
 import { useT } from "@/i18n/client";
 import type { Sight } from "@/lib/sights";
 import { adminAction, adminButton, adminGhost, adminInlineInput, adminInput } from "./adminApi";
 
-type Draft = { id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; active: boolean };
-const blank: Draft = { id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], active: true };
+type Draft = { id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string; difficulty: string; active: boolean };
+const blank: Draft = { id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true };
 
 // Add, rename and hide sights. One line per sight; the form on top edits the
 // chosen one or adds a new one.
@@ -46,7 +46,7 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
         className="space-y-3 rounded-xl border border-line bg-surface p-5"
       >
         <h3 className="font-serif text-lg font-semibold text-heading">{draft.id ? "Խմբագրել վայրը" : "Նոր տեսարժան վայր"}</h3>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <div>
             <label htmlFor="sight-hy" className="mb-1 block text-sm font-medium text-ink">Անվանումը հայերեն</label>
             <input id="sight-hy" required value={draft.name_hy} onChange={(e) => set({ name_hy: e.target.value })} className={adminInput} />
@@ -67,7 +67,24 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
               ))}
             </select>
           </div>
+          <div>
+            <label htmlFor="sight-terrain" className="mb-1 block text-sm font-medium text-ink">Տեսակ</label>
+            <select id="sight-terrain" value={draft.terrain} onChange={(e) => set({ terrain: e.target.value })} className={adminInput}>
+              {TERRAINS.map((k) => (
+                <option key={k} value={k}>{t(`terrain.${k}`)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sight-difficulty" className="mb-1 block text-sm font-medium text-ink">Բարդություն</label>
+            <select id="sight-difficulty" value={draft.difficulty} onChange={(e) => set({ difficulty: e.target.value })} className={adminInput}>
+              {DIFFICULTIES.map((k) => (
+                <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
+              ))}
+            </select>
+          </div>
         </div>
+        <p className="text-xs text-muted">Տեսակն ու բարդությունը ավտոմատ անցնում են այս վայրն ընտրած հայտարարություններին (արշավի բարդությունը՝ ամենաբարդ վայրինը)։</p>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-2">
           <button type="submit" disabled={busy} className={adminButton}>
@@ -97,10 +114,10 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
           <table className="w-full text-left text-[13px]">
             <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
               <tr>
-                <th className="whitespace-nowrap px-3 py-2.5">Հայերեն</th>
-                <th className="whitespace-nowrap px-3 py-2.5">Ռուսերեն</th>
-                <th className="whitespace-nowrap px-3 py-2.5">Անգլերեն</th>
+                <th className="whitespace-nowrap px-3 py-2.5">Անվանում</th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-center">Մարզ</th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-center">Տեսակ</th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-center">Բարդություն</th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-center">Վիճակ</th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-right">Գործողություններ</th>
               </tr>
@@ -113,10 +130,13 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
               )}
               {shown.map((s) => (
                 <tr key={s.id} className={`border-b border-line last:border-0 ${s.active ? "" : "opacity-60"}`}>
-                  <td className="whitespace-nowrap px-3 py-2 font-medium text-ink">{s.name_hy}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-muted">{s.name_ru}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-muted">{s.name_en}</td>
+                  <td className="px-3 py-2">
+                    <span className="block font-medium text-ink">{s.name_hy}</span>
+                    <span className="block text-xs text-muted">{s.name_ru} · {s.name_en}</span>
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{t(`region.${s.region}`)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{s.terrain ? t(`terrain.${s.terrain}`) : "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{s.difficulty ? t(`difficulty.${s.difficulty}`) : "—"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-center">
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -128,10 +148,10 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2">
                     <div className="flex justify-end gap-1.5">
-                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => setDraft({ ...s })}>
+                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => setDraft({ ...s, terrain: s.terrain ?? TERRAINS[0], difficulty: s.difficulty ?? "medium" })}>
                         Խմբագրել
                       </button>
-                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => save({ ...s, active: !s.active })}>
+                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => save({ ...s, terrain: s.terrain ?? "other", difficulty: s.difficulty ?? "medium", active: !s.active })}>
                         {s.active ? "Թաքցնել" : "Ցուցադրել"}
                       </button>
                     </div>

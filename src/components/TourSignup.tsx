@@ -210,8 +210,8 @@ export default function TourSignup({
         {!ready ? (
           <p className="text-sm text-muted">{t("common.loading")}</p>
         ) : ownsTour ? (
-          <Link href={`/dashboard/listings/${tourId}/edit`} className={`${primary} block text-center`}>
-            {t("signup.editOwn")}
+          <Link href={isPast ? `/dashboard/listings/new?from=${tourId}` : `/dashboard/listings/${tourId}/edit`} className={`${primary} block text-center`}>
+            {isPast ? t("announcements.republish") : t("signup.editOwn")}
           </Link>
         ) : isPast ? (
           <p className="text-sm text-muted">{t("signup.past")}</p>

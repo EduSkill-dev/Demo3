@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useT } from "@/i18n/client";
 
-export type SightOption = { id: string; name: string; region: string };
+export type SightOption = { id: string; name: string; region: string; terrain?: string | null; difficulty?: string | null };
 
 // Tick sights from the platform's list: a search box over a scrolling list,
 // with the chosen ones shown as removable chips. When regions are picked in
@@ -56,13 +56,19 @@ export default function SightPicker({
         aria-label={t("sights.search")}
         className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none"
       />
-      <ul className="mt-2 grid max-h-44 gap-x-3 gap-y-1 overflow-y-auto sm:grid-cols-2">
+      <ul className="mt-2 grid max-h-64 gap-x-3 gap-y-1 overflow-y-auto sm:grid-cols-2">
         {shown.map((s) => (
           <li key={s.id}>
-            <label className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={value.includes(s.id)} onChange={() => toggle(s.id)} className="accent-spruce-500" />
-              <span className="truncate">{s.name}</span>
-              <span className="ml-auto shrink-0 text-xs text-muted">{t(`region.${s.region}`)}</span>
+            <label className="flex items-start gap-2 rounded-md px-1 py-0.5 text-sm text-ink hover:bg-sand/60">
+              <input type="checkbox" checked={value.includes(s.id)} onChange={() => toggle(s.id)} className="mt-1 accent-spruce-500" />
+              <span className="min-w-0">
+                <span className="block">{s.name}</span>
+                <span className="block text-xs text-muted">
+                  {t(`region.${s.region}`)}
+                  {s.terrain ? ` · ${t(`terrain.${s.terrain}`)}` : ""}
+                  {s.difficulty ? ` · ${t(`difficulty.${s.difficulty}`)}` : ""}
+                </span>
+              </span>
             </label>
           </li>
         ))}

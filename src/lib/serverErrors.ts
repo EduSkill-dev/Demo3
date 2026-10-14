@@ -5,6 +5,8 @@ import type { MessageKey, TFunction } from "@/i18n/translate";
 // unknown is shown as-is.
 const KNOWN: [string, MessageKey][] = [
   ["հաշիվը սառեցված", "errors.frozen"],
+  ["Նշեք հավաքի վայրը և ժամը", "tourForm.errMeeting"],
+  ["Անցած արշավի ամսաթիվը փոխել չի կարելի", "errors.pastTourDate"],
   ["Չաթը Ձեր հաշվի համար անջատված", "errors.chatBlocked"],
   ["Մեկ հաղորդագրությունը կարող է լինել", "errors.messageTooLong"],
   ["արդեն գրանցված է որպես անհատ", "errors.alreadyIndividual"],

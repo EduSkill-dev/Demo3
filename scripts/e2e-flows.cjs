@@ -172,6 +172,7 @@ function tourRow(clubId, overrides = {}) {
     club_id: clubId, title: 'E2E Tour', regions: ['kotayk'], terrains: ['mountains'],
     date: future(78), max_participants: 4, difficulty: 'easy', overnight: false,
     coordinator_phone: '+374 55 123456',
+    meeting_point: 'E2E meeting point', meeting_time: '09:00',
     ...overrides,
   };
 }
@@ -966,8 +967,22 @@ async function main() {
           && !!tooEarly.error && !!atNotOwner.error && !markAbsent.error && !!absentRates.error && !!absentLikes.error && !markCame.error && (cameRates.data || []).length === 1,
         `book=${atBook.status} unknown=${unknownSource} sources=${JSON.stringify(atRows.map((r) => r.source))} early=${tooEarly.error ? 'refused' : 'ALLOWED'} other=${atNotOwner.error ? 'refused' : 'ALLOWED'} absent=${markAbsent.error?.message || 'ok'} rate=${absentRates.error ? 'refused' : 'ALLOWED'} like=${absentLikes.error ? 'refused' : 'ALLOWED'} came=${markCame.error?.message || 'ok'} rate2=${cameRates.error?.message || 'ok'}`);
 
+      // Places decide the listing's tags; a finished hike keeps its date.
+      const pl = (await admin.from('sights').select('id, region, terrain, difficulty').in('name_hy', ['Արագած լեռ', 'Սևանա լիճ'])).data || [];
+      await signIn('club');
+      const placed = await anon.from('tours').update({ sight_ids: pl.map((x) => x.id), regions: ['yerevan'], terrains: ['caves'], difficulty: 'easy' }).eq('id', tourId).select('regions, terrains, difficulty');
+      const pr = placed.data?.[0];
+      const moveOld = await anon.from('tours').update({ date: future(90) }).eq('id', atTour.id).select('id');
+      await admin.from('tours').update({ sight_ids: [] }).eq('id', tourId);
+      check('places: a listing takes its regions, kinds and the hardest difficulty from its places; a finished hike cannot be moved to a new date',
+        pl.length === 2 && JSON.stringify(pr?.regions) === JSON.stringify(['aragatsotn', 'gegharkunik']) && JSON.stringify(pr?.terrains) === JSON.stringify(['lakes', 'mountains'])
+          && pr?.difficulty === 'hard' && !!moveOld.error,
+        `places=${pl.length} tags=${JSON.stringify(pr)} ${placed.error?.message || ''} move=${moveOld.error ? 'refused' : 'ALLOWED'}`);
+
       // Monthly report: the numbers of that hike; its lines are set per club by an admin.
       const repMonth = future(-1).slice(0, 7);
+      // Every line on, whatever the plan's default list says.
+      await act({ action: 'club.setReport', userId: ids.club, items: ['hikes_total', 'regions', 'overnight', 'bookings_total', 'sources', 'cancellations', 'attendance', 'revenue', 'followers', 'comments', 'rating', 'hikes_table', 't_region', 't_difficulty', 't_overnight', 't_booked', 't_came', 't_absent', 't_cancelled', 't_sources', 't_price', 't_revenue'] }, superCookie);
       const repPage = await fetch(`http://localhost:${DEV_PORT}/dashboard/report?month=${repMonth}`, { headers: { Cookie: clubCookie } });
       const repHtml = await repPage.text();
       const planAReport = (dbPackages.find((x) => x.id === 'advanced') || {}).config?.monthly_report;
@@ -1031,6 +1046,8 @@ async function main() {
       const tgNoSecret = await tg(reply);
       const tgOtherChat = await tg({ message: { ...reply.message, chat: { id: -5 } } }, 'e2e-tg-secret');
       const tgReply = await tg(reply, 'e2e-tg-secret');
+      // An admin answering another admin's reply: that stays among the admins.
+      await tg({ message: { message_id: 777003, text: 'E2E admins only', chat: { id: -100123 }, from: { first_name: 'Ջիրո' }, reply_to_message: { message_id: 777002 } } }, 'e2e-tg-secret');
       const chatRows = (await admin.from('support_messages').select('from_admin, admin_name, body').eq('user_id', ids.ind).order('id')).data || [];
       await signIn('club2');
       const chatOther = (await anon.from('support_messages').select('id')).data || [];

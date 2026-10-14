@@ -7,14 +7,14 @@ import type { Locale } from "@/i18n/config";
 
 export const SIGHTS_TAG = "sights";
 
-export type Sight = { id: string; name_hy: string; name_ru: string; name_en: string; region: string; active: boolean };
+export type Sight = { id: string; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string | null; difficulty: string | null; active: boolean };
 
 const loadSights = unstable_cache(
   async (): Promise<Sight[]> => {
     try {
       const { data } = await createAdminClient()
         .from("sights")
-        .select("id, name_hy, name_ru, name_en, region, active")
+        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active")
         .order("name_hy");
       return (data ?? []) as Sight[];
     } catch {
@@ -37,10 +37,10 @@ export async function getSightNames(): Promise<Map<string, string>> {
 }
 
 // What the pickers offer: the active sights, named in the reader's language.
-export async function getSightOptions(): Promise<{ id: string; name: string; region: string }[]> {
+export async function getSightOptions(): Promise<{ id: string; name: string; region: string; terrain: string | null; difficulty: string | null }[]> {
   const [sights, locale] = await Promise.all([loadSights(), getLocale()]);
   return sights
     .filter((s) => s.active)
-    .map((s) => ({ id: s.id, name: nameIn(s, locale), region: s.region }))
+    .map((s) => ({ id: s.id, name: nameIn(s, locale), region: s.region, terrain: s.terrain, difficulty: s.difficulty }))
     .sort((a, b) => a.name.localeCompare(b.name, locale));
 }
