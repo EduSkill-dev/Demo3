@@ -118,11 +118,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <ToursHeader view="calendar" filters={f} />
-      <ToursFilters action="/calendar" filters={f} clubs={clubs} count={monthCount} hidden={{ month }} />
+      {/* On wide screens the filters and the month stay in place; only the cards scroll. */}
+      <div className="mt-4 lg:sticky lg:top-[72px] lg:z-20 lg:-mx-2 lg:bg-stone lg:px-2 lg:pb-1 lg:pt-3 [&>form]:mt-0">
+        <ToursFilters action="/calendar" filters={f} clubs={clubs} count={monthCount} hidden={{ month }} />
+      </div>
 
-      <div className="mt-5 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <div className="mt-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
         {/* ---------- Desktop: a small month that stays in view ---------- */}
-        <aside className="sticky top-24 hidden rounded-2xl border border-line bg-surface p-4 lg:block">
+        <aside className="sticky top-[210px] hidden rounded-2xl border border-line bg-surface p-4 lg:block">
           <div className="flex items-center gap-2">
             <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} aria-label={t("calendar.prevMonth")} className={arrow}>
               ‹
