@@ -6,6 +6,7 @@ import { useFormatDate, useT } from "@/i18n/client";
 import type { PublicTour } from "@/lib/publicTours";
 import FavoriteToggle from "@/components/FavoriteToggle";
 import LikeButton from "@/components/LikeButton";
+import CardPhotos from "@/components/tour/CardPhotos";
 
 // Difficulty chips: easy = Spruce, hard = Terracotta, the rest neutral.
 const DIFFICULTY_CHIP: Record<string, string> = {
@@ -44,13 +45,7 @@ export default function TourCard({
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
       <div className="relative">
-        <button data-view type="button" onClick={onOpen} className="block w-full" aria-label={tour.title}>
-          {tour.photo_urls?.[0] ? (
-            <img src={tour.photo_urls[0]} alt="" className="h-52 w-full object-cover" />
-          ) : (
-            <div className="flex h-52 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
-          )}
-        </button>
+        <CardPhotos photos={tour.photo_urls ?? []} title={tour.title} className="h-52" onOpen={onOpen} />
         {ended ? (
           <span className="absolute left-3 top-3 rounded-full bg-spruce-900 px-2.5 py-1 text-xs font-semibold text-white">{t("calendar.ended")}</span>
         ) : full ? (

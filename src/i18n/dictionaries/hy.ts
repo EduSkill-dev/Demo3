@@ -500,6 +500,9 @@ const hy = {
     deletedUser: "Ջնջված օգտատեր",
   },
   tour: {
+    prevPhoto: "Նախորդ նկարը",
+    nextPhoto: "Հաջորդ նկարը",
+    photoOf: "Նկար {n}՝ {count}-ից",
     ratingTitle: "{count} հոգի է գնահատել",
     date: "Ամսաթիվ",
     regions: "Մարզեր",

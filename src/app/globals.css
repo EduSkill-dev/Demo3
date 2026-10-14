@@ -46,6 +46,73 @@
 .dark .bg-red-50 { background-color: rgb(127 29 29 / 0.3); }
 .dark .text-red-700 { color: rgb(252 165 165); }
 
+/* Drop-down lists (<select>). Where the browser allows it (Chrome and Edge
+   135+), the open list takes the site's look: a rounded card on the page
+   colours, rounded rows, the chosen one in Spruce. Elsewhere at least its
+   colours follow the theme. */
+option {
+  background-color: rgb(var(--c-surface));
+  color: rgb(var(--c-ink));
+}
+@supports (appearance: base-select) {
+  select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+  select {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  /* The site's thin chevron instead of the browser's triangle. */
+  select::picker-icon {
+    content: "";
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    background: rgb(var(--c-muted));
+    mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27 fill=%27none%27 stroke=%27black%27 stroke-width=%271.8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M5.5 7.5L10 12l4.5-4.5%27/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: rotate 0.15s;
+  }
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+  select::picker(select) {
+    margin-block: 4px;
+    padding: 4px;
+    max-height: min(20rem, 60vh);
+    border: 1px solid rgb(var(--c-line));
+    border-radius: 14px;
+    background: rgb(var(--c-surface));
+    color: rgb(var(--c-ink));
+    box-shadow: 0 14px 34px rgb(0 0 0 / 0.18);
+  }
+  select option {
+    padding: 0.45rem 0.75rem;
+    border-radius: 9px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  select option::checkmark {
+    display: none;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: rgb(var(--c-sand));
+    outline: none;
+  }
+  select option:checked {
+    background: #1e5b4f;
+    color: #fffdf8;
+    font-weight: 600;
+  }
+}
+
+/* A row that scrolls sideways by swipe or buttons, with no scrollbar shown. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* A frozen account (see FrozenGuard): every control is switched off, except
    the ones that only show something. */
 .frozen :is(button, input, select, textarea, [role="button"]):not([data-view], [data-view] *) {

@@ -495,6 +495,9 @@ const en: DeepPartial<Dictionary> = {
     deletedUser: "Deleted user",
   },
   tour: {
+    prevPhoto: "Previous photo",
+    nextPhoto: "Next photo",
+    photoOf: "Photo {n} of {count}",
     ratingTitle: "Rated by {count}",
     date: "Date",
     regions: "Regions",

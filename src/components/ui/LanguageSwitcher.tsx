@@ -21,13 +21,13 @@ export default function LanguageSwitcher() {
   }
 
   return (
-    <label className="relative inline-flex items-center">
+    <label className="inline-flex items-center">
       <span className="sr-only">{t("language.label")}</span>
       <select
         value={locale}
         disabled={pending}
         onChange={(e) => choose(e.target.value as Locale)}
-        className="cursor-pointer appearance-none rounded-lg border border-line bg-surface py-1.5 pl-2.5 pr-7 text-xs font-semibold text-ink disabled:opacity-60"
+        className="cursor-pointer rounded-lg border border-line bg-surface py-1.5 pl-2.5 pr-2 text-xs font-semibold text-ink disabled:opacity-60"
       >
         {LOCALES.map((l) => (
           <option key={l} value={l} title={t(`language.${l}`)}>
@@ -35,9 +35,6 @@ export default function LanguageSwitcher() {
           </option>
         ))}
       </select>
-      <svg viewBox="0 0 20 20" className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M5.5 7.5L10 12l4.5-4.5" />
-      </svg>
     </label>
   );
 }
