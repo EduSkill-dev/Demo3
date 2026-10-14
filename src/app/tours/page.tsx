@@ -68,7 +68,7 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
   };
   const round = "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-line bg-surface text-lg leading-none text-ink hover:border-spruce-500";
   const pill = (on: boolean) =>
-    `flex h-[60px] min-w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full border-2 px-2 transition ${
+    `flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-full border-2 pb-1 transition ${
       on ? "border-spruce-500 bg-spruce-500 text-[#FFFDF8]" : "border-line bg-surface text-ink hover:border-spruce-500"
     }`;
 
@@ -89,13 +89,13 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
             <span className={`${round} cursor-not-allowed opacity-40`} aria-hidden="true">‹</span>
           ))}
         <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1">
-          <Link href={href({ day: "" })} scroll={false} className={`${pill(!day)} px-4`}>
-            <span className="text-xs font-bold">{t("toursPage.allDays")}</span>
+          <Link href={href({ day: "" })} scroll={false} className={pill(!day)}>
+            <span className="text-[11px] font-bold leading-none">{t("toursPage.allDays")}</span>
           </Link>
           {hikeDays.map((d) => (
             <Link key={d} href={href({ day: d === day ? "" : d })} scroll={false} aria-label={dayInWords(d, words)} aria-current={d === day ? "date" : undefined} className={`${pill(d === day)} ${d === today && d !== day ? "!border-spruce-500 text-spruce-700 dark:text-spruce-300" : ""}`}>
-              <span className="text-[10px] font-semibold uppercase">{d === today ? t("calendar.today") : words.weekdaysShort[weekdayIndex(d)]}</span>
-              <span className="text-base font-bold leading-none">{+d.slice(8, 10)}</span>
+              <span className="text-[10px] font-semibold uppercase leading-none">{d === today ? t("calendar.today") : words.weekdaysShort[weekdayIndex(d)]}</span>
+              <span className="text-[17px] font-bold leading-none">{+d.slice(8, 10)}</span>
             </Link>
           ))}
         </div>

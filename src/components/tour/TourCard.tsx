@@ -13,11 +13,12 @@ const DIFFICULTY_CHIP: Record<string, string> = {
   hard: "bg-terracotta-100 text-terracotta-700",
 };
 const NEUTRAL_CHIP = "bg-sand text-[#5A4A2E] dark:text-ink";
-const chip = "rounded-full px-2.5 py-0.5 text-xs font-semibold";
+const chip = "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold leading-none";
 const icon = "h-4 w-4 shrink-0 text-spruce-500 dark:text-spruce-300";
 
-// One hike on the Tours page / home page: photo · title · date and regions
-// (click a region = filter) · chips · club row with price · See more.
+// One hike on the Tours page / home page: photo · title · date and regions on
+// one line (click a region = filter) · chips · club, its rating and the price ·
+// See more.
 export default function TourCard({
   tour,
   backHref,
@@ -45,9 +46,9 @@ export default function TourCard({
       <div className="relative">
         <button data-view type="button" onClick={onOpen} className="block w-full" aria-label={tour.title}>
           {tour.photo_urls?.[0] ? (
-            <img src={tour.photo_urls[0]} alt="" className="h-48 w-full object-cover" />
+            <img src={tour.photo_urls[0]} alt="" className="h-52 w-full object-cover" />
           ) : (
-            <div className="flex h-48 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
+            <div className="flex h-52 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
           )}
         </button>
         {ended ? (
@@ -68,20 +69,21 @@ export default function TourCard({
           <Link href={`/tours/${tour.id}`} className="hover:text-terracotta-700 hover:underline dark:hover:text-terracotta-300">{tour.title}</Link>
         </h3>
 
-        <div className="mt-3 space-y-1.5 text-sm text-ink">
-          <p className="flex items-center gap-2">
+        {/* Date and regions on one line (they wrap when long). */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink">
+          <span className="flex items-center gap-1.5">
             <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="3" y="5" width="18" height="16" rx="2" />
               <path d="M3 10h18M8 3v4M16 3v4" />
             </svg>
             {date}
-          </p>
-          <p className="flex items-start gap-2">
-            <svg viewBox="0 0 24 24" className={`${icon} mt-0.5`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          </span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" />
               <circle cx="12" cy="10" r="2.5" />
             </svg>
-            <span className="flex flex-wrap gap-x-1.5">
+            <span className="flex flex-wrap gap-x-1">
               {tour.regions.map((r, i) => (
                 <span key={r}>
                   {onRegion ? (
@@ -101,28 +103,30 @@ export default function TourCard({
                 </span>
               ))}
             </span>
-          </p>
+          </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className={`${chip} ${DIFFICULTY_CHIP[tour.difficulty] ?? NEUTRAL_CHIP}`}>{t(`difficulty.${tour.difficulty}`)}</span>
-          {tour.overnight && <span className={`${chip} bg-apricot-100 text-apricot-700`}>🌙 {t("common.overnight")}</span>}
-          <span className={`${chip} ${NEUTRAL_CHIP}`}>{t("common.upTo", { count: tour.max_participants })}</span>
-          <span className="ml-auto">
+        {/* The chips wrap; the like stays on the right of their first line. */}
+        <div className="mt-2.5 flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+            <span className={`${chip} ${DIFFICULTY_CHIP[tour.difficulty] ?? NEUTRAL_CHIP}`}>{t(`difficulty.${tour.difficulty}`)}</span>
+            {tour.overnight && <span className={`${chip} bg-apricot-100 text-apricot-700`}>🌙 {t("common.overnight")}</span>}
+            <span className={`${chip} ${NEUTRAL_CHIP}`}>{t("common.upTo", { count: tour.max_participants })}</span>
+          </div>
+          <span className="flex h-6 shrink-0 items-center">
             <LikeButton kind="tour" id={tour.id} count={tour.likes} />
           </span>
         </div>
 
-        <div className="mt-auto pt-4">
-          <div className="flex items-end justify-between gap-3 border-t border-line pt-3">
-            <p className="min-w-0 text-sm">
-              <span className="block text-xs text-muted">{t("tour.organizer")}</span>
-              <Link href={clubHref} className="font-semibold text-heading hover:text-terracotta-700">
+        <div className="mt-auto pt-3">
+          {/* The club, its rating (when its plan shows it) and the price. */}
+          <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+              <Link href={clubHref} className="truncate text-[15px] font-semibold text-heading hover:text-terracotta-700">
                 {tour.club.name}
               </Link>
-              {/* The club's rating (when its plan shows it): score and how many rated. */}
               {tour.club.rating && (
-                <span className="mt-0.5 flex items-center gap-1 text-xs text-muted" title={t("tour.ratingTitle", { count: tour.club.rating.count })}>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted" title={t("tour.ratingTitle", { count: tour.club.rating.count })}>
                   <span className="text-apricot-500">★</span>
                   <span className="font-semibold text-ink">{tour.club.rating.average.toFixed(1)}/5</span>
                   <span className="inline-flex items-center">
