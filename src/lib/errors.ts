@@ -42,6 +42,7 @@ export async function reportError(input: {
   userId?: string | null;
   detail?: string | null;
 }): Promise<void> {
+  if (building()) return;
   try {
     const source = input.source ?? "server";
     const err = input.error;
@@ -81,8 +82,15 @@ export async function reportError(input: {
   }
 }
 
-// Next.js signals redirects and "not found" by throwing; those are not faults.
-const isControlFlow = (e: unknown) => typeof (e as { digest?: unknown })?.digest === "string" && (e as { digest: string }).digest.startsWith("NEXT_");
+// Next.js signals some things by throwing — a redirect, "not found", and
+// (while building) "this route cannot be prepared ahead of time". None of
+// them is a fault: they carry a `digest` and must travel on untouched.
+const isControlFlow = (e: unknown) => {
+  const digest = (e as { digest?: unknown })?.digest;
+  return typeof digest === "string" && (digest.startsWith("NEXT_") || digest === "DYNAMIC_SERVER_USAGE" || digest === "BAILOUT_TO_CLIENT_SIDE_RENDERING");
+};
+// Nothing that happens while the site is being built is a fault of the live site.
+const building = () => process.env.NEXT_PHASE === "phase-production-build";
 
 // Wraps a route handler: a crash, or an answer of 500 and above, is reported;
 // the visitor gets a plain message instead of a broken page.
