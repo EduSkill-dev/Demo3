@@ -31,6 +31,8 @@ export const ACCOUNT_LIMITS = {
   receive: { role: "club", label: "Նոր հայտերի ընդունում", short: "Հայտեր" },
   book: { role: "individual", label: "Արշավների ամրագրում", short: "Ամրագրում" },
   request: { role: "individual", label: "Անհատական հայտի ստեղծում", short: "Հայտի ստեղծում" },
+  chat: { role: "individual", label: "Օգնության չաթ", short: "Չաթ" },
+  clubChat: { role: "club", label: "Օգնության չաթ", short: "Չաթ" },
 } as const;
 export type AccountLimit = keyof typeof ACCOUNT_LIMITS;
 
@@ -92,6 +94,7 @@ export const TEXT_SECTIONS: { title: string; sections: [string, string][] }[] = 
       ["about", "Մեր մասին"],
       ["toursPage", "Արշավներ"],
       ["calendar", "Արշավների օրացույց"],
+      ["support", "Օգնության չաթ"],
       ["share", "Արշավով կիսվելը"],
       ["planner", "Պլանավորիչ"],
       ["tour", "Արշավի էջ"],

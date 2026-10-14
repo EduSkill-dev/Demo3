@@ -22,7 +22,7 @@ type Row = {
   plan_overrides: unknown;
   share_blocked: string[] | null;
   report_items: string[] | null;
-  profiles: { id: string; email: string; status: AccountStatus; created_at: string } | null;
+  profiles: { id: string; email: string; status: AccountStatus; created_at: string; chat_blocked: boolean } | null;
 };
 
 export default async function AdminClubsPage({ searchParams }: { searchParams: { q?: string } }) {
@@ -33,7 +33,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
   const plans = await getPlans();
   const { data } = await createAdminClient()
     .from("clubs")
-    .select("name, phone, tariff, package_ends_at, plan_overrides, share_blocked, report_items, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at)")
+    .select("name, phone, tariff, package_ends_at, plan_overrides, share_blocked, report_items, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at, chat_blocked)")
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -52,6 +52,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
         limits: [
           { key: "post" as const, blocked: c.posting_blocked },
           { key: "receive" as const, blocked: c.applications_blocked },
+          { key: "clubChat" as const, blocked: c.profiles!.chat_blocked },
         ],
         extra: (pkg ? [plans[pkg].name, `մինչև ${fmt(c.package_ends_at!, "short")}`] : ["Փաթեթ չկա"]) as [string, string?],
         planId: pkg,

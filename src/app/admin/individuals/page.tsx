@@ -12,7 +12,7 @@ export default async function AdminIndividualsPage({ searchParams }: { searchPar
   const fmt = await getFormatDate();
   const { data } = await createAdminClient()
     .from("profiles")
-    .select("id, first_name, last_name, email, phone, status, booking_blocked, requests_blocked, created_at")
+    .select("id, first_name, last_name, email, phone, status, booking_blocked, requests_blocked, chat_blocked, created_at")
     .eq("role", "individual")
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -27,6 +27,7 @@ export default async function AdminIndividualsPage({ searchParams }: { searchPar
     status: AccountStatus;
     booking_blocked: boolean;
     requests_blocked: boolean;
+    chat_blocked: boolean;
     created_at: string;
   }[])
     .map((p) => ({
@@ -39,6 +40,7 @@ export default async function AdminIndividualsPage({ searchParams }: { searchPar
       limits: [
         { key: "book" as const, blocked: p.booking_blocked },
         { key: "request" as const, blocked: p.requests_blocked },
+        { key: "chat" as const, blocked: p.chat_blocked },
       ],
     }))
     .filter((r) => !q || `${r.name} ${r.email} ${r.phone ?? ""}`.toLowerCase().includes(q));

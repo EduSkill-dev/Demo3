@@ -22,6 +22,7 @@ export const ERROR_AREAS: Record<string, string> = {
   calendar: "Օրացույց",
   tours: "Արշավներ",
   account: "Հաշիվ",
+  support: "Օգնության չաթ",
   page: "Էջի ցուցադրում",
   site: "Կայքի հասանելիություն",
 };

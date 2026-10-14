@@ -1,5 +1,6 @@
 "use client";
 
+import GoogleButton, { AuthDivider } from "@/components/auth/GoogleButton";
 import PasswordInput from "@/components/ui/PasswordInput";
 import { useState } from "react";
 import Link from "next/link";
@@ -13,6 +14,8 @@ import CheckEmail from "@/components/auth/CheckEmail";
 export default function ClubRegisterPage() {
   const t = useT();
   const [clubName, setClubName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +36,7 @@ export default function ClubRegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "club", email: email.trim(), password, phone: phone.trim(), clubName: clubName.trim() }),
+      body: JSON.stringify({ role: "club", email: email.trim(), password, phone: phone.trim(), clubName: clubName.trim(), firstName: firstName.trim(), lastName: lastName.trim() }),
     }).catch(() => null);
     const data = res
       ? ((await res.json().catch(() => ({}))) as { session?: boolean; error?: { code?: string; message: string; status?: number } })
@@ -48,11 +51,24 @@ export default function ClubRegisterPage() {
 
   return (
     <AuthCard title={t("auth.clubTitle")}>
+      <GoogleButton next="/register/club/google" />
+      <AuthDivider />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className={authLabel}>{t("auth.clubName")}</label>
           <input id="name" required minLength={2} maxLength={100} autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="first" className={authLabel}>{t("auth.firstName")}</label>
+            <input id="first" required maxLength={60} autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={authInput} />
+          </div>
+          <div>
+            <label htmlFor="last" className={authLabel}>{t("auth.lastName")}</label>
+            <input id="last" required maxLength={60} autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} className={authInput} />
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-muted">{t("auth.clubPersonHint")}</p>
         <div>
           <label htmlFor="email" className={authLabel}>{t("auth.email")}</label>
           <input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} />

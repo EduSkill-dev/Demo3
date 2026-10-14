@@ -129,6 +129,8 @@ const en: DeepPartial<Dictionary> = {
     menu: "Menu",
   },
   auth: {
+    clubGoogleText: "One step left: enter the club's details.",
+    clubPersonHint: "The first name and surname of the person registering the club. Not shown to visitors.",
     withGoogle: "Continue with Google",
     or: "or",
     completeTitle: "Complete your details",
@@ -573,6 +575,17 @@ const en: DeepPartial<Dictionary> = {
     t_price: "Price",
     t_revenue: "Amount",
   },
+  support: {
+    title: "Write to us",
+    intro: "Ask the platform's administrator: the answer will appear here, and we will let you know by email.",
+    empty: "No messages yet. Write your question.",
+    placeholder: "Your question…",
+    send: "Send",
+    admin: "Administrator",
+    blocked: "The chat has been switched off for your account by an administrator.",
+    guestText: "To chat with an administrator, sign in or register.",
+    guestForm: "Without registering you can write to us with the Suggestions form at the bottom of the page; the answer comes by email.",
+  },
   calendar: {
     title: "Hike calendar",
     short: "Calendar",
@@ -650,6 +663,9 @@ const en: DeepPartial<Dictionary> = {
     onTour: "hike: {title}",
   },
   errors: {
+    chatBlocked: "The chat has been switched off for your account by an administrator.",
+    messageTooLong: "One message can be at most 1000 characters.",
+    alreadyIndividual: "This account is already registered as an individual. Use another email address to register a club.",
     oauthFailed: "Signing in with Google did not work. Please try again.",
     profileIncomplete: "Please complete your details first (first name, surname, birth date, gender, phone).",
     pageTitle: "Something went wrong",

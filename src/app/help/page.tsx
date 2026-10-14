@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getT } from "@/i18n/server";
 import LegalPage from "@/components/layout/LegalPage";
+import SupportChat from "@/components/SupportChat";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: `${(await getT())("legal.helpTitle")}` };
@@ -17,7 +18,9 @@ export default async function HelpPage() {
           {t("header.faq")} →
         </Link>
       </p>
-      <p className="text-muted">{t("legal.placeholder")}</p>
+      <div className="pt-2">
+        <SupportChat />
+      </div>
     </LegalPage>
   );
 }

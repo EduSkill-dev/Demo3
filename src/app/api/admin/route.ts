@@ -110,7 +110,9 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     if (t.account.role !== ACCOUNT_LIMITS[limit].role) return fail("Այս ֆունկցիան այս հաշվին չի վերաբերում։");
 
     const { error } =
-      limit === "book" || limit === "request"
+      limit === "chat" || limit === "clubChat"
+        ? await ctx.db.from("profiles").update({ chat_blocked: blocked }).eq("id", t.account.id)
+        : limit === "book" || limit === "request"
         ? await ctx.db.from("profiles").update(limit === "book" ? { booking_blocked: blocked } : { requests_blocked: blocked }).eq("id", t.account.id)
         : await ctx.db
             .from("clubs")

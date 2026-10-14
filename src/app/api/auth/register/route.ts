@@ -32,7 +32,7 @@ async function handlePOST(req: Request) {
   if (!EMAIL_RE.test(email)) return fail("validation_failed", "Նշեք ճիշտ էլ. հասցե։");
   if (password.length < MIN_PASSWORD || password.length > 72) return fail("weak_password", "");
   if (!PHONE_RE.test(phone)) return fail("validation_failed", "Նշեք ճիշտ հեռախոսահամար։");
-  if (role === "club" ? clubName.length < 2 : !firstName || !lastName) return fail("validation_failed", "Լրացրեք բոլոր դաշտերը։");
+  if ((role === "club" && clubName.length < 2) || !firstName || !lastName) return fail("validation_failed", "Լրացրեք բոլոր դաշտերը։");
   if (role === "individual" && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return fail("validation_failed", "Նշեք ճիշտ ծննդյան ամսաթիվ։");
 
   const db = createAdminClient();
@@ -52,7 +52,7 @@ async function handlePOST(req: Request) {
       emailRedirectTo: `${new URL(req.url).origin}${b.then === "request" && role === "individual" ? "/auth/confirm-request" : "/auth/confirm"}`,
       data:
         role === "club"
-          ? { role, club_name: clubName, phone }
+          ? { role, club_name: clubName, phone, first_name: firstName, last_name: lastName }
           : { role, first_name: firstName, last_name: lastName, birth_date: birthDate, gender, phone },
     },
   });

@@ -468,7 +468,7 @@ async function main() {
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
       stdio: 'pipe',
-      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
+      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
       shell: false,
     });
     devServer.on('error', (err) => console.error('     dev server error:', err.message));
@@ -789,7 +789,7 @@ async function main() {
 
       const regTaken = await api('/api/auth/register', { role: 'individual', email: email('never'), password: PASSWORD, phone: '010 000002', firstName: 'Ա', lastName: 'Բ', birthDate: '1990-01-01' });
       const regBad = await api('/api/auth/register', { role: 'club', email: 'not-an-email', password: PASSWORD, phone: '+374 77 000000', clubName: 'X' });
-      const regName = await api('/api/auth/register', { role: 'club', email: email('never2'), password: PASSWORD, phone: '+374 77 ' + String(stamp).slice(-6), clubName: 'e2e CLUB a' });
+      const regName = await api('/api/auth/register', { role: 'club', email: email('never2'), password: PASSWORD, phone: '+374 77 ' + String(stamp).slice(-6), clubName: 'e2e CLUB a', firstName: 'Ա', lastName: 'Բ' });
       const created0 = (await admin.from('profiles').select('id').in('email', [email('never'), email('never2')])).data || [];
       check('sign-up route: a taken phone or club name and bad input are refused before any account exists',
         regTaken.status === 409 && regTaken.body.error?.code === 'phone_taken' && regBad.status === 400 && regName.body.error?.code === 'club_name_taken' && created0.length === 0,
@@ -1018,6 +1018,49 @@ async function main() {
           && [307, 308].includes(gAccount.status) && (gAccount.headers.get('location') || '').includes('/account/complete') && gComplete.status === 200
           && gBook2.status === 200 && gAccount2.status === 200 && (noCode.headers.get('location') || '').includes('/login?error=oauth'),
         `profile=${JSON.stringify(gProfile)} book=${gBook.status} account=${gAccount.status} ${gAccount.headers.get('location')} complete=${gComplete.status} book2=${gBook2.status} ${JSON.stringify(gBook2.body)} account2=${gAccount2.status} nocode=${noCode.headers.get('location')}`);
+
+      // Help chat: registered accounts write, admins answer from Telegram, the chat can be switched off.
+      const chatGuest = await api('/api/support', { body: 'hello' });
+      const chatLong = await api('/api/support', { body: 'x'.repeat(1001) }, indCookie);
+      const chatSend = await api('/api/support', { body: 'E2E հարց' }, indCookie);
+      const chatClub = await api('/api/support', { body: 'E2E ակումբի հարց' }, clubCookie);
+      const chatMsgId = chatSend.body?.message?.id;
+      await admin.from('support_messages').update({ tg_message_id: 777001 }).eq('id', chatMsgId);
+      const tg = (body, secret) => fetch(`http://localhost:${DEV_PORT}/api/telegram/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(secret ? { 'X-Telegram-Bot-Api-Secret-Token': secret } : {}) }, body: JSON.stringify(body) });
+      const reply = { message: { message_id: 777002, text: 'E2E պատասխան', chat: { id: -100123 }, from: { first_name: 'Գոռ', last_name: 'Ադմին' }, reply_to_message: { message_id: 777001 } } };
+      const tgNoSecret = await tg(reply);
+      const tgOtherChat = await tg({ message: { ...reply.message, chat: { id: -5 } } }, 'e2e-tg-secret');
+      const tgReply = await tg(reply, 'e2e-tg-secret');
+      const chatRows = (await admin.from('support_messages').select('from_admin, admin_name, body').eq('user_id', ids.ind).order('id')).data || [];
+      await signIn('club2');
+      const chatOther = (await anon.from('support_messages').select('id')).data || [];
+      await signIn('ind');
+      const chatOwn = (await anon.from('support_messages').select('id')).data || [];
+      const chatForge = await anon.from('support_messages').insert({ user_id: ids.ind, body: 'forged', from_admin: true });
+      const chatOff = await act({ action: 'account.setLimit', userId: ids.ind, limit: 'chat', blocked: true }, superCookie);
+      const chatRefused = await api('/api/support', { body: 'again' }, indCookie);
+      await act({ action: 'account.setLimit', userId: ids.ind, limit: 'chat', blocked: false }, superCookie);
+      check('help chat: only registered accounts write (a paragraph at most), the admin reply from Telegram lands in the right chat, nobody reads another chat, admins can switch it off',
+        chatGuest.status === 401 && chatLong.status === 400 && chatSend.status === 200 && chatClub.status === 200
+          && tgNoSecret.status === 401 && tgOtherChat.status === 200 && tgReply.status === 200
+          && chatRows.length === 2 && chatRows[1].from_admin === true && chatRows[1].admin_name === 'Գոռ Ադմին' && chatRows[1].body === 'E2E պատասխան'
+          && chatOther.length === 0 && chatOwn.length === 2 && !!chatForge.error && chatOff.status === 200 && chatRefused.status === 403,
+        `guest=${chatGuest.status} long=${chatLong.status} send=${chatSend.status} club=${chatClub.status} tg=${tgNoSecret.status}/${tgOtherChat.status}/${tgReply.status} rows=${JSON.stringify(chatRows)} other=${chatOther.length} own=${chatOwn.length} forge=${chatForge.error ? 'refused' : 'ALLOWED'} off=${chatOff.status} refused=${chatRefused.status}`);
+
+      // A club registered with Google: the fresh account becomes a club once.
+      const gClub = await admin.auth.admin.createUser({ email: email('gclub'), password: PASSWORD, email_confirm: true, app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Գուգլ Ակումբ' } });
+      ids.gclub = gClub.data.user.id;
+      const gClubCookie = await cookieFor('gclub');
+      const clubForm = { clubName: `E2E Google Club ${stamp}`, firstName: 'Գուգլ', lastName: 'Ակումբ', phone: '+374 98 ' + String(stamp).slice(-6) };
+      const becomeTaken = await api('/api/auth/become-club', { ...clubForm, clubName: 'E2E Club A' }, gClubCookie);
+      const become = await api('/api/auth/become-club', clubForm, gClubCookie);
+      const gClubRow = (await admin.from('clubs').select('name, slug, profiles!clubs_owner_id_fkey(role, first_name)').eq('owner_id', ids.gclub).maybeSingle()).data;
+      const becomeDone = await api('/api/auth/become-club', clubForm, gCookie); // the finished individual from the test above
+      const becomeEmail = await api('/api/auth/become-club', clubForm, indCookie); // an email+password account
+      check('club with Google: a fresh Google account becomes a club once; a finished individual and a password account cannot',
+        becomeTaken.status === 409 && become.status === 200 && gClubRow?.name === clubForm.clubName && gClubRow?.profiles?.role === 'club' && gClubRow?.profiles?.first_name === 'Գուգլ' && !!gClubRow?.slug
+          && becomeDone.status === 409 && becomeEmail.status === 403,
+        `taken=${becomeTaken.status} become=${become.status} ${JSON.stringify(become.body)} row=${JSON.stringify(gClubRow)} done=${becomeDone.status} email=${becomeEmail.status}`);
 
       // Shared calendar and its feeds: public data only.
       const calPage = await fetch(`http://localhost:${DEV_PORT}/calendar?month=${future(78).slice(0, 7)}`);

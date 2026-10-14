@@ -34,6 +34,10 @@ export async function GET(request: NextRequest) {
   }
   await logActivity({ actor: data.user.id, action: "auth.login", meta: { via: "google" }, ip: clientIp(request) });
 
+  // Registering a club with Google: the fresh account goes on to the club form.
+  if (next?.startsWith("/register/club/") && profile?.role === "individual" && missingProfileFields(profile).length > 0) return to(next);
+  if (profile?.role === "club" && next?.startsWith("/register/club/")) return to("/dashboard");
+
   if (missingProfileFields(profile).length > 0) {
     return to(`${COMPLETE_PATH}${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   }
