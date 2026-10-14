@@ -23,17 +23,21 @@ export default function TourCard({
   backHref,
   onRegion,
   onOpen,
+  size = "md",
 }: {
   tour: PublicTour;
   backHref?: string; // where the club page's "Back" should return to
   onRegion?: (region: string) => void;
   onOpen: () => void;
+  size?: "md" | "sm"; // "sm": four in a row (Tours page, calendar)
 }) {
   const t = useT();
   const fmt = useFormatDate();
   const closed = tour.cap <= 0;
   const full = tour.taken >= tour.cap;
   const date = fmt(tour.date, "weekday");
+  const ended = tour.date < new Date().toISOString().slice(0, 10);
+  const sm = size === "sm";
   const clubHref = `/clubs/${tour.club.id}${backHref ? `?back=${encodeURIComponent(backHref)}` : ""}`;
 
   return (
@@ -41,24 +45,28 @@ export default function TourCard({
       <div className="relative">
         <button data-view type="button" onClick={onOpen} className="block w-full" aria-label={tour.title}>
           {tour.photo_urls?.[0] ? (
-            <img src={tour.photo_urls[0]} alt="" className="h-48 w-full object-cover" />
+            <img src={tour.photo_urls[0]} alt="" className={`${sm ? "h-40" : "h-48"} w-full object-cover`} />
           ) : (
-            <div className="flex h-48 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
+            <div className={`flex ${sm ? "h-40" : "h-48"} items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl`}>🏔️</div>
           )}
         </button>
-        {full && (
+        {ended ? (
+          <span className="absolute left-3 top-3 rounded-full bg-spruce-900 px-2.5 py-1 text-xs font-semibold text-white">{t("calendar.ended")}</span>
+        ) : full ? (
           <span className="absolute left-3 top-3 rounded-full bg-terracotta-500 px-2.5 py-1 text-xs font-semibold text-white">
             {closed ? t("signup.closed") : t("toursPage.full")}
           </span>
-        )}
+        ) : null}
         {/* The bookmark: follow the club that runs this hike (individuals only). */}
         <div className="absolute right-3 top-3">
           <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-[21px] font-bold leading-snug text-heading">{tour.title}</h3>
+      <div className={`flex flex-1 flex-col ${sm ? "p-4" : "p-5"}`}>
+        <h3 className={`${sm ? "text-lg" : "text-[21px]"} font-bold leading-snug text-heading`}>
+          <Link href={`/tours/${tour.id}`} className="hover:text-terracotta-700 hover:underline dark:hover:text-terracotta-300">{tour.title}</Link>
+        </h3>
 
         <div className="mt-3 space-y-1.5 text-sm text-ink">
           <p className="flex items-center gap-2">
@@ -112,14 +120,21 @@ export default function TourCard({
               <Link href={clubHref} className="font-semibold text-heading hover:text-terracotta-700">
                 {tour.club.name}
               </Link>
+              {/* The club's rating (when its plan shows it): score and how many rated. */}
               {tour.club.rating && (
-                <span className="ml-1 text-muted">
-                  (<span className="text-apricot-500">★</span> {tour.club.rating.average.toFixed(1)}/5)
+                <span className="mt-0.5 flex items-center gap-1 text-xs text-muted" title={t("tour.ratingTitle", { count: tour.club.rating.count })}>
+                  <span className="text-apricot-500">★</span>
+                  <span className="font-semibold text-ink">{tour.club.rating.average.toFixed(1)}/5</span>
+                  <span className="inline-flex items-center">
+                    (
+                    <svg viewBox="0 0 24 24" className="mr-0.5 h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="9" cy="8" r="3.5" />
+                      <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" />
+                    </svg>
+                    {tour.club.rating.count})
+                  </span>
                 </span>
               )}
-              <span className="ml-2 align-middle">
-                <LikeButton kind="club" id={tour.club.id} count={tour.club.likes} />
-              </span>
             </p>
             <p className="shrink-0 whitespace-nowrap font-bold text-heading">
               {Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(tour.price) }) : t("common.free")}

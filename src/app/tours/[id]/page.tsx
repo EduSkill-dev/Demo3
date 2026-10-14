@@ -10,6 +10,7 @@ import type { Club, Tour } from "@/types/database";
 import BackLink from "@/components/BackLink";
 import TourDetails from "@/components/tour/TourDetails";
 import TourSignup from "@/components/TourSignup";
+import AddToCalendar from "@/components/calendar/AddToCalendar";
 import RatingBox from "@/components/RatingBox";
 
 type TourWithClub = Tour & { clubs: Club | null };
@@ -121,6 +122,15 @@ export default async function TourDetailPage({ params }: { params: { id: string 
             meetingTime={tour.meeting_time}
             price={Number(tour.price) || 0}
           />
+          {/* Not for a hike that is over. */}
+          {tour.date >= new Date().toISOString().slice(0, 10) && (
+            <div className="mt-3 flex justify-center">
+              <AddToCalendar
+                tour={{ id: tour.id, title: tour.title, date: tour.date, end_date: tour.end_date ?? null, place: tour.regions.map((r) => t(`region.${r}`)).join(", "), club: club?.name ?? "" }}
+                className="flex items-center gap-2 rounded-full border-2 border-line px-4 py-2 text-sm font-semibold text-ink hover:border-spruce-500"
+              />
+            </div>
+          )}
         </aside>
       </div>
     </main>

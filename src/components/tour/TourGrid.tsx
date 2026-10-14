@@ -12,16 +12,18 @@ export default function TourGrid({
   tours,
   backHref,
   columns = "sm:grid-cols-2 lg:grid-cols-3",
+  size = "md",
 }: {
   tours: PublicTour[];
   backHref?: string;
   columns?: string; // narrower containers (club page) pass "sm:grid-cols-2"
+  size?: "md" | "sm";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState<PublicTour | null>(null);
   return (
     <>
-      <div className={`grid gap-6 ${columns}`}>
+      <div className={`grid ${size === "sm" ? "gap-4" : "gap-6"} ${columns}`}>
         {tours.map((tour) => (
           <TourCard
             key={tour.id}
@@ -29,6 +31,7 @@ export default function TourGrid({
             backHref={backHref}
             onRegion={(region) => router.push(`/tours?region=${region}`)}
             onOpen={() => setOpen(tour)}
+            size={size}
           />
         ))}
       </div>

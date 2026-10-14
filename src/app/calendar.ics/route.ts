@@ -21,12 +21,20 @@ async function handleGET(req: Request) {
     overnight: t("calendar.night"),
   };
 
+  // ?from=&to= (both days) narrows it to that stretch.
+  const from = params.get("from");
+  const to = params.get("to");
+  const clubId = /^[0-9a-f-]{36}$/i.test(club) ? club : undefined;
   let tours = await getPublicTours(
-    isDay(day) ? { range: { from: day, to: day } } : { range: { from: addDays(todayInYerevan(), -30) }, clubId: /^[0-9a-f-]{36}$/i.test(club) ? club : undefined }
+    isDay(day)
+      ? { range: { from: day, to: day } }
+      : isDay(from)
+        ? { range: { from, to: isDay(to) && to >= from ? to : undefined }, clubId }
+        : { range: { from: addDays(todayInYerevan(), -30) }, clubId }
   );
   if (isDay(day)) tours = tours.filter((x) => coversDay(x, day));
   if ((REGIONS as readonly string[]).includes(region)) tours = tours.filter((x) => x.regions.includes(region));
-  return icsResponse(buildIcs(tours, siteOrigin(req), labels), isDay(day) ? `culmen-${day}.ics` : "culmen.ics");
+  return icsResponse(buildIcs(tours, siteOrigin(req), labels), isDay(day) ? `culmen-${day}.ics` : isDay(from) ? `culmen-${from.slice(0, 7)}.ics` : "culmen.ics");
 }
 
 // A crash or a 5xx answer here is logged and the admins are told.
