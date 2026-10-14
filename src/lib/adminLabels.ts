@@ -1,7 +1,7 @@
 // Names used across the admin area (safe to import from client components).
 // The admin area is Armenian only.
 
-export const ADMIN_PERMS = ["individuals", "clubs", "tours", "pages"] as const;
+export const ADMIN_PERMS = ["individuals", "clubs", "tours", "pages", "news"] as const;
 export type AdminPerm = (typeof ADMIN_PERMS)[number];
 
 export const PERM_LABELS: Record<AdminPerm, string> = {
@@ -9,6 +9,7 @@ export const PERM_LABELS: Record<AdminPerm, string> = {
   clubs: "Ակումբների հաշիվների կառավարում",
   tours: "Արշավների հայտարարությունների կառավարում",
   pages: "Հարթակի էջերի կառավարում",
+  news: "Գրառումներ ակումբների նորությունների ալիքում (Telegram)",
 };
 
 export type AccountStatus = "active" | "frozen" | "blocked";
@@ -75,6 +76,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.club_share_set": "Փոխեց ակումբի կիսվելու հնարավորությունը",
   "admin.block_removed": "Բացեց ավտոմատ արգելքը",
   "admin.club_report_set": "Փոխեց ակումբի հաշվետվության տողերը",
+  "admin.news_posted": "Գրառում արեց նորությունների ալիքում",
   "admin.plan_saved": "Փոխեց փաթեթի կարգավորումները",
   "admin.club_plan_set": "Փոխեց ակումբի փաթեթը",
   "admin.admin_created": "Ստեղծեց ադմին",
@@ -137,6 +139,7 @@ export const TEXT_SECTIONS: { title: string; sections: [string, string][] }[] = 
       ["dashboard", "Վահանակ"],
       ["announcements", "Հայտարարություններ"],
       ["tourForm", "Հայտարարության ձև"],
+      ["bring", "Ինչ վերցնել (ցանկ)"],
       ["applications", "Հայտեր"],
       ["clubData", "Ակումբի տվյալներ"],
       ["report", "Ամսական հաշվետվություն"],

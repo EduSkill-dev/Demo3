@@ -23,6 +23,7 @@ export const ERROR_AREAS: Record<string, string> = {
   tours: "Արշավներ",
   account: "Հաշիվ",
   support: "Օգնության չաթ",
+  news: "Նորությունների ալիք",
   page: "Էջի ցուցադրում",
   site: "Կայքի հասանելիություն",
 };

@@ -35,6 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ...(can(me, "individuals") ? [{ href: "/admin/individuals", label: "Անհատներ" }] : []),
     ...(can(me, "individuals") ? [{ href: "/admin/requests", label: "Անհատների հայտեր" }] : []),
     ...(me.isSuper ? [{ href: "/admin/admins", label: "Ադմիններ" }] : []),
+    ...(can(me, "news") ? [{ href: "/admin/news", label: "Նորությունների ալիք" }] : []),
     { href: "/admin/logs", label: "Լոգեր" },
     { href: "/admin/errors", label: "Սխալներ" },
     { href: "/admin/security", label: "Պաշտպանություն" },

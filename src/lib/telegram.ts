@@ -29,3 +29,23 @@ export async function sendToAdmins(html: string): Promise<number | null> {
 }
 
 export const tgEscape = escapeHtml;
+
+// The clubs' news channel, written to by its own bot:
+//   TELEGRAM_NEWS_BOT_TOKEN, TELEGRAM_NEWS_CHANNEL_ID
+export const newsChannelReady = () => !!process.env.TELEGRAM_NEWS_BOT_TOKEN && !!process.env.TELEGRAM_NEWS_CHANNEL_ID;
+
+// Posts plain text to the channel. Returns the message id, or the error Telegram gave.
+export async function sendToNewsChannel(text: string): Promise<{ id: number } | { error: string }> {
+  if (!newsChannelReady()) return { error: "Ալիքը կապված չէ կայքին։" };
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_NEWS_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: process.env.TELEGRAM_NEWS_CHANNEL_ID, text: text.slice(0, 4000) }),
+    });
+    const json = (await res.json().catch(() => null)) as { ok?: boolean; description?: string; result?: { message_id?: number } } | null;
+    return json?.ok && json.result?.message_id ? { id: json.result.message_id } : { error: json?.description ?? "Telegram-ը չընդունեց գրառումը։" };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}

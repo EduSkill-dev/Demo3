@@ -70,7 +70,8 @@ export interface Tour {
   photo_urls: string[];
   status: TourStatus;
   cancel_hours: number; // how long before the hike a booking can still be cancelled (24/36/48/60)
-  sight_ids: string[]; // sights.id
+  sight_ids: string[]; // sights.id — the places the hike visits; regions, terrains and difficulty follow from them
+  bring_items: string[]; // BRING_ITEMS keys
   admin_hidden: boolean; // an admin took it off the site; the club cannot undo it
   terrains: string[]; // Terrain keys
   overnight: boolean;

@@ -15,10 +15,11 @@ type Update = {
 };
 
 // Telegram calls this for every message in the admins' group. Only one kind
-// matters: an admin's Reply to a help-chat message the bot posted. It
+// matters: an admin's Reply to a person's question that the bot posted. It
 // becomes the answer in that person's chat on the site, signed with the
-// admin's name. Everything else is ignored (always with 200, or Telegram
-// keeps resending).
+// admin's name. A reply to another admin's message is the admins talking
+// among themselves and stays in the group. Everything else is ignored
+// (always with 200, or Telegram keeps resending).
 async function handlePOST(req: Request) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!secret || req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
@@ -30,12 +31,11 @@ async function handlePOST(req: Request) {
   if (!m || !text || m.from?.is_bot || !m.reply_to_message || String(m.chat.id) !== telegramChatId()) return NextResponse.json({ ok: true });
 
   const db = createAdminClient();
-  const { data: original } = await db.from("support_messages").select("user_id").eq("tg_message_id", m.reply_to_message.message_id).limit(1).maybeSingle();
+  const { data: original } = await db.from("support_messages").select("user_id").eq("tg_message_id", m.reply_to_message.message_id).eq("from_admin", false).limit(1).maybeSingle();
   const userId = (original as { user_id: string } | null)?.user_id;
   if (!userId) return NextResponse.json({ ok: true });
 
   const adminName = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(" ").slice(0, 80) || "Ադմինիստրատոր";
-  // The reply's own id is stored too, so an admin can also answer in a thread.
   await db.from("support_messages").insert({ user_id: userId, from_admin: true, admin_name: adminName, body: text.slice(0, 1000), tg_message_id: m.message_id });
 
   // The person may have left the page: tell them by email (one line, no content).

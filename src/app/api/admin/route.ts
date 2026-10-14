@@ -10,8 +10,9 @@ import { SITE_TEXTS_TAG } from "@/lib/siteTexts";
 import { SIGHTS_TAG } from "@/lib/sights";
 import { SHARE_NETWORKS, SHARE_NETWORK_IDS } from "@/lib/share";
 import { REPORT_KEYS, cleanReportItems } from "@/lib/report/items";
+import { sendToNewsChannel } from "@/lib/telegram";
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
-import { REGIONS, addOneMonth, isPackageId } from "@/lib/catalog";
+import { DIFFICULTIES, REGIONS, TERRAINS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
 import { DICTIONARIES } from "@/i18n/translate";
 import { isLocale } from "@/i18n/config";
@@ -230,10 +231,14 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       name_ru: str(body.name_ru).slice(0, 120),
       name_en: str(body.name_en).slice(0, 120),
       region: str(body.region),
+      terrain: str(body.terrain),
+      difficulty: str(body.difficulty),
       active: body.active !== false,
     };
     if (!row.name_hy || !row.name_ru || !row.name_en) return fail("Լրացրեք անվանումը երեք լեզվով։");
     if (!(REGIONS as readonly string[]).includes(row.region)) return fail("Ընտրեք մարզը։");
+    if (!(TERRAINS as readonly string[]).includes(row.terrain)) return fail("Ընտրեք վայրի տեսակը։");
+    if (!(DIFFICULTIES as readonly string[]).includes(row.difficulty)) return fail("Ընտրեք բարդությունը։");
     const id = str(body.id);
     const { error } = id ? await ctx.db.from("sights").update(row).eq("id", id) : await ctx.db.from("sights").insert(row);
     if (error) return fail(error.code === "23505" ? "Այս անունով վայր արդեն կա։" : error.message, error.code === "23505" ? 400 : 500);
@@ -328,6 +333,22 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true, items });
+  },
+
+  // A post to the clubs' news channel in Telegram.
+  async "news.post"(ctx, body) {
+    if (!can(ctx.me, "news")) return fail(FORBIDDEN, 403);
+    const text = typeof body.body === "string" ? body.body.trim() : "";
+    if (!text) return fail("Գրեք գրառման տեքստը։");
+    if (text.length > 4000) return fail("Գրառումը կարող է լինել առավելագույնը 4000 նիշ։");
+    const sent = await sendToNewsChannel(text);
+    // The channel's bot may already have reported this post (api/telegram/news): one row either way.
+    const row = { author_id: ctx.me.userId, author_label: ctx.me.email, body: text, tg_message_id: "id" in sent ? sent.id : null };
+    if ("id" in sent) await ctx.db.from("news_posts").upsert(row, { onConflict: "tg_message_id" });
+    else await ctx.db.from("news_posts").insert(row);
+    if ("error" in sent) return fail(`Գրառումը չհրապարակվեց՝ ${sent.error}`, 502);
+    await logActivity({ actor: ctx.me.userId, action: "admin.news_posted", targetType: "news", targetLabel: text.slice(0, 80), ip: ctx.ip });
+    return NextResponse.json({ ok: true });
   },
 
   // Super admin only: what a plan costs and allows. Every capability named in

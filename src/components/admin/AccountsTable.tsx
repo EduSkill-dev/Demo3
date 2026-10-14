@@ -115,8 +115,8 @@ export default function AccountsTable({
                       <ClubReportEditor
                         userId={r.userId}
                         label={r.name || r.email}
-                        planName={planReports[r.planId].name}
-                        planItems={planReports[r.planId].items}
+                        planId={r.planId}
+                        planReports={planReports}
                         clubItems={r.reportItems ?? null}
                       />
                     )}
