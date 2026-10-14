@@ -79,13 +79,13 @@ export default function TourForm({
     const levels = chosen.map((s) => DIFFICULTIES.indexOf((s.difficulty ?? "") as Difficulty)).filter((i) => i >= 0);
     return levels.length ? DIFFICULTIES[Math.max(...levels)] : null;
   }, [chosen]);
-  const suggestedTitle = chosen.map((s) => s.name).join(" – ");
+  const suggestedTitle = chosen.map((s) => s.name).join(", ");
 
   function pickPlaces(ids: string[]) {
     setSightIds(ids);
     if (!titleTouched) {
       const names = ids.map((id) => sights.find((s) => s.id === id)?.name).filter(Boolean);
-      setTitle(names.join(" – ").slice(0, 150));
+      setTitle(names.join(", ").slice(0, 150));
     }
   }
 

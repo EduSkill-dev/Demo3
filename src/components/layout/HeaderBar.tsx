@@ -169,10 +169,22 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
           <ThemeToggle />
         </div>
 
-        {/* Phones and tablets */}
-        <div className="ml-auto flex items-center gap-1 lg:hidden">
+        {/* Phones and tablets: the greeting stays in the bar, before the menu button. */}
+        <div className="ml-auto flex min-w-0 items-center gap-1 lg:hidden">
+          {user && (
+            <Link
+              href={home!}
+              title={homeLabel}
+              className="min-w-0 max-w-[11rem] truncate rounded-lg px-1.5 py-2 text-sm font-semibold text-ink hover:text-terracotta-700 sm:max-w-[14rem]"
+            >
+              {t("header.hello", { name: user.name || homeLabel })}
+            </Link>
+          )}
           {bell}
-          <ThemeToggle />
+          {/* On phones the theme switch moves into the menu to leave room for the greeting. */}
+          <span className="max-sm:hidden">
+            <ThemeToggle />
+          </span>
           <button
             type="button"
             aria-label={t("header.menu")}
@@ -205,7 +217,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
             {user ? (
               <>
                 <Link href={home!} className="block rounded-lg px-3 py-2 text-sm font-semibold text-ink">
-                  {t("header.hello", { name: user.name || homeLabel })} · {homeLabel}
+                  {homeLabel}
                 </Link>
                 <button type="button" onClick={logout} className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink">
                   {t("header.logout")}
@@ -224,8 +236,11 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
                 </Link>
               </>
             )}
-            <div className="pt-2">
+            <div className="flex items-center gap-2 pt-2">
               <LanguageSwitcher />
+              <span className="sm:hidden">
+                <ThemeToggle />
+              </span>
             </div>
           </div>
         </div>
