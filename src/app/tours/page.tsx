@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getPublicTours, type PublicTour } from "@/lib/publicTours";
+import { getPublicTours } from "@/lib/publicTours";
 import { getT } from "@/i18n/server";
 import { addDays, addMonths, dateWords, dayInWords, isDay, isMonth, monthOf, monthTitle, todayInYerevan, weekdayIndex } from "@/lib/calendar";
 import { ToursFilters, ToursHeader, filterQuery, readFilters } from "@/components/tour/ToursChrome";
@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type Params = Record<string, string | undefined>;
 
-// The Tours page: the hikes still to come, as cards. Over them, the days of
+// The Tours page: the hikes still to come, as cards in date order. Over them, the days of
 // the month that have hikes (only those) — choosing one shows that day's
 // hikes; arrows move to the next or previous month. Finished hikes are in
 // the calendar view. Every filter lives in the URL.
@@ -51,10 +51,8 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
       (!f.free || (seatsLeft(x, today) ?? 0) > 0)
   );
   const hikeDays = [...new Set(inRange.map((x) => x.date))].sort();
-  const shown = day ? inRange.filter((x) => x.date === day) : inRange;
-  const byDay = new Map<string, PublicTour[]>();
-  for (const x of shown) byDay.set(x.date, [...(byDay.get(x.date) ?? []), x]);
-  const days = [...byDay.keys()].sort();
+  // One run of cards by date, earliest first (the sort keeps the order within a day).
+  const shown = (day ? inRange.filter((x) => x.date === day) : inRange).sort((a, b) => a.date.localeCompare(b.date));
 
   // Links keep every filter and change only what they are given.
   const state: Record<string, string> = {
@@ -75,11 +73,11 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
     }`;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-<ToursHeader view="list" filters={f} />
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <ToursHeader view="list" filters={f} />
       <ToursFilters action="/tours" filters={f} clubs={clubs} count={shown.length} minDate={today} hidden={{ month: state.month }} />
 
-            {/* The month's days that have hikes. */}
+      {/* The month's days that have hikes. */}
       <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="w-full text-base font-bold text-heading sm:w-auto sm:min-w-[9rem]">
           {fromSet ? `${dayInWords(from, words)} – ${dayInWords(to, words)}` : monthTitle(month, words)}
@@ -106,20 +104,19 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
         )}
       </div>
 
-      {/* The hikes, by day. */}
-      <div className="mt-6 space-y-8">
-        {days.length === 0 && (
+      {/* The hikes: all of them in date order, or the chosen day's. */}
+      <section className="mt-6">
+        {day && (
+          <h2 className="mb-3 text-[15px] font-bold text-heading">{day === today ? `${t("calendar.today")} · ` : ""}{dayInWords(day, words)}</h2>
+        )}
+        {shown.length === 0 ? (
           <p className="rounded-2xl border border-line bg-surface p-8 text-center text-muted">
             {day ? t("calendar.emptyDay") : t("toursPage.noneInRange")}
           </p>
+        ) : (
+          <TourGrid tours={shown} size="sm" columns="sm:grid-cols-2 lg:grid-cols-3" backHref={href({})} />
         )}
-        {days.map((d) => (
-          <section key={d}>
-            <h2 className="mb-3 text-[15px] font-bold text-heading">{d === today ? `${t("calendar.today")} · ` : ""}{dayInWords(d, words)}</h2>
-            <TourGrid tours={byDay.get(d)!} size="sm" columns="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" backHref={href({})} />
-          </section>
-        ))}
-      </div>
+      </section>
 
       <div className="mt-12">
         <CustomTourCta />

@@ -29,7 +29,7 @@ export default function TourCard({
   backHref?: string; // where the club page's "Back" should return to
   onRegion?: (region: string) => void;
   onOpen: () => void;
-  size?: "md" | "sm"; // "sm": four in a row (Tours page, calendar)
+  size?: "md" | "sm"; // "sm": three in a row, smaller text (Tours page, calendar)
 }) {
   const t = useT();
   const fmt = useFormatDate();
@@ -45,9 +45,9 @@ export default function TourCard({
       <div className="relative">
         <button data-view type="button" onClick={onOpen} className="block w-full" aria-label={tour.title}>
           {tour.photo_urls?.[0] ? (
-            <img src={tour.photo_urls[0]} alt="" className={`${sm ? "h-40" : "h-48"} w-full object-cover`} />
+            <img src={tour.photo_urls[0]} alt="" className="h-48 w-full object-cover" />
           ) : (
-            <div className={`flex ${sm ? "h-40" : "h-48"} items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl`}>🏔️</div>
+            <div className="flex h-48 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
           )}
         </button>
         {ended ? (
@@ -64,7 +64,7 @@ export default function TourCard({
       </div>
 
       <div className={`flex flex-1 flex-col ${sm ? "p-4" : "p-5"}`}>
-        <h3 className={`${sm ? "text-lg" : "text-[21px]"} font-bold leading-snug text-heading`}>
+        <h3 className={`${sm ? "text-[17px]" : "text-[21px]"} font-bold leading-snug text-heading`}>
           <Link href={`/tours/${tour.id}`} className="hover:text-terracotta-700 hover:underline dark:hover:text-terracotta-300">{tour.title}</Link>
         </h3>
 
