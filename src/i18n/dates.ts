@@ -7,7 +7,8 @@ import { INTL_LOCALE, type Locale } from "./config";
 export type DateStyle =
   | "long" // 4 հոկտեմբերի, 2026 թ.
   | "short" // 4 հոկ, 2026
-  | "weekday" // շբթ, 4 հոկտեմբերի (tour cards)
+  | "weekday" // շբթ, 4 հոկտեմբերի
+  | "weekdayShort" // շբթ, 4 հոկ (tour cards)
   | "weekdayLong" // շաբաթ, 4 հոկտեմբերի, 2026 թ.
   | "dateTime"; // 4 հոկ, 2026, 18:11
 
@@ -24,7 +25,7 @@ const HY_WEEKDAYS_SHORT = ["կիր", "երկ", "երք", "չրք", "հնգ", "ո
 // in any visitor's browser, so the two never disagree. "2026-10-04" is a
 // calendar day and has no time zone at all.
 const TIME_ZONE = "Asia/Yerevan";
-const DAY_ONLY = /^(d{4})-(d{2})-(d{2})$/;
+const DAY_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 type Parts = { year: number; month: number; day: number; weekday: number; hour: number; minute: number };
 
@@ -49,6 +50,7 @@ const INTL_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   long: { day: "numeric", month: "long", year: "numeric" },
   short: { day: "numeric", month: "short", year: "numeric" },
   weekday: { weekday: "short", day: "numeric", month: "long" },
+  weekdayShort: { weekday: "short", day: "numeric", month: "short" },
   weekdayLong: { weekday: "long", day: "numeric", month: "long", year: "numeric" },
   dateTime: { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" },
 };
@@ -68,6 +70,8 @@ export function formatDate(value: string | Date, locale: Locale, style: DateStyl
       return `${p.day} ${HY_MONTHS_SHORT[p.month]}, ${p.year}`;
     case "weekday":
       return `${HY_WEEKDAYS_SHORT[p.weekday]}, ${p.day} ${HY_MONTHS[p.month]}`;
+    case "weekdayShort":
+      return `${HY_WEEKDAYS_SHORT[p.weekday]}, ${p.day} ${HY_MONTHS_SHORT[p.month]}`;
     case "weekdayLong":
       return `${HY_WEEKDAYS[p.weekday]}, ${p.day} ${HY_MONTHS[p.month]}, ${p.year} թ.`;
     case "dateTime":

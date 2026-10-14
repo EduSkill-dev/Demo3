@@ -68,7 +68,7 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
   };
   const round = "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-line bg-surface text-lg leading-none text-ink hover:border-spruce-500";
   const pill = (on: boolean) =>
-    `flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-full border-2 pb-1 transition ${
+    `flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-full border-2 transition ${
       on ? "border-spruce-500 bg-spruce-500 text-[#FFFDF8]" : "border-line bg-surface text-ink hover:border-spruce-500"
     }`;
 

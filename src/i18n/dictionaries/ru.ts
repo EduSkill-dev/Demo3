@@ -495,6 +495,7 @@ const ru: DeepPartial<Dictionary> = {
     deletedUser: "Удалённый пользователь",
   },
   tour: {
+    seatsFree: "Свободно: {count}",
     prevPhoto: "Предыдущее фото",
     nextPhoto: "Следующее фото",
     photoOf: "Фото {n} из {count}",

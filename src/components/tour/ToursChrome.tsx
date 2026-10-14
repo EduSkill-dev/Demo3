@@ -127,7 +127,9 @@ export async function ToursFilters({
           <option value="">{t("toursPage.difficulty")}</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d}>{t(`difficulty.${d}`)}</option>)}
         </select>
-        <span className="flex h-9 items-center justify-center text-sm text-muted max-lg:order-last">{t("toursPage.results", { count })}</span>
+        <span className={`flex min-h-[2.25rem] items-center justify-center text-[15px] font-semibold text-muted max-lg:order-last ${filtered ? "" : "lg:row-span-2"}`}>
+          {t("toursPage.results", { count })}
+        </span>
         {date("from", f.from, minDate, t("toursPage.from"))}
         {date("to", f.to, f.from || minDate, t("toursPage.to"))}
         {check("overnight", f.overnight, t("calendar.night"))}
@@ -140,9 +142,7 @@ export async function ToursFilters({
             <span aria-hidden="true">✕</span>
             {t("toursPage.clear")}
           </Link>
-        ) : (
-          <span className="max-lg:hidden" />
-        )}
+        ) : null}
       </div>
       <button type="submit" className="sr-only">{t("calendar.apply")}</button>
     </AutoSubmitForm>

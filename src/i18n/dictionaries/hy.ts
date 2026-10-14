@@ -500,6 +500,7 @@ const hy = {
     deletedUser: "Ջնջված օգտատեր",
   },
   tour: {
+    seatsFree: "{count} ազատ տեղ",
     prevPhoto: "Նախորդ նկարը",
     nextPhoto: "Հաջորդ նկարը",
     photoOf: "Նկար {n}՝ {count}-ից",

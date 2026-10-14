@@ -37,9 +37,11 @@ export default function TourCard({
   const fmt = useFormatDate();
   const closed = tour.cap <= 0;
   const full = tour.taken >= tour.cap;
-  const date = fmt(tour.date, "weekday");
+  const date = fmt(tour.date, "weekdayShort");
   const ended = tour.date < new Date().toISOString().slice(0, 10);
   const sm = size === "sm";
+  // Seats still free right now (not shown once the hike is full or over).
+  const free = !ended && !full ? Math.max(0, tour.cap - tour.taken) : 0;
   const clubHref = `/clubs/${tour.club.id}${backHref ? `?back=${encodeURIComponent(backHref)}` : ""}`;
 
   return (
@@ -64,7 +66,7 @@ export default function TourCard({
           <Link href={`/tours/${tour.id}`} className="hover:text-terracotta-700 hover:underline dark:hover:text-terracotta-300">{tour.title}</Link>
         </h3>
 
-        {/* Date and regions on one line (they wrap when long). */}
+        {/* Date, regions and free seats on one line (they wrap when long). */}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink">
           <span className="flex items-center gap-1.5">
             <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -99,6 +101,15 @@ export default function TourCard({
               ))}
             </span>
           </span>
+          {free > 0 && (
+            <span className="flex items-center gap-1.5 font-semibold text-spruce-700 dark:text-spruce-300">
+              <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="9" cy="8" r="3.5" />
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" />
+              </svg>
+              {t("tour.seatsFree", { count: free })}
+            </span>
+          )}
         </div>
 
         {/* The chips wrap; the like stays on the right of their first line. */}
