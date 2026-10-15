@@ -16,6 +16,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  // Crawlers follow the calendar's month and day links without end (years
+  // back and ahead, every filter). A date more than a year from today is
+  // refused here, before any page is built.
+  if (outsideDateWindow(request)) {
+    return new NextResponse("Not found", { status: 404, headers: { "x-robots-tag": "noindex" } });
+  }
+
   // An auth email whose redirect target was not allowed falls back to the
   // site root; send its token on to the route that verifies it.
   const { pathname: requestedPath, searchParams } = request.nextUrl;
@@ -96,3 +103,20 @@ export const config = {
   // Skip static assets and image optimisation; everything else gets a fresh session.
   matcher: ["/((?!_next/static|_next/image|favicon.ico|images/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };
+
+// The Tours page and the calendar take dates in the address (month, day,
+// from, to); only a year back to a year ahead is served.
+const DATED_PAGES = new Set(["/calendar", "/tours"]);
+function outsideDateWindow(request: NextRequest): boolean {
+  const { pathname, searchParams } = request.nextUrl;
+  if (!DATED_PAGES.has(pathname)) return false;
+  const now = new Date();
+  const monthIndex = (y: number, m: number) => y * 12 + m;
+  const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
+  for (const key of ["month", "day", "from", "to"]) {
+    const value = searchParams.get(key);
+    const m = value?.match(/^(\d{4})-(\d{2})/);
+    if (m && Math.abs(monthIndex(+m[1], +m[2]) - current) > 12) return true;
+  }
+  return false;
+}

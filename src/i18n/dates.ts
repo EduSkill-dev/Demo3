@@ -6,17 +6,19 @@ import { INTL_LOCALE, type Locale } from "./config";
 
 export type DateStyle =
   | "long" // 4 հոկտեմբերի, 2026 թ.
-  | "short" // 4 հոկ, 2026
+  | "short" // 4 հոկտ․, 2026
   | "weekday" // շբթ, 4 հոկտեմբերի
-  | "weekdayShort" // շբթ, 4 հոկ (tour cards)
+  | "weekdayShort" // շբթ, 4 հոկտ․ (tour cards)
   | "weekdayLong" // շաբաթ, 4 հոկտեմբերի, 2026 թ.
-  | "dateTime"; // 4 հոկ, 2026, 18:11
+  | "dateTime"; // 4 հոկտ․, 2026, 18:11
 
 const HY_MONTHS = [
   "հունվարի", "փետրվարի", "մարտի", "ապրիլի", "մայիսի", "հունիսի",
   "հուլիսի", "օգոստոսի", "սեպտեմբերի", "հոկտեմբերի", "նոյեմբերի", "դեկտեմբերի",
 ];
-const HY_MONTHS_SHORT = ["հնվ", "փտվ", "մրտ", "ապր", "մյս", "հնս", "հլս", "օգս", "սեպ", "հոկ", "նոյ", "դեկ"];
+// Short months as Armenian writes them: the long ones cut with the
+// abbreviation dot (U+2024), the short ones kept whole.
+const HY_MONTHS_SHORT = ["հունվ․", "փետր․", "մարտի", "ապր․", "մայիսի", "հունիսի", "հուլիսի", "օգոստ․", "սեպտ․", "հոկտ․", "նոյ․", "դեկտ․"];
 const HY_WEEKDAYS = ["կիրակի", "երկուշաբթի", "երեքշաբթի", "չորեքշաբթի", "հինգշաբթի", "ուրբաթ", "շաբաթ"];
 const HY_WEEKDAYS_SHORT = ["կիր", "երկ", "երք", "չրք", "հնգ", "ուրբ", "շբթ"];
 

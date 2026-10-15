@@ -29,7 +29,8 @@ import TourGrid from "@/components/tour/TourGrid";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
-  return { title: t("calendar.title"), description: t("calendar.subtitle") };
+  // The same hikes as the Tours page: not indexed, and its links not followed.
+  return { title: t("calendar.title"), description: t("calendar.subtitle"), robots: { index: false, follow: false } };
 }
 
 type Params = Record<string, string | undefined>;
@@ -99,6 +100,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
       month: d >= grid.first && d <= grid.last ? month : monthOf(d),
     });
   const weekend = comingWeekend(today);
+  // A year back to a year ahead (the middleware refuses dates beyond that).
+  const canPrev = month > addMonths(monthOf(today), -12);
+  const canNext = month < addMonths(monthOf(today), 12);
   // The month's hikes as a file: from today (or the month's first day, for a
   // month still to come) to the month's last day, with the region and club filters.
   const fileQuery = new URLSearchParams({
@@ -127,13 +131,21 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
         {/* ---------- Desktop: a small month that stays in view ---------- */}
         <aside className="sticky top-[210px] hidden rounded-2xl border border-line bg-surface p-4 lg:block">
           <div className="flex items-center gap-2">
-            <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} aria-label={t("calendar.prevMonth")} className={arrow}>
-              ‹
-            </Link>
+            {canPrev ? (
+              <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={arrow}>
+                ‹
+              </Link>
+            ) : (
+              <span className={`${arrow} opacity-40`} aria-hidden="true">‹</span>
+            )}
             <h2 className="min-w-0 flex-1 truncate text-center text-[15px] font-bold text-heading">{monthTitle(month, words)}</h2>
-            <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} aria-label={t("calendar.nextMonth")} className={arrow}>
-              ›
-            </Link>
+            {canNext ? (
+              <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={arrow}>
+                ›
+              </Link>
+            ) : (
+              <span className={`${arrow} opacity-40`} aria-hidden="true">›</span>
+            )}
           </div>
           <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-muted">
             {words.weekdaysShort.map((w) => (
@@ -149,7 +161,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
                 <Link
                   key={d}
                   href={dayHref(d)}
-                  scroll={false}
+                  scroll={false} rel="nofollow"
                   title={items.map((x) => x.title).join("\n") || undefined}
                   aria-label={items.length ? t("calendar.cellLabel", { date: dayAndMonth(d, words), count: items.length }) : dayAndMonth(d, words)}
                   aria-current={on ? "date" : undefined}
@@ -182,10 +194,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-            <Link href={href({ month: "", day: "" })} scroll={false} className={smallOff}>
+            <Link href={href({ month: "", day: "" })} scroll={false} rel="nofollow" className={smallOff}>
               {t("calendar.today")}
             </Link>
-            <Link href={dayHref(weekend)} scroll={false} className={weekendOn ? smallOn : smallOff}>
+            <Link href={dayHref(weekend)} scroll={false} rel="nofollow" className={weekendOn ? smallOn : smallOff}>
               {t("calendar.weekend")}
             </Link>
             <a href={monthFile} download className="text-xs font-semibold text-terracotta-700 underline underline-offset-4 hover:text-terracotta-500 dark:text-terracotta-300">
@@ -197,12 +209,20 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
         {/* ---------- Phones and tablets: a week strip ---------- */}
         <div className="space-y-4 lg:hidden">
           <div className="flex items-center gap-3">
-            <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} aria-label={t("calendar.prevMonth")} className={arrow}>
-              ‹
-            </Link>
-            <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} aria-label={t("calendar.nextMonth")} className={arrow}>
-              ›
-            </Link>
+            {canPrev ? (
+              <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={arrow}>
+                ‹
+              </Link>
+            ) : (
+              <span className={`${arrow} opacity-40`} aria-hidden="true">‹</span>
+            )}
+            {canNext ? (
+              <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={arrow}>
+                ›
+              </Link>
+            ) : (
+              <span className={`${arrow} opacity-40`} aria-hidden="true">›</span>
+            )}
             <h2 className="min-w-0 flex-1 truncate text-lg font-bold text-heading">{monthTitle(month, words)}</h2>
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -212,7 +232,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
                 <Link
                   key={d}
                   href={dayHref(d)}
-                  scroll={false}
+                  scroll={false} rel="nofollow"
                   aria-label={count(d) ? t("calendar.cellLabel", { date: dayAndMonth(d, words), count: count(d) }) : dayAndMonth(d, words)}
                   aria-current={on ? "date" : undefined}
                   className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 ${
@@ -227,10 +247,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
             })}
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-            <Link href={href({ month: "", day: "" })} scroll={false} className={`${smallOff} shrink-0`}>
+            <Link href={href({ month: "", day: "" })} scroll={false} rel="nofollow" className={`${smallOff} shrink-0`}>
               {t("calendar.today")}
             </Link>
-            <Link href={dayHref(weekend)} scroll={false} className={`${weekendOn ? smallOn : smallOff} shrink-0`}>
+            <Link href={dayHref(weekend)} scroll={false} rel="nofollow" className={`${weekendOn ? smallOn : smallOff} shrink-0`}>
               {t("calendar.weekend")}
             </Link>
             <a href={monthFile} download className={`${smallOff} shrink-0`}>

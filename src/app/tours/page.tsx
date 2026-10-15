@@ -9,8 +9,10 @@ import { seatsLeft } from "@/components/calendar/parts";
 import TourGrid from "@/components/tour/TourGrid";
 import CustomTourCta from "@/components/requests/CustomTourCta";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return { title: `${(await getT())("toursPage.title")}` };
+export async function generateMetadata({ searchParams }: { searchParams: Params }): Promise<Metadata> {
+  // The plain page is indexed; a filtered or dated view of it is not.
+  const filtered = Object.values(searchParams).some(Boolean);
+  return { title: `${(await getT())("toursPage.title")}`, ...(filtered ? { robots: { index: false, follow: false } } : {}) };
 }
 
 type Params = Record<string, string | undefined>;
@@ -84,23 +86,23 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
         </p>
         {!fromSet &&
           (month > thisMonth ? (
-            <Link href={href({ month: addMonths(month, -1) === thisMonth ? "" : addMonths(month, -1), day: "" })} scroll={false} aria-label={t("calendar.prevMonth")} className={round}>‹</Link>
+            <Link href={href({ month: addMonths(month, -1) === thisMonth ? "" : addMonths(month, -1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={round}>‹</Link>
           ) : (
             <span className={`${round} cursor-not-allowed opacity-40`} aria-hidden="true">‹</span>
           ))}
         <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1">
-          <Link href={href({ day: "" })} scroll={false} className={pill(!day)}>
+          <Link href={href({ day: "" })} scroll={false} rel="nofollow" className={pill(!day)}>
             <span className="text-[11px] font-bold leading-none">{t("toursPage.allDays")}</span>
           </Link>
           {hikeDays.map((d) => (
-            <Link key={d} href={href({ day: d === day ? "" : d })} scroll={false} aria-label={dayInWords(d, words)} aria-current={d === day ? "date" : undefined} className={`${pill(d === day)} ${d === today && d !== day ? "!border-spruce-500 text-spruce-700 dark:text-spruce-300" : ""}`}>
+            <Link key={d} href={href({ day: d === day ? "" : d })} scroll={false} rel="nofollow" aria-label={dayInWords(d, words)} aria-current={d === day ? "date" : undefined} className={`${pill(d === day)} ${d === today && d !== day ? "!border-spruce-500 text-spruce-700 dark:text-spruce-300" : ""}`}>
               <span className="text-[10px] font-semibold uppercase leading-none">{d === today ? t("calendar.today") : words.weekdaysShort[weekdayIndex(d)]}</span>
               <span className="text-[17px] font-bold leading-none">{+d.slice(8, 10)}</span>
             </Link>
           ))}
         </div>
-        {!fromSet && (
-          <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} aria-label={t("calendar.nextMonth")} className={round}>›</Link>
+        {!fromSet && month < addMonths(thisMonth, 12) && (
+          <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={round}>›</Link>
         )}
       </div>
 

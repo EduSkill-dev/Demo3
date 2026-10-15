@@ -56,12 +56,12 @@ export async function ToursHeader({ view, filters }: { view: "list" | "calendar"
           {view === "list" ? (
             <span className={segment(true)} aria-current="page">{t("calendar.switchList")}</span>
           ) : (
-            <Link href={toQuery("/tours", q)} className={segment(false)}>{t("calendar.switchList")}</Link>
+            <Link href={toQuery("/tours", q)} rel="nofollow" className={segment(false)}>{t("calendar.switchList")}</Link>
           )}
           {view === "calendar" ? (
             <span className={segment(true)} aria-current="page">{t("calendar.switchCalendar")}</span>
           ) : (
-            <Link href={toQuery("/calendar", q)} className={segment(false)}>{t("calendar.switchCalendar")}</Link>
+            <Link href={toQuery("/calendar", q)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
           )}
         </div>
       </div>

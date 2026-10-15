@@ -1012,7 +1012,7 @@ async function main() {
       const robotsTxt = await (await fetch(`http://localhost:${DEV_PORT}/robots.txt`)).text();
       check('monitoring: health answers, a browser fault is logged (noise is not), sitemap and robots exist',
         healthRes.status === 200 && clientErr.status === 200 && faultRows.length === 1 && faultRows[0].source === 'browser' && noise.status === 200 && noiseLogged.length === 0
-          && siteMap.includes('/tours') && siteMap.includes('/calendar') && /Disallow: \/admin/.test(robotsTxt) && /Sitemap: .*sitemap.xml/.test(robotsTxt),
+          && siteMap.includes('/tours') && !siteMap.includes('/calendar<') && /Disallow: \/admin/.test(robotsTxt) && /Disallow: \/calendar/.test(robotsTxt) && /Sitemap: .*sitemap.xml/.test(robotsTxt),
         `healthRes=${healthRes.status} faultRows=${JSON.stringify(faultRows)} noise=${noiseLogged.length} sitemap=${siteMap.length} robots=${robotsTxt.length}`);
 
       // Google sign-in: such an account finishes its profile before it can book.
