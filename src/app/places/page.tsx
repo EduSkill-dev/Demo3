@@ -19,12 +19,15 @@ export async function generateMetadata({ searchParams }: { searchParams: Params 
 const PAGE = 12;
 
 // Every place the hikes go to, as cards: the most popular first (hearts,
-// then hikes), or by name. Filters by kind (chips), region and difficulty;
+// then hikes), or by name. Filters by kind (chips, several at once), region
+// and difficulty;
 // twelve at a time, "show more" adds twelve. Everything lives in the URL.
 export default async function PlacesPage({ searchParams }: { searchParams: Params }) {
   const [t, locale, all] = await Promise.all([getT(), getLocale(), getPlaces()]);
   const pick = (list: readonly string[], v?: string) => (list.includes(v ?? "") ? v! : "");
-  const kind = pick(TERRAINS, searchParams.kind);
+  // Kinds chosen together show places of any of them ("lakes,mountains").
+  const chosen = (searchParams.kind ?? "").split(",").filter((k) => (TERRAINS as readonly string[]).includes(k));
+  const kind = TERRAINS.filter((k) => chosen.includes(k)).join(",");
   const region = pick(REGIONS, searchParams.region);
   const difficulty = pick(DIFFICULTIES, searchParams.difficulty);
   const sort = searchParams.sort === "name" ? "name" : "popular";
@@ -32,7 +35,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Param
 
   const collator = new Intl.Collator(INTL_LOCALE[locale], { sensitivity: "base" });
   const found = all
-    .filter((p) => (!kind || p.terrain === kind) && (!region || p.region === region) && (!difficulty || p.difficulty === difficulty))
+    .filter((p) => (!chosen.length || chosen.includes(p.terrain ?? "")) && (!region || p.region === region) && (!difficulty || p.difficulty === difficulty))
     .sort((a, b) => (sort === "popular" ? b.likes - a.likes || b.hikes - a.hikes || b.upcoming - a.upcoming : 0) || collator.compare(a.name, b.name));
   const shown = found.slice(0, show);
 
@@ -56,33 +59,53 @@ export default async function PlacesPage({ searchParams }: { searchParams: Param
       <h1 className="font-serif text-3xl font-semibold text-heading">{t("placesPage.title")}</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("placesPage.intro")}</p>
 
-      <div className="mt-4 rounded-2xl border border-line bg-surface p-3">
-        {/* Kinds of place: one tap filters. */}
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          <Link href={href({ kind: "" })} scroll={false} className={chipCls(!kind)}>{t("placesPage.all")}</Link>
-          {kinds.map((k) => (
-            <Link key={k} href={href({ kind: kind === k ? "" : k })} scroll={false} className={chipCls(kind === k)}>
-              {t(`terrain.${k}`)}
+      <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3 lg:flex-row lg:items-stretch">
+        {/* Left: the kinds (each tap adds or removes one) and, under them, the
+            selects, as wide as the row of kinds. */}
+        <div className="min-w-0 lg:w-fit lg:max-w-full">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            <Link href={href({ kind: "" })} scroll={false} className={chipCls(!chosen.length)}>
+              {t("placesPage.all")}
             </Link>
-          ))}
+            {kinds.map((k) => {
+              const on = chosen.includes(k);
+              const next = TERRAINS.filter((x) => (x === k ? !on : chosen.includes(x))).join(",");
+              return (
+                <Link key={k} href={href({ kind: next })} scroll={false} aria-pressed={on} className={chipCls(on)}>
+                  {t(`terrain.${k}`)}
+                </Link>
+              );
+            })}
+          </div>
+          <AutoSubmitForm action="/places" className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-3">
+            {kind && <input type="hidden" name="kind" value={kind} />}
+            <select name="region" defaultValue={region} aria-label={t("placesPage.region")} className={field(!!region)}>
+              <option value="">{t("placesPage.region")}</option>
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>
+                  {t(`region.${r}`)}
+                </option>
+              ))}
+            </select>
+            <select name="difficulty" defaultValue={difficulty} aria-label={t("placesPage.difficulty")} className={field(!!difficulty)}>
+              <option value="">{t("placesPage.difficulty")}</option>
+              {DIFFICULTIES.map((d) => (
+                <option key={d} value={d}>
+                  {t(`difficulty.${d}`)}
+                </option>
+              ))}
+            </select>
+            <select name="sort" defaultValue={sort === "name" ? "name" : ""} aria-label={t("placesPage.sort")} className={field(false)}>
+              <option value="">{t("placesPage.sortPopular")}</option>
+              <option value="name">{t("placesPage.sortName")}</option>
+            </select>
+            <button type="submit" className="sr-only">
+              {t("calendar.apply")}
+            </button>
+          </AutoSubmitForm>
         </div>
-        <AutoSubmitForm action="/places" className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_10rem]">
-          {kind && <input type="hidden" name="kind" value={kind} />}
-          <select name="region" defaultValue={region} aria-label={t("placesPage.region")} className={field(!!region)}>
-            <option value="">{t("placesPage.region")}</option>
-            {REGIONS.map((r) => <option key={r} value={r}>{t(`region.${r}`)}</option>)}
-          </select>
-          <select name="difficulty" defaultValue={difficulty} aria-label={t("placesPage.difficulty")} className={field(!!difficulty)}>
-            <option value="">{t("placesPage.difficulty")}</option>
-            {DIFFICULTIES.map((d) => <option key={d} value={d}>{t(`difficulty.${d}`)}</option>)}
-          </select>
-          <select name="sort" defaultValue={sort === "name" ? "name" : ""} aria-label={t("placesPage.sort")} className={field(false)}>
-            <option value="">{t("placesPage.sortPopular")}</option>
-            <option value="name">{t("placesPage.sortName")}</option>
-          </select>
-          <span className="flex h-9 items-center justify-center text-[15px] font-semibold text-muted">{t("placesPage.found", { count: found.length })}</span>
-          <button type="submit" className="sr-only">{t("calendar.apply")}</button>
-        </AutoSubmitForm>
+        {/* Right: how many were found, in the middle of the free space. */}
+        <span className="flex flex-1 items-center justify-center py-1 text-[15px] font-semibold text-muted">{t("placesPage.found", { count: found.length })}</span>
       </div>
 
       {shown.length === 0 ? (
