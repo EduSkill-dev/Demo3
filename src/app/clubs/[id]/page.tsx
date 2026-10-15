@@ -162,7 +162,7 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
           {(guides ?? []).length > 0 && (
             <section>
               <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.guides")}</h2>
-              <ul className="mt-4 flex flex-wrap items-start gap-4">
+              <ul className="mt-4 grid items-start gap-4 [grid-template-columns:repeat(auto-fill,minmax(13.5rem,1fr))]">
                 {((guides ?? []) as ClubGuide[]).map((g) => (
                   <TeamCard key={g.id} name={[g.first_name, g.last_name].filter(Boolean).join(" ")} role={g.role} bio={g.bio} photo={g.photo_url} moreLabel={t("clubPage.teamMore")} />
                 ))}
