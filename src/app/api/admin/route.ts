@@ -11,6 +11,7 @@ import { SIGHTS_TAG } from "@/lib/sights";
 import { SHARE_NETWORKS, SHARE_NETWORK_IDS } from "@/lib/share";
 import { REPORT_KEYS, cleanReportItems } from "@/lib/report/items";
 import { sendToNewsChannel } from "@/lib/telegram";
+import { adminDisplayName, answerSuggestion, answerSupport } from "@/lib/messages";
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
 import { DIFFICULTIES, REGIONS, TERRAINS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
@@ -342,6 +343,35 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   },
 
   // A post to the clubs' news channel in Telegram.
+  // Answers from the Messages page: a help chat (shown in the person's chat)
+  // or a suggestion (emailed). Signed with the admin's name; the Telegram
+  // groups see the answer too.
+  async "support.reply"(ctx, body) {
+    if (!can(ctx.me, "messages")) return fail(FORBIDDEN, 403);
+    const userId = str(body.userId);
+    const text = typeof body.body === "string" ? body.body.trim() : "";
+    if (!userId || !text) return fail("Գրեք պատասխանը։");
+    if (text.length > 1000) return fail("Պատասխանը կարող է լինել առավելագույնը 1000 նիշ։");
+    const adminName = await adminDisplayName(ctx.db, ctx.me.userId, ctx.me.email);
+    const res = await answerSupport(ctx.db, { userId, adminName, body: text, via: "site" });
+    if ("error" in res) return fail(res.error ?? "Չստացվեց։", 500);
+    await logActivity({ actor: ctx.me.userId, action: "admin.message_answered", targetType: "support", targetLabel: text.slice(0, 80), ip: ctx.ip });
+    return NextResponse.json({ ok: true });
+  },
+
+  async "suggestion.reply"(ctx, body) {
+    if (!can(ctx.me, "messages")) return fail(FORBIDDEN, 403);
+    const id = str(body.id);
+    const text = typeof body.body === "string" ? body.body.trim() : "";
+    if (!id || !text) return fail("Գրեք պատասխանը։");
+    if (text.length > 4000) return fail("Պատասխանը կարող է լինել առավելագույնը 4000 նիշ։");
+    const adminName = await adminDisplayName(ctx.db, ctx.me.userId, ctx.me.email);
+    const res = await answerSuggestion(ctx.db, { id, adminName, body: text, via: "site" });
+    if ("error" in res) return fail(res.error ?? "Չստացվեց։", 400);
+    await logActivity({ actor: ctx.me.userId, action: "admin.message_answered", targetType: "suggestion", targetLabel: text.slice(0, 80), ip: ctx.ip });
+    return NextResponse.json({ ok: true });
+  },
+
   async "news.post"(ctx, body) {
     if (!can(ctx.me, "news")) return fail(FORBIDDEN, 403);
     const text = typeof body.body === "string" ? body.body.trim() : "";

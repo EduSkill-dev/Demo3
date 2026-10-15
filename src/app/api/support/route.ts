@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { withErrorReport } from "@/lib/errors";
 import { ownerInbox, sendEmail } from "@/lib/email";
 import { sendToAdmins, telegramReady, tgEscape } from "@/lib/telegram";
+import { supportPostHtml } from "@/lib/messages";
 
 const SUPPORT_MAX = 1000; // about a paragraph
 
@@ -38,9 +39,8 @@ async function handlePOST(req: Request) {
   const { data: row, error } = await db.from("support_messages").insert({ user_id: user.id, body: text }).select("id, body, from_admin, admin_name, created_at").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const tgId = await sendToAdmins(
-    `💬 <b>${tgEscape(who)}</b>\n${tgEscape(profile.email)}${profile.status === "frozen" ? " · սառեցված հաշիվ" : ""}\n\n${tgEscape(text)}\n\n<i>Պատասխանելու համար՝ Reply այս հաղորդագրությանը։</i>`
-  );
+  // The same post the answer later marks "✅ answered" (src/lib/messages.ts).
+  const tgId = await sendToAdmins(supportPostHtml({ who, email: profile.email, frozen: profile.status === "frozen" }, text));
   if (tgId) await db.from("support_messages").update({ tg_message_id: tgId }).eq("id", (row as { id: number }).id);
   else if (!telegramReady() && ownerInbox()) {
     await sendEmail({

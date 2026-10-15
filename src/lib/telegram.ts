@@ -2,7 +2,8 @@
 // (help-chat messages; later, alerts) and the group's replies come back
 // through /api/telegram/webhook.
 //   TELEGRAM_BOT_TOKEN       the bot
-//   TELEGRAM_CHAT_ID         the admins' group
+//   TELEGRAM_CHAT_ID         the admins' group ("Culmen Support": help chat)
+//   TELEGRAM_SUGGESTIONS_CHAT_ID  the admins' group for suggestions
 //   TELEGRAM_WEBHOOK_SECRET  proves a webhook call really is from Telegram
 // Without the first two nothing is sent and callers fall back to email.
 
@@ -29,6 +30,44 @@ export async function sendToAdmins(html: string): Promise<number | null> {
 }
 
 export const tgEscape = escapeHtml;
+
+export const suggestionsChatId = () => process.env.TELEGRAM_SUGGESTIONS_CHAT_ID ?? "";
+export const suggestionsReady = () => !!process.env.TELEGRAM_BOT_TOKEN && !!process.env.TELEGRAM_SUGGESTIONS_CHAT_ID;
+
+async function botCall(method: string, payload: Record<string, unknown>): Promise<{ ok: boolean; result?: { message_id?: number } } | null> {
+  if (!process.env.TELEGRAM_BOT_TOKEN) return null;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return (await res.json().catch(() => null)) as { ok: boolean; result?: { message_id?: number } } | null;
+  } catch {
+    return null;
+  }
+}
+
+// Posts to one of the admins' groups, optionally as a reply to one of its
+// messages. Returns the new message's id, or null.
+export async function sendToGroup(chatId: string, html: string, replyTo?: number | null): Promise<number | null> {
+  if (!chatId) return null;
+  const json = await botCall("sendMessage", {
+    chat_id: chatId,
+    text: html.slice(0, 4000),
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...(replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {}),
+  });
+  return json?.ok ? json.result?.message_id ?? null : null;
+}
+
+// Rewrites one of the bot's own posts (e.g. to mark it answered).
+export async function editInGroup(chatId: string, messageId: number, html: string): Promise<boolean> {
+  if (!chatId || !messageId) return false;
+  const json = await botCall("editMessageText", { chat_id: chatId, message_id: messageId, text: html.slice(0, 4000), parse_mode: "HTML", disable_web_page_preview: true });
+  return !!json?.ok;
+}
 
 // The clubs' news channel, written to by its own bot:
 //   TELEGRAM_NEWS_BOT_TOKEN, TELEGRAM_NEWS_CHANNEL_ID

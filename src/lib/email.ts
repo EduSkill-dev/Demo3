@@ -448,3 +448,22 @@ export function newsletterDigestEmail(input: {
     text: input.tours.map((tour) => `${tour.title} (${tour.date}) — ${BASE_URL()}/tours/${tour.id}`).join("\n"),
   };
 }
+
+// To the author of a suggestion: an admin's answer, under their own words.
+// Their reply comes back to the platform's inbox.
+export function suggestionReplyEmail(input: { to: string; original: string; reply: string; adminName: string }) {
+  const html = layout(
+    "Պատասխան Ձեր առաջարկին",
+    `<p style="white-space:pre-line">${esc(input.reply)}</p>
+     <p style="color:#5B6B66;margin-top:6px">— ${esc(input.adminName)}, Culmen</p>
+     <p style="margin-top:22px;color:#5B6B66;font-size:13px">Ձեր առաջարկը՝</p>
+     <blockquote style="margin:6px 0 0;padding:10px 14px;border-left:3px solid #E6D9C2;color:#5B6B66;white-space:pre-line">${esc(input.original)}</blockquote>`
+  );
+  return {
+    to: input.to,
+    replyTo: ownerInbox() || undefined,
+    subject: "Culmen — պատասխան Ձեր առաջարկին",
+    html,
+    text: `${input.reply}\n\n— ${input.adminName}, Culmen\n\nՁեր առաջարկը՝\n${input.original}`,
+  };
+}

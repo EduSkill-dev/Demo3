@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { contactInboxEmail, ownerInbox, sendEmail } from "@/lib/email";
 import { getT } from "@/i18n/server";
 import AuthCard from "@/components/auth/AuthCard";
+import { announceSuggestion } from "@/lib/messages";
 
 // /contact/confirm?token=… — the link in the "confirm your message" email.
 // Confirming is what delivers a visitor's suggestion to the owner.
@@ -29,6 +30,7 @@ export default async function ContactConfirmPage({ searchParams }: { searchParam
         .eq("id", row.id)
         .is("confirmed_at", null)
         .select("id");
+      if ((updated ?? []).length > 0) await announceSuggestion(admin, row.id);
       const inbox = ownerInbox();
       if ((updated ?? []).length > 0 && inbox) {
         await sendEmail(contactInboxEmail({ to: inbox, message: row.message, email: row.email, phone: row.phone }));

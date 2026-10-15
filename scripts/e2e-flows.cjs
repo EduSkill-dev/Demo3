@@ -499,7 +499,7 @@ async function main() {
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
       stdio: 'pipe',
-      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
+      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', TELEGRAM_SUGGESTIONS_CHAT_ID: '-100456', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
       shell: false,
     });
     devServer.on('error', (err) => console.error('     dev server error:', err.message));
@@ -1106,6 +1106,28 @@ async function main() {
           && chatRows.length === 2 && chatRows[1].from_admin === true && chatRows[1].admin_name === 'Գոռ Ադմին' && chatRows[1].body === 'E2E պատասխան'
           && chatOther.length === 0 && chatOwn.length === 2 && !!chatForge.error && chatOff.status === 200 && chatRefused.status === 403,
         `guest=${chatGuest.status} long=${chatLong.status} send=${chatSend.status} club=${chatClub.status} tg=${tgNoSecret.status}/${tgOtherChat.status}/${tgReply.status} rows=${JSON.stringify(chatRows)} other=${chatOther.length} own=${chatOwn.length} forge=${chatForge.error ? 'refused' : 'ALLOWED'} off=${chatOff.status} refused=${chatRefused.status}`);
+
+      // Messages: a suggestion answered by Reply in its Telegram group and from
+      // the admin area; a help chat answered from the admin area.
+      {
+        const idea = (await admin.from('contact_messages').insert({ message: 'E2E առաջարկ', email: email('idea'), phone: '', confirmed_at: new Date().toISOString(), tg_message_id: 888001 }).select('id').single()).data;
+        const fromTg = await tg({ message: { message_id: 888002, text: 'E2E պատասխան Telegram-ից', chat: { id: -100456 }, from: { first_name: 'Անի' }, reply_to_message: { message_id: 888001 } } }, 'e2e-tg-secret');
+        // the same reply in the help group must not touch suggestions
+        await tg({ message: { message_id: 888003, text: 'wrong group', chat: { id: -100123 }, from: { first_name: 'Անի' }, reply_to_message: { message_id: 888001 } } }, 'e2e-tg-secret');
+        const fromSite = await act({ action: 'suggestion.reply', id: idea.id, body: 'E2E պատասխան կայքից' }, superCookie);
+        const empty = await act({ action: 'suggestion.reply', id: idea.id, body: '  ' }, superCookie);
+        const answers = (await admin.from('contact_replies').select('admin_name, body, via').eq('message_id', idea.id).order('id')).data || [];
+        const chatFromSite = await act({ action: 'support.reply', userId: ids.ind, body: 'E2E պատասխան կայքից' }, superCookie);
+        const lastChat = (await admin.from('support_messages').select('from_admin, via, body').eq('user_id', ids.ind).order('id', { ascending: false }).limit(1).single()).data;
+        const byPerson = await api('/api/admin', { action: 'suggestion.reply', id: idea.id, body: 'x' }, indCookie);
+        const page = await fetch(`http://localhost:${DEV_PORT}/admin/messages`, { headers: { Cookie: superCookie }, redirect: 'manual' });
+        check('messages: a suggestion is answered from Telegram and from the admin area (both kept, signed), a help chat from the admin area; only admins may',
+          fromTg.status === 200 && fromSite.status === 200 && empty.status === 400 && answers.length === 2
+            && answers[0].via === 'telegram' && answers[0].admin_name === 'Անի' && answers[1].via === 'site' && answers[1].body === 'E2E պատասխան կայքից'
+            && chatFromSite.status === 200 && lastChat?.from_admin === true && lastChat?.via === 'site' && byPerson.status >= 401 && page.status === 200,
+          `tg=${fromTg.status} site=${fromSite.status} empty=${empty.status} answers=${JSON.stringify(answers)} chat=${chatFromSite.status} last=${JSON.stringify(lastChat)} person=${byPerson.status} page=${page.status}`);
+        await admin.from('contact_messages').delete().eq('id', idea.id);
+      }
 
       // A club registered with Google: the fresh account becomes a club once.
       const gClub = await admin.auth.admin.createUser({ email: email('gclub'), password: PASSWORD, email_confirm: true, app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Գուգլ Ակումբ' } });

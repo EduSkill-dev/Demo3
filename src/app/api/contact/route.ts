@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { contactConfirmEmail, contactInboxEmail, emailStatus, ownerInbox, sendEmail } from "@/lib/email";
+import { announceSuggestion } from "@/lib/messages";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,10 +43,11 @@ async function handlePOST(req: Request) {
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
   }
 
-  const { data, error } = await createAdminClient()
+  const db = createAdminClient();
+  const { data, error } = await db
     .from("contact_messages")
     .insert({ message, email, phone, confirmed_at: verified ? new Date().toISOString() : null })
-    .select("token")
+    .select("id, token")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
@@ -55,6 +57,8 @@ async function handlePOST(req: Request) {
     return NextResponse.json({ ok: true, confirmed: false, email: emailStatus(result) });
   }
 
+  // Confirmed at once (a signed-in, verified address): the admins' group hears of it.
+  await announceSuggestion(db, (data as { id: string }).id);
   const inbox = ownerInbox();
   const result = inbox
     ? await sendEmail(contactInboxEmail({ to: inbox, message, email, phone }))

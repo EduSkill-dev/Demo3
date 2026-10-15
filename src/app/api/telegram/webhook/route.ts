@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withErrorReport } from "@/lib/errors";
-import { sendEmail } from "@/lib/email";
-import { telegramChatId } from "@/lib/telegram";
+import { suggestionsChatId, telegramChatId } from "@/lib/telegram";
+import { answerSuggestion, answerSupport } from "@/lib/messages";
 
 type Update = {
   message?: {
@@ -14,12 +14,15 @@ type Update = {
   };
 };
 
-// Telegram calls this for every message in the admins' group. Only one kind
-// matters: an admin's Reply to a person's question that the bot posted. It
-// becomes the answer in that person's chat on the site, signed with the
-// admin's name. A reply to another admin's message is the admins talking
-// among themselves and stays in the group. Everything else is ignored
-// (always with 200, or Telegram keeps resending).
+// Telegram calls this for every message in the admins' groups. Only one kind
+// matters: an admin's Reply to a post the bot made —
+//   * in "Culmen Support", a person's help-chat question: the answer appears
+//     in their chat on the site, signed with the admin's name;
+//   * in "Culmen Suggestions", a suggestion: the answer is emailed to its
+//     author.
+// Either way the post is marked answered. A reply to another admin's message
+// is the admins talking among themselves and stays in the group. Everything
+// else is ignored (always with 200, or Telegram keeps resending).
 async function handlePOST(req: Request) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!secret || req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
@@ -28,27 +31,19 @@ async function handlePOST(req: Request) {
   const update = (await req.json().catch(() => ({}))) as Update;
   const m = update.message;
   const text = m?.text?.trim();
-  if (!m || !text || m.from?.is_bot || !m.reply_to_message || String(m.chat.id) !== telegramChatId()) return NextResponse.json({ ok: true });
-
-  const db = createAdminClient();
-  const { data: original } = await db.from("support_messages").select("user_id").eq("tg_message_id", m.reply_to_message.message_id).eq("from_admin", false).limit(1).maybeSingle();
-  const userId = (original as { user_id: string } | null)?.user_id;
-  if (!userId) return NextResponse.json({ ok: true });
-
+  if (!m || !text || m.from?.is_bot || !m.reply_to_message) return NextResponse.json({ ok: true });
+  const chat = String(m.chat.id);
   const adminName = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(" ").slice(0, 80) || "Ադմինիստրատոր";
-  await db.from("support_messages").insert({ user_id: userId, from_admin: true, admin_name: adminName, body: text.slice(0, 1000), tg_message_id: m.message_id });
+  const db = createAdminClient();
 
-  // The person may have left the page: tell them by email (one line, no content).
-  const { data: p } = await db.from("profiles").select("email").eq("id", userId).maybeSingle();
-  const email = (p as { email?: string } | null)?.email;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
-  if (email) {
-    await sendEmail({
-      to: email,
-      subject: "Culmen. Ձեր հարցին պատասխանել են",
-      text: `Հարթակի ադմինիստրատորը պատասխանել է Ձեր հարցին։ Պատասխանը կարդացեք այստեղ՝ ${site}/help`,
-      html: `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#12332D"><p>Հարթակի ադմինիստրատորը պատասխանել է Ձեր հարցին։</p><p><a href="${site}/help" style="display:inline-block;background:#1E5B4F;color:#fff;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Կարդալ պատասխանը</a></p></div>`,
-    });
+  if (chat === telegramChatId()) {
+    const { data: original } = await db.from("support_messages").select("user_id").eq("tg_message_id", m.reply_to_message.message_id).eq("from_admin", false).limit(1).maybeSingle();
+    const userId = (original as { user_id: string } | null)?.user_id;
+    if (userId) await answerSupport(db, { userId, adminName, body: text, via: "telegram", tgMessageId: m.message_id });
+  } else if (suggestionsChatId() && chat === suggestionsChatId()) {
+    const { data: original } = await db.from("contact_messages").select("id").eq("tg_message_id", m.reply_to_message.message_id).limit(1).maybeSingle();
+    const id = (original as { id: string } | null)?.id;
+    if (id) await answerSuggestion(db, { id, adminName, body: text, via: "telegram", tgMessageId: m.message_id });
   }
   return NextResponse.json({ ok: true });
 }
