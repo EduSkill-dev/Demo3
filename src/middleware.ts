@@ -18,9 +18,9 @@ export async function middleware(request: NextRequest) {
 
   // Crawlers follow the calendar's month and day links without end (years
   // back and ahead, every filter). A date more than a year from today is
-  // refused here, before any page is built.
+  // refused here, before any page is built ("gone", so crawlers drop it).
   if (outsideDateWindow(request)) {
-    return new NextResponse("Not found", { status: 404, headers: { "x-robots-tag": "noindex" } });
+    return new NextResponse("Gone", { status: 410, headers: { "x-robots-tag": "noindex" } });
   }
 
   // An auth email whose redirect target was not allowed falls back to the
@@ -110,6 +110,9 @@ const DATED_PAGES = new Set(["/calendar", "/tours"]);
 function outsideDateWindow(request: NextRequest): boolean {
   const { pathname, searchParams } = request.nextUrl;
   if (!DATED_PAGES.has(pathname)) return false;
+  // Old calendar links (level=, night=) are no longer made by the site; only
+  // crawlers still hold them.
+  if (pathname === "/calendar" && (searchParams.has("level") || searchParams.has("night"))) return true;
   const now = new Date();
   const monthIndex = (y: number, m: number) => y * 12 + m;
   const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
