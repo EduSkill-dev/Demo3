@@ -6,7 +6,6 @@ import type { Tour } from "@/types/database";
 import { cancelHoursOf, formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import FramedPhoto from "@/components/ui/FramedPhoto";
-import FavoriteToggle from "@/components/FavoriteToggle";
 import LikeButton from "@/components/LikeButton";
 
 export type TourForDetails = Pick<
@@ -17,8 +16,8 @@ export type TourForDetails = Pick<
 > & {
   cancel_hours?: number | null;
   end_date?: string | null;
-  club?: { id: string; name: string; likes?: number } | null;
-  sights?: string[];
+  club?: { id: string; name: string } | null;
+  sights?: { id: string; name: string }[];
   likes?: number; // shown (and likeable) when the page supplied the count
 };
 
@@ -45,7 +44,20 @@ export default function TourDetails({
     [t("tour.date"), date],
     [t("tour.regions"), tour.regions.map((r) => t(`region.${r}`)).join(", ") || "—"],
     [t("tour.terrains"), tour.terrains.map((k) => t(`terrain.${k}`)).join(", ") || "—"],
-    ...(tour.sights?.length ? ([[t("tour.sights"), tour.sights.join(", ")]] as [string, React.ReactNode][]) : []),
+    // Each place links to its own page.
+    ...(tour.sights?.length
+      ? ([[
+          t("tour.sights"),
+          <span key="sights">
+            {tour.sights.map((s, i) => (
+              <span key={s.id}>
+                {i > 0 && ", "}
+                <Link href={`/places/${s.id}`} className="underline decoration-line underline-offset-2 hover:text-terracotta-700 dark:hover:text-terracotta-300">{s.name}</Link>
+              </span>
+            ))}
+          </span>,
+        ]] as [string, React.ReactNode][])
+      : []),
     [t("tour.difficulty"), t(`difficulty.${tour.difficulty}`)],
     [t("tour.overnight"), tour.overnight ? t("tour.yes") : t("tour.no")],
     [
@@ -104,10 +116,6 @@ export default function TourDetails({
             <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-terracotta-500 hover:text-terracotta-700">
               {tour.club.name}
             </Link>
-            <span className="flex shrink-0 items-center gap-2">
-              {tour.club.likes !== undefined && <LikeButton kind="club" id={tour.club.id} count={tour.club.likes} size="md" />}
-              <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
-            </span>
           </div>
         )}
         <div className="mt-1 flex items-start justify-between gap-3">

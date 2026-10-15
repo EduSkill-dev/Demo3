@@ -10,7 +10,6 @@ export type PublicClubInfo = {
   id: string;
   name: string;
   photo: string | null;
-  likes: number; // hearts from people who hiked with the club
   // Present only when the club's package shows ratings to the public.
   rating: { average: number; count: number } | null;
 };
@@ -19,7 +18,7 @@ export type PublicTour = Tour & {
   club: PublicClubInfo;
   taken: number; // confirmed seats
   likes: number; // thumbs-up from people who took part
-  sights: string[]; // names of the ticked sights, in the reader's language
+  sights: { id: string; name: string }[]; // the ticked sights, named in the reader's language
   cap: number; // seats the club's package allows on this tour; 0 = sign-up closed
 };
 
@@ -56,7 +55,7 @@ export async function getPublicTours(
 
   const plans = await getPlans();
   const sightNames = await getSightNames();
-  const likes = await getLikeCounts(rows.map((t) => t.id), [...new Set(rows.map((t) => t.club_id))]);
+  const likes = await getLikeCounts(rows.map((t) => t.id));
   const [{ data: seats }, { data: ratings }] = await Promise.all([
     supabase.rpc("tours_seats_taken", { p_tours: rows.map((t) => t.id) }),
     supabase.from("club_rating_summary").select("club_id, average, count").in("club_id", [...new Set(rows.map((t) => t.club_id))]),
@@ -75,11 +74,10 @@ export async function getPublicTours(
         id: clubs!.id,
         name: clubs!.name,
         photo: clubs!.photo_url,
-        likes: likes.clubs.get(clubs!.id) ?? 0,
         rating: clubConfig(plans, clubs).public_show_rating && r ? { average: Number(r.average), count: r.count } : null,
       },
       likes: likes.tours.get(tour.id) ?? 0,
-      sights: (tour.sight_ids ?? []).map((id) => sightNames.get(id)).filter((n): n is string => !!n),
+      sights: (tour.sight_ids ?? []).flatMap((id) => (sightNames.has(id) ? [{ id, name: sightNames.get(id)! }] : [])),
       taken: taken.get(tour.id) ?? 0,
       // 0 = sign-up closed (an admin switched the club's applications off).
       cap: clubs!.applications_blocked ? 0 : Math.min(tour.max_participants, clubConfig(plans, clubs).max_participants_per_tour),

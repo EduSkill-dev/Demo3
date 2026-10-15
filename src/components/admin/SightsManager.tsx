@@ -5,12 +5,26 @@ import { useRouter } from "next/navigation";
 import { DIFFICULTIES, REGIONS, TERRAINS } from "@/lib/catalog";
 import { useT } from "@/i18n/client";
 import type { Sight } from "@/lib/sights";
+import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import { adminAction, adminButton, adminGhost, adminInlineInput, adminInput } from "./adminApi";
 
-type Draft = { id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string; difficulty: string; active: boolean };
-const blank: Draft = { id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true };
+type Draft = {
+  id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string; difficulty: string; active: boolean;
+  photo_url: string; description_hy: string; description_ru: string; description_en: string;
+};
+const blank: Draft = {
+  id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true,
+  photo_url: "", description_hy: "", description_ru: "", description_en: "",
+};
+const toDraft = (s: Sight, patch: Partial<Draft> = {}): Draft => ({
+  id: s.id, name_hy: s.name_hy, name_ru: s.name_ru, name_en: s.name_en, region: s.region,
+  terrain: s.terrain ?? TERRAINS[0], difficulty: s.difficulty ?? "medium", active: s.active,
+  photo_url: s.photo_url ?? "", description_hy: s.description_hy ?? "", description_ru: s.description_ru ?? "", description_en: s.description_en ?? "",
+  ...patch,
+});
 
-// Add, rename and hide sights. One line per sight; the form on top edits the
+// Add, rename and hide sights, with a photo and a few words per language for
+// the place's public page. One line per sight; the form on top edits the
 // chosen one or adds a new one.
 export default function SightsManager({ sights }: { sights: Sight[] }) {
   const t = useT(); // region names only; the admin area itself is Armenian
@@ -35,6 +49,18 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
     router.refresh();
   }
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+
+  async function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    const up = await uploadImage("places", file);
+    setBusy(false);
+    if ("error" in up) return setError(up.error);
+    set({ photo_url: up.url });
+  }
 
   return (
     <div className="space-y-6">
@@ -82,6 +108,44 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
                 <option key={k} value={k}>{t(`difficulty.${k}`)}</option>
               ))}
             </select>
+          </div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)]">
+          <div>
+            <span className="mb-1 block text-sm font-medium text-ink">Նկար</span>
+            {draft.photo_url ? (
+              <img src={draft.photo_url} alt="" className="h-32 w-full rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-line text-xs text-muted">Նկար չկա (ցույց կտրվի արշավի վերջին նկարը)</div>
+            )}
+            <div className="mt-2 flex gap-2">
+              <label className={`${adminGhost} cursor-pointer !px-2 !py-1 text-xs`}>
+                {draft.photo_url ? "Փոխել" : "Բեռնել"}
+                <input type="file" accept={IMAGE_ACCEPT} onChange={pickPhoto} className="sr-only" />
+              </label>
+              {draft.photo_url && (
+                <button type="button" className={`${adminGhost} !px-2 !py-1 text-xs`} onClick={() => set({ photo_url: "" })}>
+                  Հեռացնել
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(["hy", "ru", "en"] as const).map((l) => (
+              <div key={l}>
+                <label htmlFor={`sight-desc-${l}`} className="mb-1 block text-sm font-medium text-ink">
+                  Նկարագրություն ({l === "hy" ? "հայերեն" : l === "ru" ? "ռուսերեն" : "անգլերեն"})
+                </label>
+                <textarea
+                  id={`sight-desc-${l}`}
+                  rows={5}
+                  maxLength={1500}
+                  value={draft[`description_${l}`]}
+                  onChange={(e) => set({ [`description_${l}`]: e.target.value } as Partial<Draft>)}
+                  className={adminInput}
+                />
+              </div>
+            ))}
           </div>
         </div>
         <p className="text-xs text-muted">Տեսակն ու բարդությունը ավտոմատ անցնում են այս վայրն ընտրած հայտարարություններին (արշավի բարդությունը՝ ամենաբարդ վայրինը)։</p>
@@ -148,10 +212,10 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2">
                     <div className="flex justify-end gap-1.5">
-                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => setDraft({ ...s, terrain: s.terrain ?? TERRAINS[0], difficulty: s.difficulty ?? "medium" })}>
+                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => setDraft(toDraft(s))}>
                         Խմբագրել
                       </button>
-                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => save({ ...s, terrain: s.terrain ?? "other", difficulty: s.difficulty ?? "medium", active: !s.active })}>
+                      <button type="button" disabled={busy} className={`${adminGhost} !px-2 !py-1`} onClick={() => save(toDraft(s, { terrain: s.terrain ?? "other", active: !s.active }))}>
                         {s.active ? "Թաքցնել" : "Ցուցադրել"}
                       </button>
                     </div>

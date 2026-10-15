@@ -7,14 +7,17 @@ import type { Locale } from "@/i18n/config";
 
 export const SIGHTS_TAG = "sights";
 
-export type Sight = { id: string; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string | null; difficulty: string | null; active: boolean };
+export type Sight = {
+  id: string; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string | null; difficulty: string | null; active: boolean;
+  photo_url: string | null; description_hy: string | null; description_ru: string | null; description_en: string | null;
+};
 
 const loadSights = unstable_cache(
   async (): Promise<Sight[]> => {
     try {
       const { data } = await createAdminClient()
         .from("sights")
-        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active")
+        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active, photo_url, description_hy, description_ru, description_en")
         .order("name_hy");
       return (data ?? []) as Sight[];
     } catch {
@@ -27,7 +30,7 @@ const loadSights = unstable_cache(
 
 export const getAllSights = () => loadSights();
 
-const nameIn = (s: Sight, locale: Locale) => (locale === "ru" ? s.name_ru : locale === "en" ? s.name_en : s.name_hy) || s.name_hy;
+export const nameIn = (s: Sight, locale: Locale) => (locale === "ru" ? s.name_ru : locale === "en" ? s.name_en : s.name_hy) || s.name_hy;
 
 // id → name in the reader's language (hidden sights included: old listings
 // and requests keep showing what they ticked).

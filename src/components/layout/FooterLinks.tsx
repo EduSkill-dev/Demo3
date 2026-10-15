@@ -7,7 +7,9 @@ import { useT } from "@/i18n/client";
 const LINKS = [
   { href: "/about", key: "header.about" },
   { href: "/tours", key: "header.tours" },
+  { href: "/places", key: "header.places" },
   { href: "/clubs", key: "header.clubs" },
+  { href: "/hikers", key: "header.hikers" },
   { href: "/faq", key: "header.faq" },
   { href: "/terms", key: "footer.terms" },
   { href: "/privacy", key: "footer.privacy" },

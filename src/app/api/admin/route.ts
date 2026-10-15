@@ -234,6 +234,10 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       terrain: str(body.terrain),
       difficulty: str(body.difficulty),
       active: body.active !== false,
+      photo_url: /^https:\/\//.test(str(body.photo_url)) ? str(body.photo_url).slice(0, 500) : null,
+      description_hy: str(body.description_hy).slice(0, 1500) || null,
+      description_ru: str(body.description_ru).slice(0, 1500) || null,
+      description_en: str(body.description_en).slice(0, 1500) || null,
     };
     if (!row.name_hy || !row.name_ru || !row.name_en) return fail("Լրացրեք անվանումը երեք լեզվով։");
     if (!(REGIONS as readonly string[]).includes(row.region)) return fail("Ընտրեք մարզը։");

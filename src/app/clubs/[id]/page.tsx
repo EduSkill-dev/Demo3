@@ -7,9 +7,6 @@ import { planConfigOf } from "@/lib/plans/server";
 import { getFormatDate, getT } from "@/i18n/server";
 import type { Club, ClubGuide } from "@/types/database";
 import BackLink from "@/components/BackLink";
-import FavoriteToggle from "@/components/FavoriteToggle";
-import LikeButton from "@/components/LikeButton";
-import { getLikeCounts } from "@/lib/likes";
 import RatingBox from "@/components/RatingBox";
 import TourGrid from "@/components/tour/TourGrid";
 
@@ -74,7 +71,6 @@ export default async function ClubDetailPage({
 
   // The package decides whether visitors see the rating and reviews; the club
   // itself always sees them (with a note when they are hidden).
-  const likes = await getLikeCounts([], [club.id]);
   // The plan decides what visitors see (rating, comments) and whether the
   // club itself gets its comments; the club always sees its own rating.
   const plan = await planConfigOf(club);
@@ -108,13 +104,11 @@ export default async function ClubDetailPage({
                 ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
               </span>
             )}
-            <LikeButton kind="club" id={club.id} count={likes.clubs.get(club.id) ?? 0} size="md" />
             {club.phone && (
               <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">📞 {club.phone}</a>
             )}
           </div>
         </div>
-        <FavoriteToggle clubId={club.id} clubName={club.name} />
       </section>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_20rem]">

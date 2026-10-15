@@ -22,12 +22,12 @@ export default async function MyToursPage() {
 
   type Raw = { id: string; tours: (Tour & { clubs: { id: string; name: string } | null }) | null };
   const booked = ((data ?? []) as unknown as Raw[]).filter((b) => b.tours);
-  const likes = await getLikeCounts(booked.map((b) => b.tours!.id), [...new Set(booked.map((b) => b.tours!.club_id))]);
+  const likes = await getLikeCounts(booked.map((b) => b.tours!.id));
   const rows: MyTourRow[] = ((data ?? []) as unknown as Raw[])
     .filter((b) => b.tours && b.tours.date >= today)
     .map((b) => {
       const { clubs, ...tour } = b.tours!;
-      return { bookingId: b.id, tour: { ...tour, likes: likes.tours.get(tour.id) ?? 0, club: clubs && { ...clubs, likes: likes.clubs.get(clubs.id) ?? 0 } } };
+      return { bookingId: b.id, tour: { ...tour, likes: likes.tours.get(tour.id) ?? 0, club: clubs } };
     })
     .sort((a, b) => (a.tour.date < b.tour.date ? -1 : 1));
 

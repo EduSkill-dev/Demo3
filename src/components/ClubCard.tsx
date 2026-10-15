@@ -1,20 +1,16 @@
 import Link from "next/link";
 import type { Club } from "@/types/database";
 import type { TFunction } from "@/i18n/translate";
-import FavoriteToggle from "@/components/FavoriteToggle";
-import LikeButton from "@/components/LikeButton";
 
 export default function ClubCard({
   club,
   rating,
   upcoming,
-  likes,
   t,
 }: {
   club: Club;
   rating: { average: number; count: number } | null; // null = hidden by package or none yet
   upcoming: number;
-  likes: number; // hearts from people who hiked with the club
   t: TFunction;
 }) {
   return (
@@ -29,10 +25,6 @@ export default function ClubCard({
             <div className="flex h-44 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
           )}
         </Link>
-        {/* The bookmark: follow this club (individuals only). */}
-        <div className="absolute right-3 top-3">
-          <FavoriteToggle compact clubId={club.id} clubName={club.name} />
-        </div>
       </div>
       <div className="flex flex-1 flex-col p-5">
         <Link href={`/clubs/${club.id}`} className="font-serif text-xl font-semibold text-heading hover:text-terracotta-700">
@@ -45,7 +37,6 @@ export default function ClubCard({
               <span className="text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
             </span>
           )}
-          <LikeButton kind="club" id={club.id} count={likes} />
         </p>
         {club.focus?.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">

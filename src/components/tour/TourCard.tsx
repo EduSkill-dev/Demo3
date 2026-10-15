@@ -4,7 +4,6 @@ import Link from "next/link";
 import { formatAmd } from "@/lib/catalog";
 import { useFormatDate, useT } from "@/i18n/client";
 import type { PublicTour } from "@/lib/publicTours";
-import FavoriteToggle from "@/components/FavoriteToggle";
 import LikeButton from "@/components/LikeButton";
 import CardPhotos from "@/components/tour/CardPhotos";
 
@@ -55,10 +54,6 @@ export default function TourCard({
             {closed ? t("signup.closed") : t("toursPage.full")}
           </span>
         ) : null}
-        {/* The bookmark: follow the club that runs this hike (individuals only). */}
-        <div className="absolute right-3 top-3">
-          <FavoriteToggle compact clubId={tour.club.id} clubName={tour.club.name} />
-        </div>
       </div>
 
       <div className={`flex flex-1 flex-col ${sm ? "p-4" : "p-5"}`}>

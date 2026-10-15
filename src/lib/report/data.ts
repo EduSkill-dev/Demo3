@@ -59,7 +59,7 @@ export async function getMonthlyReport(clubId: string, month: string): Promise<M
 
   const [{ data: tourRows }, { data: followerRows }, { data: reviewRows }] = await Promise.all([
     db.from("tours").select("id, title, date, regions, difficulty, overnight, price").eq("club_id", clubId).neq("status", "cancelled").gte("date", first).lte("date", last).order("date"),
-    db.from("favorite_clubs").select("created_at").eq("club_id", clubId).lt("created_at", next),
+    db.from("saved_searches").select("user_id, created_at").eq("club_id", clubId).lt("created_at", next),
     db.from("public_reviews").select("score, comment, created_at").eq("club_id", clubId).lt("created_at", next),
   ]);
   const tours = (tourRows ?? []) as { id: string; title: string; date: string; regions: string[]; difficulty: Difficulty; overnight: boolean; price: number | string | null }[];
@@ -98,7 +98,14 @@ export async function getMonthlyReport(clubId: string, month: string): Promise<M
   const sum = (pick: (h: ReportHike) => number) => hikes.reduce((n, h) => n + pick(h), 0);
   const sources = noSources();
   for (const h of hikes) for (const s of REPORT_SOURCES) sources[s] += h.sources[s];
-  const followers = (followerRows ?? []) as { created_at: string }[];
+  // Followers: people with a saved search naming the club, each counted once
+  // (from their first such search).
+  const firstWatch = new Map<string, string>();
+  for (const r of (followerRows ?? []) as { user_id: string; created_at: string }[]) {
+    const seen = firstWatch.get(r.user_id);
+    if (!seen || r.created_at < seen) firstWatch.set(r.user_id, r.created_at);
+  }
+  const followers = [...firstWatch.values()].map((created_at) => ({ created_at }));
   const reviews = (reviewRows ?? []) as { score: number; comment: string | null; created_at: string }[];
   const booked = sum((h) => h.booked);
   const came = sum((h) => h.came);

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
+import type { MessageKey } from "@/i18n/translate";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import CountBadge from "@/components/ui/CountBadge";
@@ -12,12 +13,24 @@ import CulmenLogo from "@/components/CulmenLogo";
 
 export type HeaderUser = { role: "individual" | "club" | "admin"; name: string; unread: number };
 
-export const NAV_LINKS = [
-  { href: "/about", key: "header.about" },
+// The main menu. "Hikes" opens a small menu (the hikes, the places). After it:
+// clubs and hikers for everyone, then FAQ for individuals and visitors, or
+// custom requests for clubs and admins. About and (for clubs) FAQ are in the
+// footer.
+type NavLink = { href: string; key: MessageKey };
+const HIKES_MENU: NavLink[] = [
   { href: "/tours", key: "header.tours" },
-  { href: "/clubs", key: "header.clubs" },
-  { href: "/faq", key: "header.faq" },
-] as const;
+  { href: "/places", key: "header.places" },
+];
+function navLinksFor(role: HeaderUser["role"] | null): NavLink[] {
+  const shared: NavLink[] = [
+    { href: "/clubs", key: "header.clubs" },
+    { href: "/hikers", key: "header.hikers" },
+  ];
+  return role === "club" || role === "admin"
+    ? [...shared, { href: "/requests", key: "requests.navLabel" }]
+    : [...shared, { href: "/faq", key: "header.faq" }];
+}
 
 function isActive(pathname: string, href: string) {
   // The shared calendar is part of the hikes section.
@@ -31,13 +44,29 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [hikesOpen, setHikesOpen] = useState(false);
   const registerRef = useRef<HTMLDivElement>(null);
+  const hikesRef = useRef<HTMLDivElement>(null);
 
   // Close menus on navigation, outside click and Escape.
   useEffect(() => {
     setMobileOpen(false);
     setRegisterOpen(false);
+    setHikesOpen(false);
   }, [pathname]);
+  useEffect(() => {
+    if (!hikesOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!hikesRef.current?.contains(e.target as Node)) setHikesOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setHikesOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [hikesOpen]);
   useEffect(() => {
     if (!registerOpen) return;
     const onDown = (e: MouseEvent) => {
@@ -61,8 +90,8 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   const home = user ? (user.role === "admin" ? "/admin" : user.role === "club" ? "/dashboard" : "/account") : null;
   const homeLabel =
     user?.role === "admin" ? t("header.admin") : user?.role === "club" ? t("header.dashboard") : t("header.account");
-  // Custom requests are for clubs to answer (admins may look).
-  const seesRequests = user?.role === "club" || user?.role === "admin";
+  const links = navLinksFor(user?.role ?? null);
+  const hikesActive = HIKES_MENU.some((l) => isActive(pathname, l.href));
   const navLink = (href: string) =>
     `whitespace-nowrap border-b-2 px-3 py-2 text-base font-semibold transition ${
       isActive(pathname, href)
@@ -113,16 +142,45 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="main">
-          {NAV_LINKS.map((l) => (
+          {/* Hikes: opens on hover or click, with the hikes and the places. */}
+          <div className="relative" ref={hikesRef} onMouseEnter={() => setHikesOpen(true)} onMouseLeave={() => setHikesOpen(false)}>
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={hikesOpen}
+              onClick={() => setHikesOpen((v) => !v)}
+              className={`${navLink(hikesActive ? pathname : "/__none")} flex items-center gap-1`}
+            >
+              {t("header.tours")}
+              <svg viewBox="0 0 20 20" className={`h-4 w-4 transition ${hikesOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M5 8l5 5 5-5" />
+              </svg>
+            </button>
+            {hikesOpen && (
+              <div role="menu" className="absolute left-0 top-full z-40 w-56 pt-2">
+                <div className="overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-lg">
+                  {HIKES_MENU.map((l) => (
+                    <Link
+                      key={l.href}
+                      role="menuitem"
+                      href={l.href}
+                      aria-current={isActive(pathname, l.href) ? "page" : undefined}
+                      className={`block rounded-lg px-3 py-2.5 text-sm font-semibold ${
+                        isActive(pathname, l.href) ? "bg-spruce-500 text-[#FFFDF8]" : "text-ink hover:bg-sand"
+                      }`}
+                    >
+                      {t(l.key)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {links.map((l) => (
             <Link key={l.href} href={l.href} className={navLink(l.href)} aria-current={isActive(pathname, l.href) ? "page" : undefined}>
               {t(l.key)}
             </Link>
           ))}
-          {seesRequests && (
-            <Link href="/requests" className={navLink("/requests")} aria-current={isActive(pathname, "/requests") ? "page" : undefined}>
-              {t("requests.navLabel")}
-            </Link>
-          )}
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
@@ -202,16 +260,11 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
       {mobileOpen && (
         <div className="border-t border-line bg-surface px-4 pb-5 pt-2 lg:hidden">
           <nav className="flex flex-col" aria-label="main">
-            {NAV_LINKS.map((l) => (
+            {[...HIKES_MENU, ...links].map((l) => (
               <Link key={l.href} href={l.href} className={navLink(l.href)}>
                 {t(l.key)}
               </Link>
             ))}
-            {seesRequests && (
-              <Link href="/requests" className={navLink("/requests")}>
-                {t("requests.navLabel")}
-              </Link>
-            )}
           </nav>
           <div className="mt-3 space-y-2 border-t border-line pt-4">
             {user ? (

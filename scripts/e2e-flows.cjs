@@ -5,7 +5,7 @@
  *   node scripts/e2e-flows.cjs
  *
  * Creates throwaway accounts (individuals + two clubs), exercises the real
- * flows — packages, sign-up, favorites, booking, the 48-hour rule, ratings,
+ * flows — packages, sign-up, saved searches, booking, the 48-hour rule, ratings,
  * notifications, listing limits, applicant visibility, guides, payments —
  * asserts each one, then deletes everything it created. Safe to re-run;
  * exits non-zero if any assertion fails.
@@ -241,10 +241,10 @@ async function main() {
     if (tourA.error) throw new Error('cannot continue without a tour: ' + tourA.error.message);
     const tourId = tourA.data.id;
 
-    // ---------- favorites + booking ----------
+    // ---------- saved searches + booking ----------
     await signIn('ind');
-    const fav = await anon.from('favorite_clubs').insert({ user_id: ids.ind, club_id: clubB });
-    check('individual can favorite a club', !fav.error, fav.error ? fav.error.message : '');
+    const fav = await anon.from('saved_searches').insert({ user_id: ids.ind, club_id: clubB });
+    check('individual can save a club-only search (following a club)', !fav.error, fav.error ? fav.error.message : '');
 
     const seats0 = await anon.rpc('seats_taken', { p_tour: tourId });
     check('seats start at 0', seats0.data === 0, String(seats0.data));
@@ -399,7 +399,10 @@ async function main() {
     check('a stranger cannot add a guide to another club', !!foreignGuide.error, foreignGuide.error ? foreignGuide.error.code : 'ALLOWED');
 
     // ---------- notifications ----------
-    await anon.from('favorite_clubs').insert({ user_id: ids.ind2, club_id: clubB });
+    await signIn('ind2');
+    await anon.from('saved_searches').insert({ user_id: ids.ind2, club_id: clubB });
+    // A second search that a hike far away will not match.
+    await anon.from('saved_searches').insert({ user_id: ids.ind2, region: 'syunik', overnight: true });
     await signIn('club2');
     const newTour = await anon.from('tours').insert(tourRow(clubB, { title: 'E2E Notified Tour', date: future(180) })).select('id').single();
     check('publishing while someone follows you works', !newTour.error && !!newTour.data?.id, newTour.error ? newTour.error.message : '');
@@ -408,6 +411,33 @@ async function main() {
     await signIn('ind2');
     const notes = await anon.from('notifications').select('id, read').eq('user_id', ids.ind2);
     check('the follower receives the notification', (notes.data || []).length >= 1, JSON.stringify(notes.data));
+    {
+      // Only the region search stays for this part (club B has room for listings).
+      await admin.from('saved_searches').delete().eq('user_id', ids.ind2).not('club_id', 'is', null);
+      const before = ((await admin.from('notifications').select('id').eq('user_id', ids.ind2)).data || []).length;
+      // Lori, no overnight → matches no search.
+      const miss = (await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Unmatched', date: future(181), regions: ['lori'], overnight: false })).select('id').single()).data;
+      const afterMiss = ((await admin.from('notifications').select('id').eq('user_id', ids.ind2)).data || []).length;
+      if (miss) await admin.from('tours').delete().eq('id', miss.id); // the club's listing limit
+      // Syunik with an overnight → matches the region search.
+      const hitRes = await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Matched', date: future(182), regions: ['syunik'], overnight: true })).select('id').single();
+      const hit = hitRes.data;
+      const hitNotes = (await admin.from('notifications').select('id').eq('user_id', ids.ind2).eq('tour_id', hit?.id ?? '')).data || [];
+      await signIn('ind2');
+      const more = [];
+      for (let i = 0; i < 5; i++) more.push(await anon.from('saved_searches').insert({ user_id: ids.ind2, terrain: 'lakes', date_from: future(i + 1) }));
+      const count = ((await anon.from('saved_searches').select('id').eq('user_id', ids.ind2)).data || []).length;
+      const empty = await anon.from('saved_searches').insert({ user_id: ids.ind2 });
+      await signIn('club');
+      const byClub = await anon.from('saved_searches').insert({ user_id: ids.club, club_id: clubB });
+      const othersVisible = ((await anon.from('saved_searches').select('id').eq('user_id', ids.ind2)).data || []).length;
+      check('saved searches: a hike that matches none sends nothing, a match does; at most five; a club cannot save one; nobody reads another\'s',
+        afterMiss === before && hitNotes.length === 1 && count === 5 && !!more[4].error && /5/.test(more[4].error?.message ?? '') && !!empty.error && !!byClub.error && othersVisible === 0,
+        `before=${before} afterMiss=${afterMiss} hit=${hitNotes.length}${hitRes.error ? ' (' + hitRes.error.message + ')' : ''} count=${count} sixth=${more[4].error?.message ?? 'ALLOWED'} empty=${empty.error ? 'refused' : 'ALLOWED'} club=${byClub.error ? 'refused' : 'ALLOWED'} visible=${othersVisible}`);
+      await admin.from('tours').delete().in('id', [miss?.id, hit?.id].filter(Boolean));
+      await admin.from('saved_searches').delete().eq('user_id', ids.ind2).not('terrain', 'is', null);
+      await signIn('ind2');
+    }
     const mark = await anon.from('notifications').update({ read: true }).eq('user_id', ids.ind2).eq('read', false);
     check('the owner can mark notifications read', !mark.error, mark.error ? mark.error.message : '');
 
@@ -749,7 +779,8 @@ async function main() {
       if (oddRow) await admin.from('tour_requests').delete().eq('id', oddRow.id);
 
       // ---------- Likes: only for people who took part ----------
-      const pastTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Liked Route', date: future(30), status: 'active' })).select('id').single()).data;
+      const sight = (await admin.from('sights').select('id, terrain').eq('active', true).eq('terrain', 'mountains').limit(1).single()).data;
+      const pastTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Liked Route', date: future(30), status: 'active', sight_ids: [sight.id] })).select('id').single()).data;
       // Booked while it was still ahead, then the day passes.
       await admin.from('bookings').insert({ tour_id: pastTour.id, user_id: ids.ind2, status: 'confirmed' });
       await admin.from('tours').update({ date: future(-3) }).eq('id', pastTour.id);
@@ -758,16 +789,28 @@ async function main() {
       await signIn('ind2');
       const upcomingLike = await anon.from('tour_likes').insert({ user_id: ids.ind2, tour_id: soonTour.id });
       const likeTour = await anon.from('tour_likes').insert({ user_id: ids.ind2, tour_id: pastTour.id });
-      const likeClub = await anon.from('club_likes').insert({ user_id: ids.ind2, club_id: clubA });
-      const forOther = await anon.from('club_likes').insert({ user_id: ids.ind, club_id: clubA });
+      const likeSight = await anon.from('sight_likes').insert({ user_id: ids.ind2, sight_id: sight.id });
+      const forOther = await anon.from('sight_likes').insert({ user_id: ids.ind, sight_id: sight.id });
       const mine = (await anon.rpc('my_engagement')).data;
-      const counts = [(await visitor.from('tour_like_counts').select('likes').eq('tour_id', pastTour.id).maybeSingle()).data?.likes,
-        (await visitor.from('club_like_counts').select('likes').eq('club_id', clubA).maybeSingle()).data?.likes];
-      const unlike = await anon.from('club_likes').delete().eq('user_id', ids.ind2).eq('club_id', clubA).select('club_id');
-      check('likes: a participant likes the hike and its club after the hike; nobody else can; counts are public',
-        !!strangerTour.error && !!upcomingLike.error && !likeTour.error && !likeClub.error && !!forOther.error
-          && mine?.tourLikes?.includes(pastTour.id) && mine?.attendedClubs?.includes(clubA) && counts[0] === 1 && counts[1] === 1 && (unlike.data || []).length === 1,
-        `stranger=${strangerTour.error ? 'refused' : 'ALLOWED'} upcoming=${upcomingLike.error ? 'refused' : 'ALLOWED'} tour=${likeTour.error?.message ?? 'ok'} club=${likeClub.error?.message ?? 'ok'} forOther=${forOther.error ? 'refused' : 'ALLOWED'} counts=${counts.join('/')} unlike=${(unlike.data || []).length}`);
+      const sightCount = ((await visitor.rpc('sight_stats')).data || []).find((x) => x.sight_id === sight.id)?.likes;
+      const counts = [(await visitor.from('tour_like_counts').select('likes').eq('tour_id', pastTour.id).maybeSingle()).data?.likes, sightCount];
+      const unlike = await anon.from('sight_likes').delete().eq('user_id', ids.ind2).eq('sight_id', sight.id).select('sight_id');
+      check('likes: a participant likes the hike and hearts its place after the hike; nobody else can; counts are public',
+        !!strangerTour.error && !!upcomingLike.error && !likeTour.error && !likeSight.error && !!forOther.error
+          && mine?.tourLikes?.includes(pastTour.id) && mine?.attendedSights?.includes(sight.id) && counts[0] === 1 && counts[1] === 1 && (unlike.data || []).length === 1,
+        `stranger=${strangerTour.error ? 'refused' : 'ALLOWED'} upcoming=${upcomingLike.error ? 'refused' : 'ALLOWED'} tour=${likeTour.error?.message ?? 'ok'} place=${likeSight.error?.message ?? 'ok'} forOther=${forOther.error ? 'refused' : 'ALLOWED'} counts=${counts.join('/')} unlike=${(unlike.data || []).length}`);
+
+      // ---------- Hiker passport: private until switched on ----------
+      const hidden = ((await visitor.rpc('passport_places', { p_user: ids.ind2 })).data || []).length;
+      const own = ((await anon.rpc('passport_places', { p_user: ids.ind2 })).data || []).map((x) => x.sight_id);
+      const listedBefore = ((await visitor.rpc('public_hikers')).data || []).some((h) => h.user_id === ids.ind2);
+      await anon.from('profiles').update({ show_passport: true }).eq('id', ids.ind2);
+      const shown = ((await visitor.rpc('passport_places', { p_user: ids.ind2 })).data || []).map((x) => x.sight_id);
+      const row = ((await visitor.rpc('public_hikers')).data || []).find((h) => h.user_id === ids.ind2);
+      await anon.from('profiles').update({ show_passport: false }).eq('id', ids.ind2);
+      check('passport: hidden from others until switched on; then the places and counts show, with only the surname\'s initial',
+        hidden === 0 && own.includes(sight.id) && !listedBefore && shown.includes(sight.id) && row?.mountains >= 1 && row?.places >= 1 && (row?.last_initial ?? '').length <= 1 && !('last_name' in (row || {})),
+        `hidden=${hidden} own=${own.length} listedBefore=${listedBefore} shown=${shown.length} row=${JSON.stringify(row)}`);
       await admin.from('tours').delete().eq('id', pastTour.id);
 
       // ---------- The guard on the open forms ----------

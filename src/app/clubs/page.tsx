@@ -1,4 +1,3 @@
-import { getLikeCounts } from "@/lib/likes";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicTours } from "@/lib/publicTours";
@@ -24,7 +23,6 @@ export default async function ClubsPage() {
 
   const list = (clubs ?? []) as Club[];
   const plans = await getPlans();
-  const likes = await getLikeCounts([], list.map((c) => c.id));
   const ratingOf = new Map(((ratings ?? []) as { club_id: string; average: number; count: number }[]).map((r) => [r.club_id, r]));
   const upcoming = new Map<string, number>();
   for (const tour of tours) upcoming.set(tour.club_id, (upcoming.get(tour.club_id) ?? 0) + 1);
@@ -42,7 +40,7 @@ export default async function ClubsPage() {
             const pkg = activePackage(club);
             const r = ratingOf.get(club.id);
             const rating = pkg && clubConfig(plans, club).public_show_rating && r ? { average: Number(r.average), count: r.count } : null;
-            return <ClubCard key={club.id} club={club} rating={rating} upcoming={upcoming.get(club.id) ?? 0} likes={likes.clubs.get(club.id) ?? 0} t={t} />;
+            return <ClubCard key={club.id} club={club} rating={rating} upcoming={upcoming.get(club.id) ?? 0} t={t} />;
           })}
         </div>
       )}

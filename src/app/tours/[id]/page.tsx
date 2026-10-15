@@ -45,7 +45,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
 
   const supabase = await createClient();
   const sightNames = await getSightNames();
-  const likes = await getLikeCounts([tour.id], [tour.club_id]);
+  const likes = await getLikeCounts([tour.id]);
   const [{ data: takenRaw }, { data: reviewRows }] = await Promise.all([
     supabase.rpc("seats_taken", { p_tour: tour.id }),
     supabase
@@ -79,7 +79,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
       <BackLink fallback="/tours" label={t("clubPage.back")} />
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="space-y-10">
-          <TourDetails tour={{ ...tour, likes: likes.tours.get(tour.id) ?? 0, club: club ? { id: club.id, name: club.name, likes: likes.clubs.get(club.id) ?? 0 } : null, sights: (tour.sight_ids ?? []).map((id) => sightNames.get(id)).filter((n): n is string => !!n) }} seats={cap ? { taken, cap } : undefined} showPageLink={false} />
+          <TourDetails tour={{ ...tour, likes: likes.tours.get(tour.id) ?? 0, club: club ? { id: club.id, name: club.name } : null, sights: (tour.sight_ids ?? []).flatMap((id) => (sightNames.has(id) ? [{ id, name: sightNames.get(id)! }] : [])) }} seats={cap ? { taken, cap } : undefined} showPageLink={false} />
 
           <section>
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>

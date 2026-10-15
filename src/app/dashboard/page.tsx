@@ -50,9 +50,11 @@ export default async function AnnouncementsPage() {
 
   const canAdd = limits.used < limits.maxListings && !club.posting_blocked;
 
-  // How many people follow (bookmarked) the club. Counted on the server:
-  // a club cannot read who they are.
-  const { count: followers } = await createAdminClient().from("favorite_clubs").select("user_id", { count: "exact", head: true }).eq("club_id", club.id);
+  // How many people follow the club: individuals with a saved search that
+  // names it (they hear of its new hikes). Counted on the server: a club
+  // cannot read who they are.
+  const { data: watchRows } = await createAdminClient().from("saved_searches").select("user_id").eq("club_id", club.id);
+  const followers = new Set(((watchRows ?? []) as { user_id: string }[]).map((r) => r.user_id)).size;
   const pagePath = `/clubs/${club.slug ?? club.id}`;
 
   return (
