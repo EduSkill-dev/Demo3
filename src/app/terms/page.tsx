@@ -13,7 +13,7 @@ export default async function TermsPage() {
   const t = await getT();
   return (
     <LegalPage title={t("legal.termsTitle")}>
-      <LegalSections t={t} prefix="terms" count={10} />
+      <LegalSections t={t} prefix="terms" count={11} />
     </LegalPage>
   );
 }

@@ -19,11 +19,10 @@ export function HikerAvatar({ name, photo, size = "md" }: { name: string; photo:
 // A passport's body: counts, badges with their texts, and the places visited
 // grouped by kind (each a link to its page).
 // `own`: the person's own page (the texts address them); otherwise a visitor's view.
-export default function PassportView({ passport, hikes, t, own = false }: { passport: Passport; hikes?: number; t: T; own?: boolean }) {
-  const groups = TERRAINS.map((k) => ({ kind: k, list: passport.places.filter((p) => (p.terrain ?? "other") === k) })).filter((g) => g.list.length);
+// The three counters: hikes, places, regions.
+export function PassportStats({ passport, hikes, t }: { passport: Passport; hikes?: number; t: T }) {
   const stat = "rounded-xl border border-line bg-surface px-3 py-2 text-center";
   return (
-    <div className="space-y-8">
       <div className="grid max-w-xs grid-cols-3 gap-2">
         {hikes !== undefined && (
           <div className={stat}>
@@ -40,6 +39,15 @@ export default function PassportView({ passport, hikes, t, own = false }: { pass
           <p className="text-xs text-muted">{t("hikersPage.statRegions")}</p>
         </div>
       </div>
+  );
+}
+
+// `stats`: false when the page shows the counters elsewhere (next to the photo).
+export default function PassportView({ passport, hikes, t, own = false, stats = true }: { passport: Passport; hikes?: number; t: T; own?: boolean; stats?: boolean }) {
+  const groups = TERRAINS.map((k) => ({ kind: k, list: passport.places.filter((p) => (p.terrain ?? "other") === k) })).filter((g) => g.list.length);
+  return (
+    <div className="space-y-8">
+      {stats && <PassportStats passport={passport} hikes={hikes} t={t} />}
 
       <section>
         <h2 className="mb-3 text-lg font-bold text-heading">{t("hikersPage.badges")}</h2>

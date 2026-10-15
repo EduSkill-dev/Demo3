@@ -7,6 +7,8 @@ import { planConfigOf } from "@/lib/plans/server";
 import { getFormatDate, getT } from "@/i18n/server";
 import type { Club, ClubGuide } from "@/types/database";
 import BackLink from "@/components/BackLink";
+import { SOCIAL_NAMES, SOCIAL_NETS, socialOk } from "@/lib/socialLinks";
+import SocialIcon, { SOCIAL_COLOR } from "@/components/club/SocialIcon";
 import RatingBox from "@/components/RatingBox";
 import TourGrid from "@/components/tour/TourGrid";
 
@@ -47,6 +49,7 @@ export default async function ClubDetailPage({
 }) {
   const club = await getClub(params.id);
   if (!club) notFound();
+  const socials = SOCIAL_NETS.map((net) => ({ net, url: club[`${net}_url` as const] ?? "" })).filter((x) => x.url && socialOk(x.net, x.url));
   if (club.slug && params.id !== club.slug) {
     redirect(`/clubs/${club.slug}${searchParams.back ? `?back=${encodeURIComponent(searchParams.back)}` : ""}`);
   }
@@ -108,6 +111,24 @@ export default async function ClubDetailPage({
               <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">📞 {club.phone}</a>
             )}
           </div>
+          {/* The club's own pages on social networks (each checked to be that network). */}
+          {socials.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {socials.map(({ net, url }) => (
+                <a
+                  key={net}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow ugc"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
+                  style={{ background: SOCIAL_COLOR[net] }}
+                >
+                  <SocialIcon net={net} className="h-4 w-4" />
+                  {SOCIAL_NAMES[net]}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

@@ -346,6 +346,17 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   // Answers from the Messages page: a help chat (shown in the person's chat)
   // or a suggestion (emailed). Signed with the admin's name; the Telegram
   // groups see the answer too.
+  // A passport text that breaks the rules: removed (the person is not told by email).
+  async "account.clearBio"(ctx, body) {
+    if (!can(ctx.me, "individuals")) return fail(FORBIDDEN, 403);
+    const userId = str(body.userId);
+    if (!userId) return fail("Հաշիվը նշված չէ։");
+    const { error } = await ctx.db.from("profiles").update({ passport_bio: null }).eq("id", userId).eq("role", "individual");
+    if (error) return fail(error.message, 500);
+    await logActivity({ actor: ctx.me.userId, action: "admin.bio_cleared", targetType: "profile", targetId: userId, ip: ctx.ip });
+    return NextResponse.json({ ok: true });
+  },
+
   async "support.reply"(ctx, body) {
     if (!can(ctx.me, "messages")) return fail(FORBIDDEN, 403);
     const userId = str(body.userId);

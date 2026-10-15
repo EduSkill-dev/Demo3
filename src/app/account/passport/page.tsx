@@ -3,6 +3,7 @@ import { getPassport } from "@/lib/hikers";
 import { getT } from "@/i18n/server";
 import PassportView from "@/components/hikers/PassportView";
 import PassportToggle from "@/components/account/PassportToggle";
+import BioEditor from "@/components/account/BioEditor";
 
 // The individual's own hiker passport, and the switch that shows it on the
 // public Hikers page.
@@ -14,7 +15,7 @@ export default async function AccountPassportPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
   const [{ data: profile }, passport, { count: hikes }] = await Promise.all([
-    supabase.from("profiles").select("show_passport").eq("id", user.id).single(),
+    supabase.from("profiles").select("show_passport, passport_bio").eq("id", user.id).single(),
     getPassport(user.id, true),
     supabase
       .from("bookings")
@@ -32,6 +33,7 @@ export default async function AccountPassportPage() {
         <p className="mt-1 text-sm text-muted">{t("passport.intro")}</p>
       </div>
       <PassportToggle userId={user.id} shown={!!(profile as { show_passport?: boolean } | null)?.show_passport} />
+      <BioEditor userId={user.id} initial={(profile as { passport_bio?: string | null } | null)?.passport_bio ?? ""} />
       <PassportView passport={passport} hikes={hikes ?? 0} t={t} own />
     </div>
   );

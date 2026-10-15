@@ -1129,6 +1129,28 @@ async function main() {
         await admin.from('contact_messages').delete().eq('id', idea.id);
       }
 
+      // Passport text and club social pages: the database keeps the rules.
+      {
+        await signIn('ind');
+        const bioOk = await anon.from('profiles').update({ passport_bio: 'Սիրում եմ սարերը, 2019-ից քայլում եմ, Արագածը 4090 մ է։' }).eq('id', ids.ind);
+        const bioLink = await anon.from('profiles').update({ passport_bio: 'Իմ էջը՝ mysite.am' }).eq('id', ids.ind);
+        const bioMail = await anon.from('profiles').update({ passport_bio: 'Գրեք a@b.com' }).eq('id', ids.ind);
+        const bioPhone = await anon.from('profiles').update({ passport_bio: 'Զանգեք 091 123 456' }).eq('id', ids.ind);
+        const bioLong = await anon.from('profiles').update({ passport_bio: 'ա'.repeat(301) }).eq('id', ids.ind);
+        const cleared = await act({ action: 'account.clearBio', userId: ids.ind }, superCookie);
+        const bioAfter = (await admin.from('profiles').select('passport_bio').eq('id', ids.ind).single()).data?.passport_bio;
+        await signIn('club');
+        const clubId = (await anon.from('clubs').select('id').eq('owner_id', ids.club).single()).data?.id;
+        const goodSocial = await anon.from('clubs').update({ instagram_url: 'https://instagram.com/e2e.club', facebook_url: 'https://facebook.com/e2eclub', linkedin_url: 'https://www.linkedin.com/company/e2e' }).eq('id', clubId);
+        const igIsFb = await anon.from('clubs').update({ instagram_url: 'https://facebook.com/e2eclub' }).eq('id', clubId);
+        const fbIsEvil = await anon.from('clubs').update({ facebook_url: 'https://evil.example/facebook.com' }).eq('id', clubId);
+        await anon.from('clubs').update({ instagram_url: null, facebook_url: null, linkedin_url: null }).eq('id', clubId);
+        check('passport text refuses links, emails, phones and long texts, an admin can remove it; club social fields take only their own network',
+          !bioOk.error && !!bioLink.error && !!bioMail.error && !!bioPhone.error && !!bioLong.error && cleared.status === 200 && bioAfter === null
+            && !goodSocial.error && !!igIsFb.error && !!fbIsEvil.error,
+          `ok=${bioOk.error?.message ?? 'ok'} link=${bioLink.error ? 'refused' : 'ALLOWED'} mail=${bioMail.error ? 'refused' : 'ALLOWED'} phone=${bioPhone.error ? 'refused' : 'ALLOWED'} long=${bioLong.error ? 'refused' : 'ALLOWED'} cleared=${cleared.status}/${bioAfter} social=${goodSocial.error?.message ?? 'ok'} ig=${igIsFb.error ? 'refused' : 'ALLOWED'} fb=${fbIsEvil.error ? 'refused' : 'ALLOWED'}`);
+      }
+
       // A club registered with Google: the fresh account becomes a club once.
       const gClub = await admin.auth.admin.createUser({ email: email('gclub'), password: PASSWORD, email_confirm: true, app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Գուգլ Ակումբ' } });
       ids.gclub = gClub.data.user.id;

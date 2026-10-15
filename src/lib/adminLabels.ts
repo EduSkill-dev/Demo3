@@ -79,6 +79,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.club_report_set": "Փոխեց ակումբի հաշվետվության տողերը",
   "admin.news_posted": "Գրառում արեց նորությունների ալիքում",
   "admin.message_answered": "Պատասխանեց օգտատիրոջ հաղորդագրությանը",
+  "admin.bio_cleared": "Հեռացրեց արշավականի անձնագրի տեքստը",
   "admin.plan_saved": "Փոխեց փաթեթի կարգավորումները",
   "admin.club_plan_set": "Փոխեց ակումբի փաթեթը",
   "admin.admin_created": "Ստեղծեց ադմին",

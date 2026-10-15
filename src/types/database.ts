@@ -31,6 +31,9 @@ export interface Club {
   owner_id: string; // profiles.id
   name: string;
   slug: string | null; // the readable address of the club page: /clubs/<slug>
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  linkedin_url?: string | null;
   tariff: Tariff | null; // the package bought; see activePackage()
   package_ends_at: string | null;
   photo_url: string | null;

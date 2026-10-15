@@ -13,7 +13,7 @@ export default async function PrivacyPage() {
   const t = await getT();
   return (
     <LegalPage title={t("legal.privacyTitle")}>
-      <LegalSections t={t} prefix="privacy" count={10} />
+      <LegalSections t={t} prefix="privacy" count={11} />
     </LegalPage>
   );
 }
