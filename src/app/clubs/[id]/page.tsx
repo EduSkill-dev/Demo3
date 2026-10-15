@@ -31,7 +31,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function getClub(key: string) {
   const supabase = await createClient();
   const byId = UUID.test(key);
-  const { data } = await supabase.from("clubs").select("*").eq(byId ? "id" : "slug", byId ? key : decodeURIComponent(key).toLowerCase()).maybeSingle();
+  const { data } = await supabase
+    .from("clubs")
+    .select("*")
+    .eq(byId ? "id" : "slug", byId ? key : decodeURIComponent(key).toLowerCase())
+    .maybeSingle();
   return data as Club | null;
 }
 
@@ -40,13 +44,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   return { title: club ? club.name : { absolute: "Culmen" } };
 }
 
-export default async function ClubDetailPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { back?: string };
-}) {
+export default async function ClubDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { back?: string } }) {
   const club = await getClub(params.id);
   if (!club) notFound();
   const socials = SOCIAL_NETS.map((net) => ({ net, url: club[`${net}_url` as const] ?? "" })).filter((x) => x.url && socialOk(x.net, x.url));
@@ -91,60 +89,78 @@ export default async function ClubDetailPage({
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <BackLink href={back} fallback="/clubs" label={t("clubPage.back")} />
 
-      <section className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center">
-        <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-line bg-sand">
-          {club.photo_url ? (
-            <img src={club.photo_url} alt={club.name} className="h-full w-full object-contain" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-4xl">🏔️</div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-3xl font-semibold text-heading">{club.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            {showRating && rating && (
-              <span className="font-semibold text-terracotta-500">
-                ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
-              </span>
-            )}
-            {club.phone && (
-              <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">📞 {club.phone}</a>
-            )}
-          </div>
-          {/* The club's own pages on social networks (each checked to be that network). */}
-          {socials.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {socials.map(({ net, url }) => (
-                <a
-                  key={net}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow ugc"
-                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
-                  style={{ background: SOCIAL_COLOR[net] }}
-                >
-                  <SocialIcon net={net} className="h-4 w-4" />
-                  {SOCIAL_NAMES[net]}
-                </a>
-              ))}
+      <div className={`mt-6 grid gap-8 ${club.description ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]" : ""}`}>
+        <div>
+          <section className="flex flex-col gap-6 sm:flex-row sm:items-center">
+            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-line bg-sand">
+              {club.photo_url ? (
+                <img src={club.photo_url} alt={club.name} className="h-full w-full object-contain" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-4xl">🏔️</div>
+              )}
             </div>
-          )}
-        </div>
-      </section>
-
-      <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_20rem]">
-        <div className="space-y-10">
-          {club.description && (
-            <section>
-              <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.about")}</h2>
-              <p className="mt-3 whitespace-pre-line leading-7 text-ink">{club.description}</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-serif text-3xl font-semibold text-heading">{club.name}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                {showRating && rating && (
+                  <span className="font-semibold text-terracotta-500">
+                    ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
+                  </span>
+                )}
+                {club.phone && (
+                  <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">
+                    📞 {club.phone}
+                  </a>
+                )}
+              </div>
+              {/* The club's own pages on social networks (each checked to be that network). */}
+              {socials.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {socials.map(({ net, url }) => (
+                    <a
+                      key={net}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow ugc"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
+                      style={{ background: SOCIAL_COLOR[net] }}
+                    >
+                      <SocialIcon net={net} className="h-4 w-4" />
+                      {SOCIAL_NAMES[net]}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+          {club.focus?.length > 0 && (
+            <section className="mt-8">
+              <h2 className="font-serif text-lg font-semibold text-heading">{t("clubPage.focus")}</h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {club.focus.map((f) => (
+                  <span key={f} className="rounded-full bg-sand px-3 py-1 text-sm text-ink">
+                    {t(`focus.${f}`)}
+                  </span>
+                ))}
+              </div>
             </section>
           )}
+        </div>
+        {/* About the club, set off by an orange line on wide screens. */}
+        {club.description && (
+          <section className="lg:border-l-[3px] lg:border-terracotta-500 lg:pl-8">
+            <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.about")}</h2>
+            <p className="mt-3 whitespace-pre-line leading-7 text-ink">{club.description}</p>
+          </section>
+        )}
+      </div>
 
+      <div className="mt-12">
+        <div className="space-y-10">
           {(guides ?? []).length > 0 && (
             <section>
               <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.guides")}</h2>
-              <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {((guides ?? []) as ClubGuide[]).map((g) => (
                   <li key={g.id} className="flex flex-col items-center rounded-2xl border border-line bg-surface p-5 text-center shadow-sm">
                     <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-sand bg-sand">
@@ -154,9 +170,7 @@ export default async function ClubDetailPage({
                         <div className="flex h-full w-full items-center justify-center text-3xl">🧭</div>
                       )}
                     </div>
-                    <p className="mt-3 font-serif text-lg font-semibold text-heading">
-                      {[g.first_name, g.last_name].filter(Boolean).join(" ")}
-                    </p>
+                    <p className="mt-3 font-serif text-lg font-semibold text-heading">{[g.first_name, g.last_name].filter(Boolean).join(" ")}</p>
                     {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-terracotta-500">{g.role}</p>}
                     {g.bio && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted">{g.bio}</p>}
                   </li>
@@ -168,7 +182,7 @@ export default async function ClubDetailPage({
           <section>
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.upcomingTours")}</h2>
             <div className="mt-4">
-              {tours.length === 0 ? <p className="text-muted">{t("clubPage.noTours")}</p> : <TourGrid tours={tours} columns="sm:grid-cols-2" />}
+              {tours.length === 0 ? <p className="text-muted">{t("clubPage.noTours")}</p> : <TourGrid tours={tours} size="sm" columns="sm:grid-cols-2 lg:grid-cols-3" />}
             </div>
           </section>
 
@@ -202,9 +216,7 @@ export default async function ClubDetailPage({
                           {r.author_photo_url ? (
                             <img src={r.author_photo_url} alt="" className="h-full w-full object-cover" />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center font-semibold text-muted">
-                              {(name || "?").slice(0, 1)}
-                            </div>
+                            <div className="flex h-full w-full items-center justify-center font-semibold text-muted">{(name || "?").slice(0, 1)}</div>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -226,19 +238,6 @@ export default async function ClubDetailPage({
               ))}
           </section>
         </div>
-
-        <aside className="space-y-8">
-          {club.focus?.length > 0 && (
-            <section>
-              <h2 className="font-serif text-lg font-semibold text-heading">{t("clubPage.focus")}</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {club.focus.map((f) => (
-                  <span key={f} className="rounded-full bg-sand px-3 py-1 text-sm text-ink">{t(`focus.${f}`)}</span>
-                ))}
-              </div>
-            </section>
-          )}
-        </aside>
       </div>
     </main>
   );
