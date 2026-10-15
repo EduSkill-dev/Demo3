@@ -1,22 +1,19 @@
 import Link from "next/link";
 import { getPublicTours } from "@/lib/publicTours";
 import { getT } from "@/i18n/server";
-import { REGIONS } from "@/lib/catalog";
+import { getViewer } from "@/lib/viewer";
 import { getSpotlight } from "@/lib/spotlight";
 import TourGrid from "@/components/tour/TourGrid";
 import CustomTourCta from "@/components/requests/CustomTourCta";
 
-const field =
-  "w-full rounded-xl border border-[#E6D9C2] bg-white px-3 py-2.5 text-sm text-spruce-900 focus:border-terracotta-500 focus:outline-none";
-
 export default async function HomePage() {
   const t = await getT();
-  const spotlight = await getSpotlight();
-  const all = await getPublicTours();
+  const [spotlight, all, viewer] = await Promise.all([getSpotlight(), getPublicTours(), getViewer()]);
   const tours = all.slice(0, 6);
-  // The clubs that have something to book right now, for the hero's filter.
-  const clubs = [...new Map(all.map((x) => [x.club.id, x.club.name])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  const today = new Date().toISOString().slice(0, 10);
+  // "Wait for a hike" = a saved search (individuals; visitors sign in first).
+  const waitHref = viewer?.role === "individual" ? "/account/searches" : !viewer ? `/login?next=${encodeURIComponent("/account/searches")}` : null;
+  const customHref = viewer?.role === "individual" ? "/account/requests/new" : "/requests/new";
+  const ghost = "inline-flex items-center gap-2 rounded-full border-2 border-card/70 px-5 py-2.5 font-bold text-card transition hover:bg-card hover:text-spruce-900";
 
   return (
     <main>
@@ -24,36 +21,33 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-20">
           <div>
             <h1 className="text-[44px] font-bold leading-[1.1] sm:text-[52px]">{t("home.heroTitle")}</h1>
-            <p className="mt-5 max-w-xl text-lg text-card/90">{t("home.heroText")}</p>
+            <p className="mt-5 max-w-xl text-xl font-semibold leading-snug text-apricot-300">{t("home.heroText")}</p>
 
-            {/* The search opens the Tours page with these filters applied. */}
-            <form action="/tours" className="mt-8 grid gap-3 rounded-[20px] bg-card p-4 text-spruce-900 shadow-lg sm:grid-cols-2">
-              <label className="text-xs font-semibold text-[#5B6B66]">
-                {t("toursPage.region")}
-                <select name="region" defaultValue="" className={`${field} mt-1`}>
-                  <option value="">{t("toursPage.any")}</option>
-                  {REGIONS.map((r) => (
-                    <option key={r} value={r}>{t(`region.${r}`)}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-[#5B6B66]">
-                {t("toursPage.from")}
-                <input type="date" name="from" min={today} className={`${field} mt-1`} />
-              </label>
-              <label className="text-xs font-semibold text-[#5B6B66]">
-                {t("toursPage.club")}
-                <select name="club" defaultValue="" className={`${field} mt-1`}>
-                  <option value="">{t("toursPage.any")}</option>
-                  {clubs.map(([id, name]) => (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" className="self-end rounded-full bg-apricot-500 px-5 py-2.5 font-bold text-spruce-900 hover:bg-apricot-300">
-                {t("home.heroCta")}
-              </button>
-            </form>
+            {/* Three ways in. The hikes themselves are listed below. */}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/places" className="inline-flex items-center gap-2 rounded-full bg-apricot-500 px-5 py-2.5 font-bold text-spruce-900 transition hover:bg-apricot-300">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" />
+                  <circle cx="12" cy="10" r="2.5" />
+                </svg>
+                {t("home.heroPlaces")}
+              </Link>
+              {waitHref && (
+                <Link href={waitHref} className={ghost}>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  {t("home.heroWait")}
+                </Link>
+              )}
+              <Link href={customHref} className={ghost}>
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                </svg>
+                {t("home.heroCustom")}
+              </Link>
+            </div>
+            {waitHref && <p className="mt-4 max-w-xl text-sm text-card/75">{t("home.heroWaitHint")}</p>}
           </div>
 
           {/* Who was most active: the hiker of the quarter, and under it the
