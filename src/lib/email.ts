@@ -25,7 +25,8 @@ export type SendResult =
 // Culmen: Spruce 900 text, Spruce 500 buttons, Sand 50 ground.
 const BRAND = { pine: "#12332D", apricot: "#1E5B4F", stone: "#FBF6EC" };
 
-function layout(title: string, bodyHtml: string): string {
+// `footer`: false for a personal letter (an admin's answer signs itself).
+function layout(title: string, bodyHtml: string, footer = true): string {
   return `<!doctype html>
 <html><body style="margin:0;background:${BRAND.stone};font-family:Arial,Helvetica,sans-serif;color:#12332D">
   <div style="max-width:560px;margin:0 auto;padding:28px 20px">
@@ -33,9 +34,9 @@ function layout(title: string, bodyHtml: string): string {
     <div style="background:#fff;border:1px solid #E6D9C2;border-radius:20px;padding:22px;margin-top:16px">
       <h1 style="margin:0 0 14px;font-size:20px;color:${BRAND.pine}">${title}</h1>
       ${bodyHtml}
-      <p style="margin-top:22px;font-size:13px;color:#5B6B66">
+      ${footer ? `<p style="margin-top:22px;font-size:13px;color:#5B6B66">
         Այս նամակն ուղարկվել է հարթակից՝ Culmen, Հայաստանի արշավական ակումբների հարթակ։
-      </p>
+      </p>` : ""}
     </div>
   </div>
 </body></html>`;
@@ -449,21 +450,16 @@ export function newsletterDigestEmail(input: {
   };
 }
 
-// To the author of a suggestion: an admin's answer, under their own words.
-// Their reply comes back to the platform's inbox.
-export function suggestionReplyEmail(input: { to: string; original: string; reply: string; adminName: string }) {
-  const html = layout(
-    "Պատասխան Ձեր առաջարկին",
-    `<p style="white-space:pre-line">${esc(input.reply)}</p>
-     <p style="color:#5B6B66;margin-top:6px">— ${esc(input.adminName)}, Culmen</p>
-     <p style="margin-top:22px;color:#5B6B66;font-size:13px">Ձեր առաջարկը՝</p>
-     <blockquote style="margin:6px 0 0;padding:10px 14px;border-left:3px solid #E6D9C2;color:#5B6B66;white-space:pre-line">${esc(input.original)}</blockquote>`
-  );
+// To the author of a suggestion: an admin's answer. Their reply goes to
+// `replyTo` (the platform's inbox by default).
+export function suggestionReplyEmail(input: { to: string; reply: string; replyTo?: string }) {
+  // Only the title and the answer: the admin signs it themselves.
+  const html = layout("Պատասխան Ձեր առաջարկին", `<p style="white-space:pre-line;margin:0">${esc(input.reply)}</p>`, false);
   return {
     to: input.to,
-    replyTo: ownerInbox() || undefined,
+    replyTo: input.replyTo || ownerInbox() || undefined,
     subject: "Culmen — պատասխան Ձեր առաջարկին",
     html,
-    text: `${input.reply}\n\n— ${input.adminName}, Culmen\n\nՁեր առաջարկը՝\n${input.original}`,
+    text: input.reply,
   };
 }

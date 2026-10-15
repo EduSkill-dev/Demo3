@@ -106,7 +106,7 @@ export async function answerSuggestion(db: Db, input: { id: string; adminName: s
   if (!s) return { error: "Առաջարկը չի գտնվել։" };
   if (!s.email) return { error: "Առաջարկի հեղինակը էլ. հասցե չի թողել։" };
 
-  const mail = await sendEmail(suggestionReplyEmail({ to: s.email, original: s.message, reply: input.body, adminName: input.adminName }));
+  const mail = await sendEmail(suggestionReplyEmail({ to: s.email, reply: input.body }));
   if (mail && typeof mail === "object" && "error" in mail && mail.error) return { error: `Նամակը չուղարկվեց՝ ${String(mail.error)}` };
 
   let tgId = input.tgMessageId ?? null;
