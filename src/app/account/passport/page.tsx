@@ -32,7 +32,7 @@ export default async function AccountPassportPage() {
         <p className="mt-1 text-sm text-muted">{t("passport.intro")}</p>
       </div>
       <PassportToggle userId={user.id} shown={!!(profile as { show_passport?: boolean } | null)?.show_passport} />
-      <PassportView passport={passport} hikes={hikes ?? 0} t={t} />
+      <PassportView passport={passport} hikes={hikes ?? 0} t={t} own />
     </div>
   );
 }

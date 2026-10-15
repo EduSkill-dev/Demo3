@@ -42,6 +42,7 @@ export const getSpotlight = cache(async (): Promise<Spotlight> => {
       .from("tours")
       .select("id, club_id, date, regions")
       .neq("status", "cancelled")
+      .eq("admin_hidden", false) // hikes an admin took off the site do not count
       .gte("date", from)
       .lte("date", today);
     const tours = (tourRows ?? []) as { id: string; club_id: string; date: string; regions: string[] }[];

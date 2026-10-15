@@ -4,12 +4,13 @@ import type { Passport } from "@/lib/hikers";
 import { TERRAINS } from "@/lib/catalog";
 import BadgeMedal from "@/components/hikers/BadgeMedal";
 
+// Round on the cards; on the passport itself a large square with soft corners.
 export function HikerAvatar({ name, photo, size = "md" }: { name: string; photo: string | null; size?: "md" | "lg" }) {
-  const box = size === "lg" ? "h-20 w-20 text-2xl" : "h-14 w-14 text-lg";
+  const box = size === "lg" ? "h-32 w-32 rounded-3xl text-4xl sm:h-36 sm:w-36" : "h-14 w-14 rounded-full text-lg";
   return photo ? (
-    <img src={photo} alt="" className={`${box} shrink-0 rounded-full object-cover`} />
+    <img src={photo} alt="" className={`${box} shrink-0 object-cover shadow-sm`} />
   ) : (
-    <span className={`${box} flex shrink-0 items-center justify-center rounded-full bg-spruce-500 font-bold text-[#FFFDF8]`} aria-hidden="true">
+    <span className={`${box} flex shrink-0 items-center justify-center bg-spruce-500 font-bold text-[#FFFDF8]`} aria-hidden="true">
       {name.trim().charAt(0).toUpperCase() || "?"}
     </span>
   );
@@ -17,24 +18,25 @@ export function HikerAvatar({ name, photo, size = "md" }: { name: string; photo:
 
 // A passport's body: counts, badges with their texts, and the places visited
 // grouped by kind (each a link to its page).
-export default function PassportView({ passport, hikes, t }: { passport: Passport; hikes?: number; t: T }) {
+// `own`: the person's own page (the texts address them); otherwise a visitor's view.
+export default function PassportView({ passport, hikes, t, own = false }: { passport: Passport; hikes?: number; t: T; own?: boolean }) {
   const groups = TERRAINS.map((k) => ({ kind: k, list: passport.places.filter((p) => (p.terrain ?? "other") === k) })).filter((g) => g.list.length);
-  const stat = "rounded-2xl border border-line bg-surface px-4 py-3 text-center";
+  const stat = "rounded-xl border border-line bg-surface px-3 py-2 text-center";
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-3 gap-3 sm:max-w-md">
+      <div className="grid max-w-xs grid-cols-3 gap-2">
         {hikes !== undefined && (
           <div className={stat}>
-            <p className="text-2xl font-bold text-heading">{hikes}</p>
+            <p className="text-xl font-bold leading-tight text-heading">{hikes}</p>
             <p className="text-xs text-muted">{t("hikersPage.statHikes")}</p>
           </div>
         )}
         <div className={stat}>
-          <p className="text-2xl font-bold text-heading">{passport.places.length}</p>
+          <p className="text-xl font-bold leading-tight text-heading">{passport.places.length}</p>
           <p className="text-xs text-muted">{t("hikersPage.statPlaces")}</p>
         </div>
         <div className={stat}>
-          <p className="text-2xl font-bold text-heading">{passport.regions}</p>
+          <p className="text-xl font-bold leading-tight text-heading">{passport.regions}</p>
           <p className="text-xs text-muted">{t("hikersPage.statRegions")}</p>
         </div>
       </div>
@@ -42,7 +44,7 @@ export default function PassportView({ passport, hikes, t }: { passport: Passpor
       <section>
         <h2 className="mb-3 text-lg font-bold text-heading">{t("hikersPage.badges")}</h2>
         {passport.badges.length === 0 ? (
-          <p className="text-muted">{t("badge.none")}</p>
+          <p className="text-muted">{own ? t("badge.none") : t("badge.noneOther")}</p>
         ) : (
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))]">
             {passport.badges.map((b) => (
@@ -55,7 +57,7 @@ export default function PassportView({ passport, hikes, t }: { passport: Passpor
       <section>
         <h2 className="mb-3 text-lg font-bold text-heading">{t("hikersPage.visited")}</h2>
         {groups.length === 0 ? (
-          <p className="text-muted">{t("hikersPage.noPlaces")}</p>
+          <p className="text-muted">{own ? t("hikersPage.noPlaces") : t("hikersPage.noPlacesOther")}</p>
         ) : (
           <div className="space-y-4">
             {groups.map((g) => (

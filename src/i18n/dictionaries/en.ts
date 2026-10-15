@@ -1015,6 +1015,7 @@ const en: DeepPartial<Dictionary> = {
     likeHint: "People who came here on a platform hike can heart it.",
   },
   hikersPage: {
+    noPlacesOther: "No places visited yet.",
     statHikes: "hikes",
     statPlaces: "places",
     statRegions: "regions",
@@ -1032,6 +1033,7 @@ const en: DeepPartial<Dictionary> = {
     joinHint: "Your passport can be here too — switch it on in your account.",
   },
   badge: {
+    noneOther: "No badges yet.",
     mountains: "{label} mountains",
     lakes: "{label} lakes",
     heritage: "{label} heritage sites",
@@ -1046,7 +1048,7 @@ const en: DeepPartial<Dictionary> = {
     title: "Hiker passport",
     intro: "The platform remembers your hikes and the places you have been, and gives badges for them.",
     show: "Show my passport on the Hikers page",
-    showHint: "Shown: your first name, the first letter of your surname, photo, places and badges. No contact details.",
+    showHint: "Shown: your first name, photo, places and badges. No contact details.",
     saved: "Saved",
     publicLink: "See it as others do",
   },

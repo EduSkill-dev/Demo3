@@ -1,6 +1,5 @@
 // Server-only: hiker passports (migration 0057). Only people who switched
-// their passport on are listed; only their first name and the surname's
-// initial leave the database.
+// their passport on are listed, by their first name.
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -35,7 +34,7 @@ const loadHikers = unstable_cache(
   { revalidate: 60 }
 );
 
-const nameOf = (r: Row) => [r.first_name?.trim(), r.last_initial ? `${r.last_initial}.` : ""].filter(Boolean).join(" ");
+const nameOf = (r: Row) => r.first_name?.trim() || "—";
 
 // The Hikers page: most places first, then most hikes.
 export async function getPublicHikers(): Promise<Hiker[]> {
