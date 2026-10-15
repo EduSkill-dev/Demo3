@@ -5,6 +5,7 @@ import { can, getAdmin } from "@/lib/admin";
 import { getFormatDate } from "@/i18n/server";
 import TourToggle from "@/components/admin/TourToggle";
 import SearchBox from "@/components/admin/SearchBox";
+import { SortLink, readSort, sortRows, type SortState } from "@/components/admin/Sortable";
 
 type Row = {
   id: string;
@@ -18,7 +19,8 @@ type Row = {
 const STATUS: Record<Row["status"], string> = { active: "Ակտիվ", hidden: "Թաքցված (ակումբի կողմից)", cancelled: "Չեղարկված" };
 
 // Listings cannot be edited here — only taken off the site and put back.
-export default async function AdminToursPage({ searchParams }: { searchParams: { q?: string } }) {
+// Newest first; the title, club and date headers sort (again = reversed).
+export default async function AdminToursPage({ searchParams }: { searchParams: { q?: string; sort?: string; dir?: string } }) {
   const me = await getAdmin();
   if (!me || !can(me, "tours")) redirect("/admin");
 
@@ -29,9 +31,13 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
     .order("date", { ascending: false })
     .limit(1000);
   const q = (searchParams.q ?? "").trim().toLowerCase();
-  const rows = ((data ?? []) as unknown as Row[]).filter(
-    (r) => !q || r.title.toLowerCase().includes(q) || (r.clubs?.name ?? "").toLowerCase().includes(q)
+  const sort = readSort(searchParams, ["title", "club", "date"], { col: "date", dir: "desc" });
+  const rows = sortRows(
+    ((data ?? []) as unknown as Row[]).filter((r) => !q || r.title.toLowerCase().includes(q) || (r.clubs?.name ?? "").toLowerCase().includes(q)),
+    { title: (r) => r.title, club: (r) => r.clubs?.name ?? null, date: (r) => r.date },
+    sort
   );
+  const sortHref = (x: SortState) => `/admin/tours?${new URLSearchParams({ ...(searchParams.q ? { q: searchParams.q } : {}), sort: x.col, dir: x.dir })}`;
 
   return (
     <div>
@@ -43,9 +49,9 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
         <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr>
-              <th className="px-4 py-3">Արշավ</th>
-              <th className="px-4 py-3">Ակումբ</th>
-              <th className="px-4 py-3">Ամսաթիվ</th>
+              <th className="px-4 py-3"><SortLink label="Արշավ" col="title" sort={sort} href={sortHref} /></th>
+              <th className="px-4 py-3"><SortLink label="Ակումբ" col="club" sort={sort} href={sortHref} /></th>
+              <th className="px-4 py-3"><SortLink label="Ամսաթիվ" col="date" sort={sort} href={sortHref} /></th>
               <th className="px-4 py-3">Վիճակ</th>
               <th className="px-4 py-3" />
             </tr>

@@ -37,6 +37,7 @@ export default async function AdminIndividualsPage({ searchParams }: { searchPar
       phone: p.phone,
       status: p.status,
       joined: fmt(p.created_at, "short"),
+      joinedAt: p.created_at,
       limits: [
         { key: "book" as const, blocked: p.booking_blocked },
         { key: "request" as const, blocked: p.requests_blocked },

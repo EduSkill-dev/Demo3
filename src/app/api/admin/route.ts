@@ -238,7 +238,9 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       description_hy: str(body.description_hy).slice(0, 1500) || null,
       description_ru: str(body.description_ru).slice(0, 1500) || null,
       description_en: str(body.description_en).slice(0, 1500) || null,
+      elevation: /^-?\d{1,4}$/.test(str(body.elevation)) ? Number(str(body.elevation)) : null,
     };
+    if (row.elevation !== null && (row.elevation < -500 || row.elevation > 9000)) return fail("Բարձրությունը պետք է լինի -500-ից 9000 մետր։");
     if (!row.name_hy || !row.name_ru || !row.name_en) return fail("Լրացրեք անվանումը երեք լեզվով։");
     if (!(REGIONS as readonly string[]).includes(row.region)) return fail("Ընտրեք մարզը։");
     if (!(TERRAINS as readonly string[]).includes(row.terrain)) return fail("Ընտրեք վայրի տեսակը։");

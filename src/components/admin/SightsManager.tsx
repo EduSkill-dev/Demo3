@@ -7,19 +7,22 @@ import { useT } from "@/i18n/client";
 import type { Sight } from "@/lib/sights";
 import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import { adminAction, adminButton, adminGhost, adminInlineInput, adminInput } from "./adminApi";
+import { SortButton, sortRows, type SortState } from "./Sortable";
 
 type Draft = {
   id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string; difficulty: string; active: boolean;
   photo_url: string; description_hy: string; description_ru: string; description_en: string;
+  elevation: string; // whole metres, "" = not set
 };
 const blank: Draft = {
   id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true,
-  photo_url: "", description_hy: "", description_ru: "", description_en: "",
+  photo_url: "", description_hy: "", description_ru: "", description_en: "", elevation: "",
 };
 const toDraft = (s: Sight, patch: Partial<Draft> = {}): Draft => ({
   id: s.id, name_hy: s.name_hy, name_ru: s.name_ru, name_en: s.name_en, region: s.region,
   terrain: s.terrain ?? TERRAINS[0], difficulty: s.difficulty ?? "medium", active: s.active,
   photo_url: s.photo_url ?? "", description_hy: s.description_hy ?? "", description_ru: s.description_ru ?? "", description_en: s.description_en ?? "",
+  elevation: s.elevation === null || s.elevation === undefined ? "" : String(s.elevation),
   ...patch,
 });
 
@@ -33,11 +36,20 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Names A–Z at first; a header click sorts by that column, again reverses.
+  const [sort, setSort] = useState<SortState>({ col: "name", dir: "asc" });
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sights.filter((s) => !q || `${s.name_hy} ${s.name_ru} ${s.name_en} ${t(`region.${s.region}`)}`.toLowerCase().includes(q));
-  }, [sights, query, t]);
+    const found = sights.filter((s) => !q || `${s.name_hy} ${s.name_ru} ${s.name_en} ${t(`region.${s.region}`)}`.toLowerCase().includes(q));
+    return sortRows(found, {
+      name: (s) => s.name_hy,
+      region: (s) => t(`region.${s.region}`),
+      terrain: (s) => (s.terrain ? t(`terrain.${s.terrain}`) : null),
+      difficulty: (s) => (s.difficulty ? DIFFICULTIES.indexOf(s.difficulty as (typeof DIFFICULTIES)[number]) : null),
+      elevation: (s) => s.elevation,
+    }, sort);
+  }, [sights, query, t, sort]);
 
   async function save(body: Draft) {
     setBusy(true);
@@ -109,6 +121,21 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
               ))}
             </select>
           </div>
+          <div>
+            <label htmlFor="sight-elevation" className="mb-1 block text-sm font-medium text-ink">Բարձրություն (մ)</label>
+            <input
+              id="sight-elevation"
+              type="number"
+              inputMode="numeric"
+              step={1}
+              min={-500}
+              max={9000}
+              placeholder="օր.՝ 2597"
+              value={draft.elevation}
+              onChange={(e) => set({ elevation: e.target.value.replace(/[^\d-]/g, "") })}
+              className={adminInput}
+            />
+          </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <div>
@@ -178,10 +205,11 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
           <table className="w-full text-left text-[13px]">
             <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
               <tr>
-                <th className="whitespace-nowrap px-3 py-2.5">Անվանում</th>
-                <th className="whitespace-nowrap px-3 py-2.5 text-center">Մարզ</th>
-                <th className="whitespace-nowrap px-3 py-2.5 text-center">Տեսակ</th>
-                <th className="whitespace-nowrap px-3 py-2.5 text-center">Բարդություն</th>
+                <th className="whitespace-nowrap px-3 py-2.5"><SortButton label="Անվանում" col="name" sort={sort} onSort={setSort} /></th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-center"><SortButton label="Մարզ" col="region" sort={sort} onSort={setSort} /></th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-center"><SortButton label="Տեսակ" col="terrain" sort={sort} onSort={setSort} /></th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-center"><SortButton label="Բարդություն" col="difficulty" sort={sort} onSort={setSort} /></th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-center"><SortButton label="Բարձր." col="elevation" sort={sort} onSort={setSort} /></th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-center">Վիճակ</th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-right">Գործողություններ</th>
               </tr>
@@ -189,7 +217,7 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
             <tbody>
               {shown.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-muted">Վայր չի գտնվել։</td>
+                  <td colSpan={7} className="px-4 py-6 text-center text-muted">Վայր չի գտնվել։</td>
                 </tr>
               )}
               {shown.map((s) => (
@@ -201,6 +229,7 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
                   <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{t(`region.${s.region}`)}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{s.terrain ? t(`terrain.${s.terrain}`) : "—"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{s.difficulty ? t(`difficulty.${s.difficulty}`) : "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-center text-muted">{s.elevation ?? "—"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-center">
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${

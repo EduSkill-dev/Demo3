@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdmin } from "@/lib/admin";
 import UnblockButton from "@/components/admin/UnblockButton";
+import { SortLink, readSort, sortRows, type SortState } from "@/components/admin/Sortable";
 
 type Block = { kind: string; key: string; until: string; reason: string | null; created_at: string };
 
@@ -15,7 +16,7 @@ const td = "whitespace-nowrap px-3 py-2";
 // early. An address is blocked for an hour after flooding a public form;
 // a whole form pauses for half an hour when it is flooded from many
 // addresses at once. Both end by themselves.
-export default async function AdminSecurityPage() {
+export default async function AdminSecurityPage({ searchParams }: { searchParams: { sort?: string; dir?: string } }) {
   const me = await getAdmin();
   if (!me) redirect("/login?next=/admin/security");
 
@@ -26,15 +27,19 @@ export default async function AdminSecurityPage() {
   const past = all.filter((b) => new Date(b.until).getTime() <= now).slice(0, 30);
 
   const what = (b: Block) => (b.kind === "ip" ? `IP հասցե ${b.key}` : `${FORMS[b.key] ?? b.key} (ամբողջ ձևը)`);
+  // Newest first; what, start and end headers sort both lists.
+  const sort = readSort(searchParams, ["what", "start", "until"], { col: "start", dir: "desc" });
+  const order = (rows: Block[]) => sortRows(rows, { what, start: (b) => b.created_at, until: (b) => b.until }, sort);
+  const sortHref = (x: SortState) => `/admin/security?sort=${x.col}&dir=${x.dir}`;
   const table = (rows: Block[], live: boolean) => (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
       <table className="w-full text-left text-[13px]">
         <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
           <tr>
-            <th className={th}>Ինչն է փակվել</th>
+            <th className={th}><SortLink label="Ինչն է փակվել" col="what" sort={sort} href={sortHref} /></th>
             <th className={th}>Պատճառը</th>
-            <th className={`${th} text-center`}>Սկիզբ</th>
-            <th className={`${th} text-center`}>{live ? "Կբացվի" : "Բացվել է"}</th>
+            <th className={`${th} text-center`}><SortLink label="Սկիզբ" col="start" sort={sort} href={sortHref} /></th>
+            <th className={`${th} text-center`}><SortLink label={live ? "Կբացվի" : "Բացվել է"} col="until" sort={sort} href={sortHref} /></th>
             {live && <th className={th} />}
           </tr>
         </thead>
@@ -44,7 +49,7 @@ export default async function AdminSecurityPage() {
               <td colSpan={live ? 5 : 4} className="px-4 py-6 text-center text-muted">{live ? "Այս պահին ոչինչ փակված չէ։" : "Գրառում չկա։"}</td>
             </tr>
           )}
-          {rows.map((b) => (
+          {order(rows).map((b) => (
             <tr key={`${b.kind}:${b.key}:${b.created_at}`} className="border-b border-line last:border-0">
               <td className={`${td} font-medium text-ink`}>{what(b)}</td>
               <td className={`${td} text-muted`}>{b.kind === "ip" ? `շատ հարցումներ՝ ${FORMS[b.reason ?? ""] ?? b.reason ?? "—"}` : "հարցումների հեղեղ շատ հասցեներից"}</td>

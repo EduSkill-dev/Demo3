@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getAdmin } from "@/lib/admin";
 import { getFormatDate, getT } from "@/i18n/server";
 import SearchBox from "@/components/admin/SearchBox";
+import { SortLink, readSort, sortRows, type SortState } from "@/components/admin/Sortable";
 
 type Raw = {
   id: string;
@@ -43,7 +44,7 @@ const td = "whitespace-nowrap px-3 py-2";
 
 // Individuals' custom hike requests: who left it, when, and where it stands.
 // Read-only — the request and its offers belong to the people involved.
-export default async function AdminRequestsPage({ searchParams }: { searchParams: { q?: string; state?: string } }) {
+export default async function AdminRequestsPage({ searchParams }: { searchParams: { q?: string; state?: string; sort?: string; dir?: string } }) {
   const me = await getAdmin();
   if (!me || !can(me, "individuals")) redirect("/admin");
 
@@ -67,14 +68,28 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
   const found = all.filter((r) => !q || `${r.name} ${r.profiles?.email ?? ""}`.toLowerCase().includes(q));
   // Cancelled requests are noise in the everyday list: they show only when asked for.
   const live = found.filter((r) => r.state !== "cancelled");
-  const rows = only ? found.filter((r) => r.state === only) : live;
-  const href = (state: State | null) => {
+  // Newest first; the headers sort (again = reversed).
+  const sort = readSort(searchParams, ["name", "created", "dates", "people", "offers", "club"], { col: "created", dir: "desc" });
+  const rows = sortRows(only ? found.filter((r) => r.state === only) : live, {
+    name: (r) => r.name,
+    created: (r) => r.created_at,
+    dates: (r) => r.date_from,
+    people: (r) => r.people,
+    offers: (r) => r.offers.length,
+    club: (r) => r.club,
+  }, sort);
+  const href = (state: State | null, order: SortState | null = null) => {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
     if (state) p.set("state", state);
+    if (order) {
+      p.set("sort", order.col);
+      p.set("dir", order.dir);
+    }
     const s = p.toString();
     return s ? `/admin/requests?${s}` : "/admin/requests";
   };
+  const sortHref = (order: SortState) => href(only, order);
   const chip = (on: boolean) =>
     `rounded-full border px-2.5 py-1 text-xs font-semibold ${on ? "border-spruce-500 bg-spruce-500 text-white" : "border-line bg-surface text-ink hover:border-spruce-500"}`;
 
@@ -96,14 +111,14 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
         <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
             <tr>
-              <th className={th}>Անհատ</th>
-              <th className={`${th} text-center`}>Ստեղծվել է</th>
-              <th className={`${th} text-center`}>Ցանկալի օրեր</th>
+              <th className={th}><SortLink label="Անհատ" col="name" sort={sort} href={sortHref} /></th>
+              <th className={`${th} text-center`}><SortLink label="Ստեղծվել է" col="created" sort={sort} href={sortHref} /></th>
+              <th className={`${th} text-center`}><SortLink label="Ցանկալի օրեր" col="dates" sort={sort} href={sortHref} /></th>
               <th className={th}>Մարզեր</th>
-              <th className={`${th} text-center`}>Մարդ</th>
-              <th className={`${th} text-center`}>Առաջարկներ</th>
+              <th className={`${th} text-center`}><SortLink label="Մարդ" col="people" sort={sort} href={sortHref} /></th>
+              <th className={`${th} text-center`}><SortLink label="Առաջարկներ" col="offers" sort={sort} href={sortHref} /></th>
               <th className={`${th} text-center`}>Վիճակ</th>
-              <th className={th}>Ակումբ</th>
+              <th className={th}><SortLink label="Ակումբ" col="club" sort={sort} href={sortHref} /></th>
             </tr>
           </thead>
           <tbody>

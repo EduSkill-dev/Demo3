@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import { STATUS_LABELS, type AccountLimit, type AccountStatus } from "@/lib/adminLabels";
 import AccountActions, { LimitSwitches } from "./AccountActions";
 import SearchBox from "./SearchBox";
@@ -7,6 +10,7 @@ import ClubReportEditor from "./ClubReportEditor";
 import type { ReportItem } from "@/lib/report/items";
 import type { ShareNetwork } from "@/lib/share";
 import type { Plans, PlanOverrides } from "@/lib/plans/registry";
+import { SortButton, sortRows, type SortState } from "./Sortable";
 
 export type AccountRow = {
   userId: string;
@@ -15,6 +19,7 @@ export type AccountRow = {
   phone: string | null;
   status: AccountStatus;
   joined: string; // already formatted
+  joinedAt: string; // the same, as an ISO date (for sorting)
   extra?: [string, string?]; // e.g. the club's package and, under it, until when
   planId?: string | null; // the club's active plan, for the plan window
   overrides?: PlanOverrides; // what this club has apart from its plan
@@ -34,7 +39,8 @@ const td = "whitespace-nowrap px-2 py-2 first:pl-3 last:pr-3";
 
 // The individuals list and the clubs list are the same table. Nothing wraps:
 // the name sits over the contact details, everything else is one line, and a
-// narrow screen scrolls the table sideways.
+// narrow screen scrolls the table sideways. Names A–Z at first; the name,
+// plan and date headers sort (again = reversed).
 export default function AccountsTable({
   title,
   nameHeader,
@@ -52,6 +58,11 @@ export default function AccountsTable({
   planReports?: Record<string, { name: string; items: ReportItem[] }>; // clubs list: each plan's default report
   rows: AccountRow[];
 }) {
+  const [sort, setSort] = useState<SortState>({ col: "name", dir: "asc" });
+  const sorted = useMemo(
+    () => sortRows(rows, { name: (r) => r.name || r.email, extra: (r) => r.extra?.[0] ?? null, joined: (r) => r.joinedAt }, sort),
+    [rows, sort]
+  );
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -64,9 +75,9 @@ export default function AccountsTable({
         <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
             <tr>
-              <th className={th}>{nameHeader}</th>
-              {extraHeader && <th className={`${th} text-center`}>{extraHeader}</th>}
-              <th className={`${th} text-center`}>Գրանցվել է</th>
+              <th className={th}><SortButton label={nameHeader} col="name" sort={sort} onSort={setSort} /></th>
+              {extraHeader && <th className={`${th} text-center`}><SortButton label={extraHeader} col="extra" sort={sort} onSort={setSort} /></th>}
+              <th className={`${th} text-center`}><SortButton label="Գրանցվել է" col="joined" sort={sort} onSort={setSort} /></th>
               <th className={`${th} text-center`}>Կարգավիճակ</th>
               <th className={`${th} text-center`}>Ֆունկցիաներ</th>
               <th className={`${th} text-right`}>Գործողություններ</th>
@@ -78,7 +89,7 @@ export default function AccountsTable({
                 <td colSpan={extraHeader ? 6 : 5} className="px-4 py-6 text-center text-muted">Հաշիվ չի գտնվել։</td>
               </tr>
             )}
-            {rows.map((r) => (
+            {sorted.map((r) => (
               <tr key={r.userId} className="border-b border-line last:border-0">
                 <td className={td}>
                   {/* A fixed width, so long names and addresses are cut with "…" (full text on hover). */}

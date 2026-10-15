@@ -10,6 +10,9 @@ const DIFFICULTY_CHIP: Record<string, string> = {
 const NEUTRAL_CHIP = "bg-sand text-[#5A4A2E] dark:text-ink";
 const chip = "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold leading-none";
 
+// Heights are written with a space between thousands: 2 597.
+export const metres = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
 // One place on the Places page: photo · name · region and kind · difficulty
 // and hearts · how many hikes go there.
 export default function PlaceCard({ place, t }: { place: Place; t: T }) {
@@ -30,6 +33,7 @@ export default function PlaceCard({ place, t }: { place: Place; t: T }) {
         <p className="mt-1 text-[13px] text-muted">
           {t(`region.${place.region}`)}
           {place.terrain ? ` · ${t(`terrain.${place.terrain}`)}` : ""}
+          {place.elevation !== null ? ` · ${t("placesPage.meters", { n: metres(place.elevation) })}` : ""}
         </p>
         <div className="mt-2.5 flex items-center gap-2">
           {place.difficulty && (

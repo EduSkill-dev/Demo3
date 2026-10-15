@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdmin } from "@/lib/admin";
 import { ERROR_AREAS } from "@/lib/errors";
+import { SortLink, readSort, sortRows, type SortState } from "@/components/admin/Sortable";
 
 type Row = { id: number; at: string; source: "server" | "browser" | "monitor"; area: string; message: string; url: string | null; signature: string };
 
@@ -20,7 +21,7 @@ const td = "px-3 py-2 align-top";
 
 // Faults the site caught, newest first. Every admin sees this page: whoever
 // notices first can act. The same fault repeated is shown once with a count.
-export default async function AdminErrorsPage() {
+export default async function AdminErrorsPage({ searchParams }: { searchParams: { sort?: string; dir?: string } }) {
   const me = await getAdmin();
   if (!me) redirect("/login?next=/admin/errors");
 
@@ -38,7 +39,10 @@ export default async function AdminErrorsPage() {
     if (g) g.times++;
     else groups.set(r.signature, { ...r, times: 1 });
   }
-  const rows = [...groups.values()];
+  // Newest first; the time, source, area and count headers sort.
+  const sort = readSort(searchParams, ["at", "source", "area", "times"], { col: "at", dir: "desc" });
+  const rows = sortRows([...groups.values()], { at: (r) => r.at, source: (r) => SOURCE[r.source][0], area: (r) => ERROR_AREAS[r.area] ?? r.area, times: (r) => r.times }, sort);
+  const sortHref = (x: SortState) => `/admin/errors?sort=${x.col}&dir=${x.dir}`;
   const down = (watch as { value?: { down?: boolean } } | null)?.value?.down === true;
   const check = lastCheck as { at: string; ok: boolean; status: number | null } | null;
 
@@ -61,11 +65,11 @@ export default async function AdminErrorsPage() {
         <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
             <tr>
-              <th className={th}>Վերջին անգամ</th>
-              <th className={`${th} text-center`}>Աղբյուր</th>
-              <th className={th}>Բաժին</th>
+              <th className={th}><SortLink label="Վերջին անգամ" col="at" sort={sort} href={sortHref} /></th>
+              <th className={`${th} text-center`}><SortLink label="Աղբյուր" col="source" sort={sort} href={sortHref} /></th>
+              <th className={th}><SortLink label="Բաժին" col="area" sort={sort} href={sortHref} /></th>
               <th className={th}>Սխալ</th>
-              <th className={`${th} text-center`}>Քանի անգամ</th>
+              <th className={`${th} text-center`}><SortLink label="Քանի անգամ" col="times" sort={sort} href={sortHref} /></th>
             </tr>
           </thead>
           <tbody>

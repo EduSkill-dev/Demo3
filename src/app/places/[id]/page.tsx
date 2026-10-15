@@ -6,6 +6,7 @@ import { getPublicTours } from "@/lib/publicTours";
 import { getT } from "@/i18n/server";
 import { getViewer } from "@/lib/viewer";
 import LikeButton from "@/components/LikeButton";
+import { metres } from "@/components/places/PlaceCard";
 import TourGrid from "@/components/tour/TourGrid";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,6 +53,7 @@ export default async function PlacePage({ params }: { params: { id: string } }) 
           <p className="mt-1 text-muted">
             {t(`region.${place.region}`)}
             {place.terrain ? ` · ${t(`terrain.${place.terrain}`)}` : ""}
+            {place.elevation !== null ? ` · ${t("placesPage.meters", { n: metres(place.elevation) })}` : ""}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {place.difficulty && (

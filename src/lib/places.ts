@@ -12,6 +12,7 @@ export type Place = {
   region: string;
   terrain: string | null;
   difficulty: string | null;
+  elevation: number | null; // metres above sea level
   photo: string | null; // the admins' photo, else the newest photo of a hike there
   description: string | null;
   likes: number;
@@ -51,6 +52,7 @@ export async function getPlaces(): Promise<Place[]> {
         region: s.region,
         terrain: s.terrain,
         difficulty: s.difficulty,
+        elevation: s.elevation,
         photo: s.photo_url || st?.tour_photo || null,
         description: textIn(s, locale),
         likes: st?.likes ?? 0,

@@ -49,6 +49,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
         phone: c.phone,
         status: c.profiles!.status,
         joined: fmt(c.profiles!.created_at, "short"),
+        joinedAt: c.profiles!.created_at,
         limits: [
           { key: "post" as const, blocked: c.posting_blocked },
           { key: "receive" as const, blocked: c.applications_blocked },
