@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Club } from "@/types/database";
 import type { TFunction } from "@/i18n/translate";
+import { orderFocus } from "@/lib/catalog";
 
 export default function ClubCard({
   club,
@@ -40,7 +41,7 @@ export default function ClubCard({
         </p>
         {club.focus?.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {club.focus.map((f) => (
+            {orderFocus(club.focus).map((f) => (
               <span key={f} className="rounded-full bg-sand px-2.5 py-0.5 text-xs text-ink">{t(`focus.${f}`)}</span>
             ))}
           </div>

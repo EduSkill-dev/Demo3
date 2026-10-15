@@ -44,9 +44,13 @@ export const TERRAINS = [
 export type Terrain = (typeof TERRAINS)[number];
 
 // What a club does (its profile checkboxes). Labels: focus.<key>.
-export const CLUB_FOCUS = [
-  "mountaineering", "lakes", "gorges", "caves", "waterfalls", "overnight", "kids", "family", "corporate",
-] as const;
+// What a club does: the kinds of places it goes to (the same as the places'
+// kinds, by the same names), then the kinds of hikes it runs.
+export const CLUB_FOCUS_PLACES = ["mountains", "lakes", "gorges", "caves", "waterfalls", "forest", "heritage"] as const;
+export const CLUB_FOCUS_FORMATS = ["overnight", "kids", "family", "corporate"] as const;
+export const CLUB_FOCUS = [...CLUB_FOCUS_PLACES, ...CLUB_FOCUS_FORMATS] as const;
+// A club's choices in that order (places first).
+export const orderFocus = (focus: string[] | null | undefined) => CLUB_FOCUS.filter((k) => (focus ?? []).includes(k));
 export type ClubFocus = (typeof CLUB_FOCUS)[number];
 
 export const DIFFICULTIES = ["easy", "medium", "hard", "prof"] as const;

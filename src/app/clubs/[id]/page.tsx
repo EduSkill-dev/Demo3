@@ -11,6 +11,8 @@ import { SOCIAL_NAMES, SOCIAL_NETS, socialOk } from "@/lib/socialLinks";
 import SocialIcon, { SOCIAL_COLOR } from "@/components/club/SocialIcon";
 import RatingBox from "@/components/RatingBox";
 import TourGrid from "@/components/tour/TourGrid";
+import { orderFocus } from "@/lib/catalog";
+import TeamCard from "@/components/club/TeamCard";
 
 type Review = {
   id: string;
@@ -137,7 +139,7 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
             <section className="mt-8">
               <h2 className="font-serif text-lg font-semibold text-heading">{t("clubPage.focus")}</h2>
               <div className="mt-3 flex flex-wrap gap-2">
-                {club.focus.map((f) => (
+                {orderFocus(club.focus).map((f) => (
                   <span key={f} className="rounded-full bg-sand px-3 py-1 text-sm text-ink">
                     {t(`focus.${f}`)}
                   </span>
@@ -160,20 +162,9 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
           {(guides ?? []).length > 0 && (
             <section>
               <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.guides")}</h2>
-              <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <ul className="mt-4 flex flex-wrap items-start gap-4">
                 {((guides ?? []) as ClubGuide[]).map((g) => (
-                  <li key={g.id} className="flex flex-col items-center rounded-2xl border border-line bg-surface p-5 text-center shadow-sm">
-                    <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-sand bg-sand">
-                      {g.photo_url ? (
-                        <img src={g.photo_url} alt={[g.first_name, g.last_name].filter(Boolean).join(" ")} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-3xl">🧭</div>
-                      )}
-                    </div>
-                    <p className="mt-3 font-serif text-lg font-semibold text-heading">{[g.first_name, g.last_name].filter(Boolean).join(" ")}</p>
-                    {g.role && <p className="text-xs font-semibold uppercase tracking-wide text-terracotta-500">{g.role}</p>}
-                    {g.bio && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted">{g.bio}</p>}
-                  </li>
+                  <TeamCard key={g.id} name={[g.first_name, g.last_name].filter(Boolean).join(" ")} role={g.role} bio={g.bio} photo={g.photo_url} moreLabel={t("clubPage.teamMore")} />
                 ))}
               </ul>
             </section>

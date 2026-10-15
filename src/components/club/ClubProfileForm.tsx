@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, removeStored, IMAGE_ACCEPT } from "@/lib/storage";
-import { CLUB_FOCUS } from "@/lib/catalog";
+import { CLUB_FOCUS_FORMATS, CLUB_FOCUS_PLACES } from "@/lib/catalog";
 import { useT } from "@/i18n/client";
 import type { Club } from "@/types/database";
 import { SOCIAL_EXAMPLES, SOCIAL_NAMES, SOCIAL_NETS, normalizeSocial, socialOk, type SocialNet } from "@/lib/socialLinks";
@@ -179,17 +179,24 @@ export default function ClubProfileForm({ club }: { club: Club }) {
         </fieldset>
         <fieldset>
           <legend className="mb-1 block text-sm font-medium text-ink">{t("clubData.focus")}</legend>
-          <div className="grid gap-x-4 gap-y-2 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2">
-            {CLUB_FOCUS.map((k) => (
-              <label key={k} className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  className="accent-spruce-500"
-                  checked={focus.includes(k)}
-                  onChange={() => setFocus((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))}
-                />
-                {t(`focus.${k}`)}
-              </label>
+          <div className="space-y-4 rounded-lg border border-line bg-surface p-4">
+            {([["focusPlaces", CLUB_FOCUS_PLACES], ["focusFormats", CLUB_FOCUS_FORMATS]] as const).map(([title, keys]) => (
+              <div key={title}>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{t(`clubData.${title}`)}</p>
+                <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                  {keys.map((k) => (
+                    <label key={k} className="flex items-center gap-2 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        className="accent-spruce-500"
+                        checked={focus.includes(k)}
+                        onChange={() => setFocus((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))}
+                      />
+                      {t(`focus.${k}`)}
+                    </label>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </fieldset>
