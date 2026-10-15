@@ -1132,10 +1132,10 @@ async function main() {
         const mailNoSecret = await inbound({ to: `reply-${token}@bolbol.am`, from: email('idea'), text: 'x' });
         const mailStranger = await inbound({ to: `reply-${token}@bolbol.am`, from: 'someone@else.test', text: 'spam' }, 'e2e-mail-secret');
         const mailAuthor = await inbound({ to: `reply-${token}@bolbol.am`, from: email('idea').toUpperCase(), text: 'Շնորհակալություն, հասկացա։\n\nOn Fri, 16 Oct 2026 Culmen <noreply@bolbol.am> wrote:\n> E2E պատասխան կայքից' }, 'e2e-mail-secret');
-        const thread = (await admin.from('contact_replies').select('author, body, via').eq('message_id', idea.id).order('id')).data || [];
+        const thread = (await admin.from('contact_replies').select('author, body, via, sender').eq('message_id', idea.id).order('id')).data || [];
         const lastTurn = thread[thread.length - 1];
-        check('messages: the author answers by email — only from their own address, the quoted letter cut away, and the suggestion waits again',
-          mailNoSecret.status === 401 && mailStranger.status === 200 && mailAuthor.status === 200 && thread.length === 3
+        check('messages: an emailed answer to the reply address is kept (another sender is noted), the quoted letter cut away, and the suggestion waits again',
+          mailNoSecret.status === 401 && mailStranger.status === 200 && mailAuthor.status === 200 && thread.length === 4 && thread[2].sender === 'someone@else.test' && thread[3].sender === null
             && lastTurn?.author === 'person' && lastTurn?.via === 'email' && lastTurn?.body === 'Շնորհակալություն, հասկացա։',
           `secret=${mailNoSecret.status} stranger=${mailStranger.status} author=${mailAuthor.status} thread=${JSON.stringify(thread)}`);
         await admin.from('contact_messages').delete().eq('id', idea.id);

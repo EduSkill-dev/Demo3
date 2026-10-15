@@ -167,9 +167,19 @@ export function freshPart(text: string): string {
   return out.join("\n").trim();
 }
 
+// The mailbox an address delivers to: "name+tag@…" is "name@…", and Gmail
+// also ignores dots (so a suggestion left as you+test@gmail.com is answered
+// from you@gmail.com and still counts as the author).
+export function mailbox(address: string): string {
+  const [local = "", domain = ""] = address.trim().toLowerCase().split("@");
+  const base = local.split("+")[0];
+  const gmail = domain === "gmail.com" || domain === "googlemail.com";
+  return `${gmail ? base.replace(/\./g, "") : base}@${gmail ? "gmail.com" : domain}`;
+}
+
 // The author of a suggestion answered our letter. Kept as their turn, posted
 // to the group under the suggestion (admins answer it with Reply), and the
-// conversation waits for an answer again. Only from the address that wrote it.
+// conversation waits for an answer again.
 export async function receiveSuggestionMail(db: Db, input: { token: string; from: string[]; text: string }) {
   const hex = input.token.toLowerCase().replace(/[^0-9a-f]/g, "");
   if (hex.length !== 32) return { error: "unknown address" };
@@ -177,14 +187,16 @@ export async function receiveSuggestionMail(db: Db, input: { token: string; from
   const { data } = await db.from("contact_messages").select(SUGGESTION_COLUMNS).eq("reply_token", uuid).maybeSingle();
   const s = data as Suggestion | null;
   if (!s || !s.email) return { error: "unknown address" };
-  const author = s.email.trim().toLowerCase();
-  if (!input.from.some((a) => a.trim().toLowerCase() === author)) return { error: "not the author" };
+  // The reply address is known only to whoever got our letter, so any sender
+  // is taken; one other than the author is shown with the answer.
+  const author = mailbox(s.email);
+  const sender = input.from.some((a) => mailbox(a) === author) ? null : input.from.find(Boolean)?.trim().toLowerCase().slice(0, 200) ?? null;
   const body = freshPart(input.text).slice(0, 4000);
   if (!body) return { error: "empty" };
 
   const { data: last } = await db.from("contact_replies").select("tg_message_id").eq("message_id", s.id).not("tg_message_id", "is", null).order("id", { ascending: false }).limit(1).maybeSingle();
-  const tgId = await sendToGroup(suggestionsChatId(), personReplyHtml(s.email, body), (last as { tg_message_id: number } | null)?.tg_message_id ?? s.tg_message_id);
-  const { error } = await db.from("contact_replies").insert({ message_id: s.id, author: "person", admin_name: null, body, via: "email", tg_message_id: tgId });
+  const tgId = await sendToGroup(suggestionsChatId(), personReplyHtml(sender ?? s.email, body), (last as { tg_message_id: number } | null)?.tg_message_id ?? s.tg_message_id);
+  const { error } = await db.from("contact_replies").insert({ message_id: s.id, author: "person", admin_name: null, body, via: "email", tg_message_id: tgId, sender });
   if (error) return { error: error.message };
   return { ok: true as const };
 }

@@ -189,7 +189,7 @@ function Item(props: {
                 <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${l.fromAdmin ? "bg-spruce-500 text-white" : "border border-line bg-surface text-ink"}`}>
                   <p className="whitespace-pre-line break-words">{l.body}</p>
                   <p className={`mt-1 text-[11px] ${l.fromAdmin ? "text-white/75" : "text-muted"}`}>
-                    {l.fromAdmin ? `${l.adminName ?? "Ադմին"} · ${l.via === "site" ? "կայքից" : "Telegram-ից"} · ` : l.via === "email" ? "նամակով · " : ""}
+                    {l.fromAdmin ? `${l.adminName ?? "Ադմին"} · ${l.via === "site" ? "կայքից" : "Telegram-ից"} · ` : l.via === "email" ? `նամակով${l.adminName ? ` (${l.adminName}-ից)` : ""} · ` : ""}
                     {fmt(l.at, "dateTime")}
                   </p>
                 </div>
