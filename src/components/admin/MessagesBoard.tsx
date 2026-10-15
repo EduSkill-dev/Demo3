@@ -56,7 +56,9 @@ export default function MessagesBoard({
   }, [router]);
 
   const waitingChats = threads.filter((x) => x.waiting).length;
-  const waitingIdeas = suggestions.filter((x) => x.replies.length === 0).length;
+  // A suggestion waits until an admin has the last word.
+  const ideaWaits = (x: SuggestionItem) => !x.replies.length || !x.replies[x.replies.length - 1].fromAdmin;
+  const waitingIdeas = suggestions.filter(ideaWaits).length;
   const both = !folded.chat && !folded.ideas;
 
   return (
@@ -96,8 +98,8 @@ export default function MessagesBoard({
               subtitle={x.phone ?? ""}
               preview={x.message}
               at={x.replies.length ? x.replies[x.replies.length - 1].at : x.at}
-              answeredBy={x.replies.length ? x.replies[x.replies.length - 1].adminName : null}
-              lines={[{ id: "q", adminName: null, body: x.message, at: x.at, via: "site" }, ...x.replies.map((r) => ({ ...r, fromAdmin: true }))]}
+              answeredBy={ideaWaits(x) ? null : x.replies[x.replies.length - 1].adminName ?? "Ադմին"}
+              lines={[{ id: "q", adminName: null, body: x.message, at: x.at, via: "site" }, ...x.replies]}
               send={(text) => adminAction({ action: "suggestion.reply", id: x.id, body: text })}
               maxLength={4000}
               hint="Պատասխանը նամակով կգնա առաջարկի հեղինակին։"
@@ -187,7 +189,7 @@ function Item(props: {
                 <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${l.fromAdmin ? "bg-spruce-500 text-white" : "border border-line bg-surface text-ink"}`}>
                   <p className="whitespace-pre-line break-words">{l.body}</p>
                   <p className={`mt-1 text-[11px] ${l.fromAdmin ? "text-white/75" : "text-muted"}`}>
-                    {l.fromAdmin ? `${l.adminName ?? "Ադմին"} · ${l.via === "site" ? "կայքից" : "Telegram-ից"} · ` : ""}
+                    {l.fromAdmin ? `${l.adminName ?? "Ադմին"} · ${l.via === "site" ? "կայքից" : "Telegram-ից"} · ` : l.via === "email" ? "նամակով · " : ""}
                     {fmt(l.at, "dateTime")}
                   </p>
                 </div>

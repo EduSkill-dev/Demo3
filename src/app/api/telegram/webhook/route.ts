@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withErrorReport } from "@/lib/errors";
 import { suggestionsChatId, telegramChatId } from "@/lib/telegram";
-import { answerSuggestion, answerSupport } from "@/lib/messages";
+import { answerSuggestion, answerSupport, suggestionForPost } from "@/lib/messages";
 
 type Update = {
   message?: {
@@ -18,8 +18,8 @@ type Update = {
 // matters: an admin's Reply to a post the bot made —
 //   * in "Culmen Support", a person's help-chat question: the answer appears
 //     in their chat on the site, signed with the admin's name;
-//   * in "Culmen Suggestions", a suggestion: the answer is emailed to its
-//     author.
+//   * in "Culmen Suggestions", a suggestion or its author's later answer: the
+//     answer is emailed to the author.
 // Either way the post is marked answered. A reply to another admin's message
 // is the admins talking among themselves and stays in the group. Everything
 // else is ignored (always with 200, or Telegram keeps resending).
@@ -41,8 +41,7 @@ async function handlePOST(req: Request) {
     const userId = (original as { user_id: string } | null)?.user_id;
     if (userId) await answerSupport(db, { userId, adminName, body: text, via: "telegram", tgMessageId: m.message_id });
   } else if (suggestionsChatId() && chat === suggestionsChatId()) {
-    const { data: original } = await db.from("contact_messages").select("id").eq("tg_message_id", m.reply_to_message.message_id).limit(1).maybeSingle();
-    const id = (original as { id: string } | null)?.id;
+    const id = await suggestionForPost(db, m.reply_to_message.message_id);
     if (id) await answerSuggestion(db, { id, adminName, body: text, via: "telegram", tgMessageId: m.message_id });
   }
   return NextResponse.json({ ok: true });

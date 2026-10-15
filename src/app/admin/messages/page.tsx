@@ -16,7 +16,7 @@ export default async function AdminMessagesPage({ searchParams }: { searchParams
     db.from("support_messages").select("id, user_id, from_admin, admin_name, body, via, created_at").order("id", { ascending: true }).limit(3000),
     db
       .from("contact_messages")
-      .select("id, message, email, phone, created_at, contact_replies(id, admin_name, body, via, created_at)")
+      .select("id, message, email, phone, created_at, contact_replies(id, author, admin_name, body, via, created_at)")
       .not("confirmed_at", "is", null)
       .order("created_at", { ascending: false })
       .limit(300),
@@ -55,14 +55,14 @@ export default async function AdminMessagesPage({ searchParams }: { searchParams
 
   const suggestions: SuggestionItem[] = ((notes ?? []) as {
     id: string; message: string; email: string | null; phone: string | null; created_at: string;
-    contact_replies: { id: number; admin_name: string; body: string; via: string; created_at: string }[];
+    contact_replies: { id: number; author: string; admin_name: string | null; body: string; via: string; created_at: string }[];
   }[]).map((n) => ({
     id: n.id,
     message: n.message,
     email: n.email,
     phone: n.phone,
     at: n.created_at,
-    replies: [...n.contact_replies].sort((a, b) => a.id - b.id).map((r) => ({ id: String(r.id), adminName: r.admin_name, body: r.body, at: r.created_at, via: r.via })),
+    replies: [...n.contact_replies].sort((a, b) => a.id - b.id).map((r) => ({ id: String(r.id), fromAdmin: r.author === "admin", adminName: r.admin_name, body: r.body, at: r.created_at, via: r.via })),
   }));
 
   return (

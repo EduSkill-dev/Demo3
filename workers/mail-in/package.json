@@ -1,0 +1,8 @@
+{
+  "name": "culmen-mail-in",
+  "private": true,
+  "description": "Cloudflare Email Worker: hands letters sent to the domain to the site (/api/mail/inbound).",
+  "dependencies": {
+    "postal-mime": "2.7.6"
+  }
+}

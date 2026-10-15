@@ -78,7 +78,8 @@ export async function answerSupport(db: Db, input: { userId: string; adminName: 
 
 /* ----------------------------------------------------------- suggestions */
 
-type Suggestion = { id: string; message: string; email: string | null; phone: string | null; tg_message_id: number | null };
+type Suggestion = { id: string; message: string; email: string | null; phone: string | null; tg_message_id: number | null; reply_token: string };
+const SUGGESTION_COLUMNS = "id, message, email, phone, tg_message_id, reply_token";
 
 export function suggestionPostHtml(s: Suggestion, answeredBy?: { name: string; via: "site" | "telegram" }) {
   const contact = [s.email, s.phone].filter(Boolean).map((x) => tgEscape(x!)).join(" · ");
@@ -88,32 +89,103 @@ export function suggestionPostHtml(s: Suggestion, answeredBy?: { name: string; v
   );
 }
 
+// The author's own answer, arrived by email, as the bot posts it.
+function personReplyHtml(email: string, body: string, answeredBy?: { name: string; via: "site" | "telegram" }) {
+  return (
+    `📩 <b>Առաջարկի հեղինակը պատասխանել է</b>\n${tgEscape(email)}\n\n${tgEscape(body)}` +
+    (answeredBy ? answered(answeredBy.name, answeredBy.via) : `\n\n<i>Պատասխանելու համար՝ Reply այս հաղորդագրությանը։</i>`)
+  );
+}
+
+// Where the author's answer to our letter goes. With MAIL_REPLIES=on (Email
+// Routing sends the domain's mail to workers/mail-in) it is the suggestion's
+// own address, so the answer comes back into the conversation; otherwise the
+// platform's inbox.
+function replyAddress(s: Suggestion): string | undefined {
+  if (process.env.MAIL_REPLIES !== "on") return undefined;
+  const domain = (process.env.MAIL_REPLY_DOMAIN || new URL(site() || "https://bolbol.am").hostname).replace(/^www\./, "");
+  return `reply-${s.reply_token.replace(/-/g, "")}@${domain}`;
+}
+
 // A suggestion was confirmed: the admins' group hears of it once.
 export async function announceSuggestion(db: Db, id: string) {
-  const { data } = await db.from("contact_messages").select("id, message, email, phone, tg_message_id").eq("id", id).maybeSingle();
+  const { data } = await db.from("contact_messages").select(SUGGESTION_COLUMNS).eq("id", id).maybeSingle();
   const s = data as Suggestion | null;
   if (!s || s.tg_message_id) return;
   const tgId = await sendToGroup(suggestionsChatId(), suggestionPostHtml(s));
   if (tgId) await db.from("contact_messages").update({ tg_message_id: tgId }).eq("id", id);
 }
 
+// The suggestion an admin's Reply in the group belongs to: the bot posted
+// either the suggestion itself or one of its author's later answers.
+export async function suggestionForPost(db: Db, tgMessageId: number): Promise<string | null> {
+  const { data: s } = await db.from("contact_messages").select("id").eq("tg_message_id", tgMessageId).limit(1).maybeSingle();
+  if (s) return (s as { id: string }).id;
+  const { data: r } = await db.from("contact_replies").select("message_id").eq("tg_message_id", tgMessageId).eq("author", "person").limit(1).maybeSingle();
+  return (r as { message_id: string } | null)?.message_id ?? null;
+}
+
 // An admin answers a suggestion: the answer goes to its author by email, is
-// kept, and the group sees it (posted, if written on the site) and the
-// suggestion marked answered.
+// kept, and the group sees it (posted, if written on the site); the
+// suggestion and the author's answers still waiting are marked answered.
 export async function answerSuggestion(db: Db, input: { id: string; adminName: string; body: string; via: "site" | "telegram"; tgMessageId?: number | null }) {
-  const { data } = await db.from("contact_messages").select("id, message, email, phone, tg_message_id").eq("id", input.id).maybeSingle();
+  const { data } = await db.from("contact_messages").select(SUGGESTION_COLUMNS).eq("id", input.id).maybeSingle();
   const s = data as Suggestion | null;
   if (!s) return { error: "Առաջարկը չի գտնվել։" };
   if (!s.email) return { error: "Առաջարկի հեղինակը էլ. հասցե չի թողել։" };
 
-  const mail = await sendEmail(suggestionReplyEmail({ to: s.email, reply: input.body }));
+  const mail = await sendEmail(suggestionReplyEmail({ to: s.email, reply: input.body, replyTo: replyAddress(s) }));
   if (mail && typeof mail === "object" && "error" in mail && mail.error) return { error: `Նամակը չուղարկվեց՝ ${String(mail.error)}` };
 
+  const { data: earlier } = await db.from("contact_replies").select("id, author, body, tg_message_id").eq("message_id", s.id).order("id", { ascending: false }).limit(30);
+  const waiting = [];
+  for (const r of (earlier ?? []) as { id: number; author: string; body: string; tg_message_id: number | null }[]) {
+    if (r.author !== "person") break;
+    waiting.push(r);
+  }
+
   let tgId = input.tgMessageId ?? null;
-  if (input.via === "site") tgId = await sendToGroup(suggestionsChatId(), `🌐 <b>${tgEscape(input.adminName)}</b> (կայքից)\n\n${tgEscape(input.body)}`, s.tg_message_id);
-  const { error } = await db.from("contact_replies").insert({ message_id: s.id, admin_name: input.adminName, body: input.body.slice(0, 4000), via: input.via, tg_message_id: tgId });
+  if (input.via === "site") tgId = await sendToGroup(suggestionsChatId(), `🌐 <b>${tgEscape(input.adminName)}</b> (կայքից)\n\n${tgEscape(input.body)}`, waiting[0]?.tg_message_id ?? s.tg_message_id);
+  const { error } = await db.from("contact_replies").insert({ message_id: s.id, author: "admin", admin_name: input.adminName, body: input.body.slice(0, 4000), via: input.via, tg_message_id: tgId });
   if (error) return { error: error.message };
-  if (s.tg_message_id) await editInGroup(suggestionsChatId(), s.tg_message_id, suggestionPostHtml(s, { name: input.adminName, via: input.via }));
+  const by = { name: input.adminName, via: input.via };
+  if (s.tg_message_id) await editInGroup(suggestionsChatId(), s.tg_message_id, suggestionPostHtml(s, by));
+  for (const r of waiting) if (r.tg_message_id) await editInGroup(suggestionsChatId(), r.tg_message_id, personReplyHtml(s.email, r.body, by));
+  return { ok: true as const };
+}
+
+// What is left of a reply once the quoted letter under it is cut away.
+export function freshPart(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  for (const line of lines) {
+    const l = line.trim();
+    if (/^>/.test(l)) break; // the quoted letter
+    if (/^(On .+wrote:|.+ написал\(а\):|.+ գրել է[՝:]?|-{2,} ?(Original Message|Исходное сообщение)|From: .+@)/i.test(l)) break;
+    out.push(line);
+  }
+  return out.join("\n").trim();
+}
+
+// The author of a suggestion answered our letter. Kept as their turn, posted
+// to the group under the suggestion (admins answer it with Reply), and the
+// conversation waits for an answer again. Only from the address that wrote it.
+export async function receiveSuggestionMail(db: Db, input: { token: string; from: string[]; text: string }) {
+  const hex = input.token.toLowerCase().replace(/[^0-9a-f]/g, "");
+  if (hex.length !== 32) return { error: "unknown address" };
+  const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  const { data } = await db.from("contact_messages").select(SUGGESTION_COLUMNS).eq("reply_token", uuid).maybeSingle();
+  const s = data as Suggestion | null;
+  if (!s || !s.email) return { error: "unknown address" };
+  const author = s.email.trim().toLowerCase();
+  if (!input.from.some((a) => a.trim().toLowerCase() === author)) return { error: "not the author" };
+  const body = freshPart(input.text).slice(0, 4000);
+  if (!body) return { error: "empty" };
+
+  const { data: last } = await db.from("contact_replies").select("tg_message_id").eq("message_id", s.id).not("tg_message_id", "is", null).order("id", { ascending: false }).limit(1).maybeSingle();
+  const tgId = await sendToGroup(suggestionsChatId(), personReplyHtml(s.email, body), (last as { tg_message_id: number } | null)?.tg_message_id ?? s.tg_message_id);
+  const { error } = await db.from("contact_replies").insert({ message_id: s.id, author: "person", admin_name: null, body, via: "email", tg_message_id: tgId });
+  if (error) return { error: error.message };
   return { ok: true as const };
 }
 

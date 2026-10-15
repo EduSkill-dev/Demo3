@@ -1,0 +1,11 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Cloudflare Email Routing sends the domain's letters here (catch-all →
+  // this Worker). Each one goes on to the site, which decides what it is.
+  // Secret: MAIL_INBOUND_SECRET (the same value as on the site's Worker).
+  "name": "culmen-mail-in",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-23",
+  "workers_dev": false,
+  "vars": { "SITE_URL": "https://bolbol.am" }
+}

@@ -499,7 +499,7 @@ async function main() {
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
       stdio: 'pipe',
-      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', TELEGRAM_SUGGESTIONS_CHAT_ID: '-100456', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
+      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', TELEGRAM_SUGGESTIONS_CHAT_ID: '-100456', MAIL_INBOUND_SECRET: 'e2e-mail-secret', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
       shell: false,
     });
     devServer.on('error', (err) => console.error('     dev server error:', err.message));
@@ -1126,6 +1126,18 @@ async function main() {
             && answers[0].via === 'telegram' && answers[0].admin_name === 'Անի' && answers[1].via === 'site' && answers[1].body === 'E2E պատասխան կայքից'
             && chatFromSite.status === 200 && lastChat?.from_admin === true && lastChat?.via === 'site' && byPerson.status >= 401 && page.status === 200,
           `tg=${fromTg.status} site=${fromSite.status} empty=${empty.status} answers=${JSON.stringify(answers)} chat=${chatFromSite.status} last=${JSON.stringify(lastChat)} person=${byPerson.status} page=${page.status}`);
+        // The author answers our letter by email (through workers/mail-in).
+        const token = (await admin.from('contact_messages').select('reply_token').eq('id', idea.id).single()).data.reply_token.replace(/-/g, '');
+        const inbound = (body, secret) => fetch(`http://localhost:${DEV_PORT}/api/mail/inbound`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(secret ? { 'x-mail-secret': secret } : {}) }, body: JSON.stringify(body) });
+        const mailNoSecret = await inbound({ to: `reply-${token}@bolbol.am`, from: email('idea'), text: 'x' });
+        const mailStranger = await inbound({ to: `reply-${token}@bolbol.am`, from: 'someone@else.test', text: 'spam' }, 'e2e-mail-secret');
+        const mailAuthor = await inbound({ to: `reply-${token}@bolbol.am`, from: email('idea').toUpperCase(), text: 'Շնորհակալություն, հասկացա։\n\nOn Fri, 16 Oct 2026 Culmen <noreply@bolbol.am> wrote:\n> E2E պատասխան կայքից' }, 'e2e-mail-secret');
+        const thread = (await admin.from('contact_replies').select('author, body, via').eq('message_id', idea.id).order('id')).data || [];
+        const lastTurn = thread[thread.length - 1];
+        check('messages: the author answers by email — only from their own address, the quoted letter cut away, and the suggestion waits again',
+          mailNoSecret.status === 401 && mailStranger.status === 200 && mailAuthor.status === 200 && thread.length === 3
+            && lastTurn?.author === 'person' && lastTurn?.via === 'email' && lastTurn?.body === 'Շնորհակալություն, հասկացա։',
+          `secret=${mailNoSecret.status} stranger=${mailStranger.status} author=${mailAuthor.status} thread=${JSON.stringify(thread)}`);
         await admin.from('contact_messages').delete().eq('id', idea.id);
       }
 
