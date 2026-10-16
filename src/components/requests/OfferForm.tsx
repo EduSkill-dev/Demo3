@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DateField from "@/components/ui/DateField";
 import { useRouter } from "next/navigation";
 import { formatAmd } from "@/lib/catalog";
 import type { OfferView } from "@/lib/requests";
@@ -100,7 +101,7 @@ export default function OfferForm({
             </div>
             <div>
               <label htmlFor={`of-date-${requestId}`} className={labelClass}>{t("requests.offerDate")}</label>
-              <input id={`of-date-${requestId}`} required type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} className={fieldClass} />
+              <DateField id={`of-date-${requestId}`} required min={today} value={date} onChange={setDate} placeholder={t("common.pickDate")} className={fieldClass} />
             </div>
           </div>
           <div>

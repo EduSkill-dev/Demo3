@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import DateField from "@/components/ui/DateField";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { serverErrorMessage } from "@/lib/serverErrors";
@@ -185,11 +186,11 @@ export default function SavedSearches({
           </label>
           <label className={label}>
             {t("searches.from")}
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={field(!!from)} />
+            <DateField value={from} onChange={setFrom} placeholder={t("common.pickDate")} className={field(!!from)} />
           </label>
           <label className={label}>
             {t("searches.to")}
-            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className={field(!!to)} />
+            <DateField value={to} min={from || undefined} onChange={setTo} placeholder={t("common.pickDate")} className={field(!!to)} />
           </label>
           <label className={label}>
             {t("searches.overnight")}

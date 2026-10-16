@@ -3,6 +3,7 @@ import type { Dictionary } from "./hy";
 
 const ru: DeepPartial<Dictionary> = {
   common: {
+    pickDate: "Выберите дату",
     tooMany: "Слишком много попыток. Попробуйте чуть позже.",
     loading: "Загрузка...",
     save: "Сохранить",
@@ -335,6 +336,7 @@ const ru: DeepPartial<Dictionary> = {
     full: "Мест нет",
   },
   applications: {
+    attendanceLater: "Присутствие — с дня похода",
     csvNotInPlan: "Выгрузка CSV не входит в ваш тариф: она есть в тарифах Advanced и PRO.",
     forTour: "Заявки на поход «{title}»",
     forTourCount: "Подтверждённых заявок: {count}",
@@ -742,6 +744,8 @@ const ru: DeepPartial<Dictionary> = {
     emptyList: "По этому выбору походов нет.",
   },
   toursPage: {
+    filters: "Фильтры",
+    hideFilters: "Скрыть фильтры",
     monthHikes: "Походы: {name}",
     daysBack: "Предыдущие дни",
     daysOn: "Следующие дни",

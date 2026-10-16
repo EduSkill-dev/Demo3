@@ -84,112 +84,119 @@ export default function AnnouncementsTable({
 
   const day = (d: string) => fmt(d, "short");
 
+  // The parts of a row, shared by the table (wider screens) and the cards (phones).
+  const titleOf = (r: ListingRow) => (
+    <>
+      <span className="font-medium text-ink">{r.title}</span>
+      {r.status !== "active" && (
+        <span className={`ml-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          r.status === "hidden" ? "bg-sand text-muted" : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+        }`}>
+          {r.status === "hidden" ? t("announcements.hidden") : t("announcements.cancelled")}
+        </span>
+      )}
+      {r.adminHidden && (
+        <span className="ml-2 inline-block rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+          {t("announcements.adminHidden")}
+        </span>
+      )}
+    </>
+  );
+  const appsOf = (r: ListingRow) => (
+    <Link href={`/dashboard/applications?tour=${r.id}`} className="relative inline-flex items-start pr-3 font-semibold text-ink hover:text-terracotta-700">
+      <span className={r.taken >= r.cap && r.cap > 0 ? "text-red-600" : ""}>
+        {r.taken}/{r.cap}
+      </span>
+      {r.unread > 0 && (
+        <CountBadge count={r.unread} label={t("announcements.unread", { count: r.unread })} className="absolute -right-2 -top-2.5 scale-90" />
+      )}
+    </Link>
+  );
+  const actionsOf = (r: ListingRow, kind: "upcoming" | "past", align: "end" | "start") =>
+    kind === "upcoming" ? (
+      r.status !== "cancelled" && (
+        <div className={`flex flex-wrap gap-x-4 gap-y-2 font-semibold ${align === "end" ? "justify-end" : ""}`}>
+          {/* Only a listing that visitors can see is worth sharing. */}
+          {r.status === "active" && !r.adminHidden && (
+            <button data-view type="button" onClick={() => setSharing(r)} className="text-spruce-500 hover:text-spruce-900 dark:text-spruce-300">
+              {t("share.button")}
+            </button>
+          )}
+          <Link href={`/dashboard/listings/${r.id}/edit`} className="text-terracotta-500 hover:text-terracotta-700">
+            {t("common.edit")}
+          </Link>
+          <button type="button" disabled={busy === r.id} onClick={() => setStatus(r, r.status === "hidden" ? "active" : "hidden")} className="text-muted hover:text-ink disabled:opacity-50">
+            {r.status === "hidden" ? t("announcements.show") : t("announcements.hide")}
+          </button>
+          <button type="button" disabled={busy === r.id} onClick={() => remove(r)} className="text-red-600 hover:text-red-700 disabled:opacity-50">
+            {r.taken > 0 ? t("announcements.cancelTour") : t("common.delete")}
+          </button>
+        </div>
+      )
+    ) : canRepublish ? (
+      // A new listing that starts as a copy of this one.
+      <Link href={`/dashboard/listings/new?from=${r.id}`} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
+        {t("announcements.republish")}
+      </Link>
+    ) : (
+      <span className="cursor-not-allowed font-semibold text-muted" title={t("announcements.republishBlocked")}>
+        {t("announcements.republish")}
+      </span>
+    );
+
   const table = (all: ListingRow[], kind: "upcoming" | "past") => {
     const sort = kind === "upcoming" ? sortUp : sortPast;
     const onSort = kind === "upcoming" ? setSortUp : setSortPast;
     const list = sortRows(all, getters, sort);
     return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full min-w-[720px] text-sm">
-        <thead>
-          <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-4 py-3"><SortButton label={t("announcements.colPlace")} col="title" sort={sort} onSort={onSort} /></th>
-            <th className="px-4 py-3">{t("announcements.colApplications")}</th>
-            <th className="px-4 py-3"><SortButton label={t("announcements.colDate")} col="date" sort={sort} onSort={onSort} /></th>
-            <th className="px-4 py-3"><SortButton label={t("announcements.colRegion")} col="region" sort={sort} onSort={onSort} /></th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {list.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-muted">{t("announcements.empty")}</td>
-            </tr>
-          )}
+      <>
+        {/* Phones: one card per listing, the actions under it. */}
+        <ul className="space-y-3 md:hidden">
+          {list.length === 0 && <li className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-muted">{t("announcements.empty")}</li>}
           {list.map((r) => (
-            <tr key={r.id} className={`border-b border-line last:border-0 ${r.status === "cancelled" ? "opacity-60" : ""}`}>
-              <td className="px-4 py-3">
-                <span className="font-medium text-ink">{r.title}</span>
-                {r.status !== "active" && (
-                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    r.status === "hidden" ? "bg-sand text-muted" : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
-                  }`}>
-                    {r.status === "hidden" ? t("announcements.hidden") : t("announcements.cancelled")}
-                  </span>
-                )}
-                {r.adminHidden && (
-                  <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
-                    {t("announcements.adminHidden")}
-                  </span>
-                )}
-              </td>
-              <td className="px-4 py-3">
-                <Link href={`/dashboard/applications?tour=${r.id}`} className="relative inline-flex items-start pr-3 font-semibold text-ink hover:text-terracotta-700">
-                  <span className={r.taken >= r.cap && r.cap > 0 ? "text-red-600" : ""}>
-                    {r.taken}/{r.cap}
-                  </span>
-                  {r.unread > 0 && (
-                    <CountBadge
-                      count={r.unread}
-                      label={t("announcements.unread", { count: r.unread })}
-                      className="absolute -right-2 -top-2.5 scale-90"
-                    />
-                  )}
-                </Link>
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-ink">{day(r.date)}</td>
-              <td className="px-4 py-3 text-muted">{r.regions.map((x) => t(`region.${x}`)).join(", ")}</td>
-              {kind === "upcoming" ? (
-                <td className="whitespace-nowrap px-4 py-3 text-right">
-                  {r.status !== "cancelled" && (
-                    <div className="flex justify-end gap-3 font-semibold">
-                      {/* Only a listing that visitors can see is worth sharing. */}
-                      {r.status === "active" && !r.adminHidden && (
-                        <button data-view type="button" onClick={() => setSharing(r)} className="text-spruce-500 hover:text-spruce-900 dark:text-spruce-300">
-                          {t("share.button")}
-                        </button>
-                      )}
-                      <Link href={`/dashboard/listings/${r.id}/edit`} className="text-terracotta-500 hover:text-terracotta-700">
-                        {t("common.edit")}
-                      </Link>
-                      <button
-                        type="button"
-                        disabled={busy === r.id}
-                        onClick={() => setStatus(r, r.status === "hidden" ? "active" : "hidden")}
-                        className="text-muted hover:text-ink disabled:opacity-50"
-                      >
-                        {r.status === "hidden" ? t("announcements.show") : t("announcements.hide")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy === r.id}
-                        onClick={() => remove(r)}
-                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
-                      >
-                        {r.taken > 0 ? t("announcements.cancelTour") : t("common.delete")}
-                      </button>
-                    </div>
-                  )}
-                </td>
-              ) : (
-                <td className="whitespace-nowrap px-4 py-3 text-right">
-                  {/* A new listing that starts as a copy of this one. */}
-                  {canRepublish ? (
-                    <Link href={`/dashboard/listings/new?from=${r.id}`} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
-                      {t("announcements.republish")}
-                    </Link>
-                  ) : (
-                    <span className="cursor-not-allowed font-semibold text-muted" title={t("announcements.republishBlocked")}>
-                      {t("announcements.republish")}
-                    </span>
-                  )}
-                </td>
-              )}
-            </tr>
+            <li key={r.id} className={`rounded-xl border border-line bg-surface p-4 text-sm ${r.status === "cancelled" ? "opacity-60" : ""}`}>
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0">{titleOf(r)}</p>
+                <span className="shrink-0 pt-0.5">{appsOf(r)}</span>
+              </div>
+              <p className="mt-1 text-muted">
+                {day(r.date)}
+                {r.regions.length > 0 && <> · {r.regions.map((x) => t(`region.${x}`)).join(", ")}</>}
+              </p>
+              <div className="mt-3 border-t border-line pt-3">{actionsOf(r, kind, "start")}</div>
+            </li>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </ul>
+        <div className="overflow-x-auto rounded-xl border border-line bg-surface max-md:hidden">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+                <th className="px-4 py-3"><SortButton label={t("announcements.colPlace")} col="title" sort={sort} onSort={onSort} /></th>
+                <th className="px-4 py-3">{t("announcements.colApplications")}</th>
+                <th className="px-4 py-3"><SortButton label={t("announcements.colDate")} col="date" sort={sort} onSort={onSort} /></th>
+                <th className="px-4 py-3"><SortButton label={t("announcements.colRegion")} col="region" sort={sort} onSort={onSort} /></th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {list.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted">{t("announcements.empty")}</td>
+                </tr>
+              )}
+              {list.map((r) => (
+                <tr key={r.id} className={`border-b border-line last:border-0 ${r.status === "cancelled" ? "opacity-60" : ""}`}>
+                  <td className="px-4 py-3">{titleOf(r)}</td>
+                  <td className="px-4 py-3">{appsOf(r)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-ink">{day(r.date)}</td>
+                  <td className="px-4 py-3 text-muted">{r.regions.map((x) => t(`region.${x}`)).join(", ")}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right">{actionsOf(r, kind, "end")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
     );
   };
 

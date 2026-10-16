@@ -86,6 +86,30 @@ export default function ApplicationsTable({ rows, oneTour = false }: { rows: App
     return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("applications.empty")}</p>;
   }
   const sorted = sortRows(rows, { tour: (r) => r.tourTitle, date: (r) => r.createdAt }, sort);
+  // Came / Did not come: for confirmed sign-ups, from the day of the hike on.
+  const attendanceOf = (r: ApplicationRow) =>
+    r.status === "confirmed" && r.tourDate <= today ? (
+      <span className="inline-flex gap-1.5">
+        {([true, false] as const).map((v) => {
+          const on = attendedOf(r) === v;
+          return (
+            <button
+              key={String(v)}
+              type="button"
+              aria-pressed={on}
+              onClick={() => mark(r, v)}
+              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                on ? (v ? "border-green-600 bg-green-600 text-white" : "border-red-600 bg-red-600 text-white") : "border-line bg-surface text-ink hover:border-spruce-500"
+              }`}
+            >
+              {v ? t("applications.came") : t("applications.absent")}
+            </button>
+          );
+        })}
+      </span>
+    ) : (
+      <span className="text-muted">—</span>
+    );
 
   const p = open?.person;
   const age = open ? ageFrom(p?.birth_date ?? null, p?.age ?? null) : null;
@@ -121,7 +145,37 @@ export default function ApplicationsTable({ rows, oneTour = false }: { rows: App
     <>
       <p className="mb-2 text-xs text-muted">{t("applications.attendanceHint")}</p>
       {markError && <p className="mb-2 text-sm text-red-600">{markError}</p>}
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+      {/* Phones: a card per application. */}
+      <ul className="space-y-3 md:hidden">
+        {sorted.map((r) => {
+          const unread = r.unread && !read.has(r.id);
+          return (
+            <li key={r.id} className="rounded-xl border border-line bg-surface p-4 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <p className={`min-w-0 text-ink ${unread ? "font-bold" : "font-semibold"}`}>
+                  {unread && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-600 align-middle" aria-hidden />}
+                  {name(r)}
+                </p>
+                <span className="shrink-0 font-semibold text-ink">{r.seq}/{r.cap}</span>
+              </div>
+              <p className="mt-1 text-muted">
+                {!oneTour && <>{r.tourTitle} · </>}
+                {fmt(r.createdAt, true)}
+              </p>
+              {r.status === "cancelled" && (
+                <span className="mt-2 inline-block rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">{t("applications.cancelled")}</span>
+              )}
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+                {r.status === "confirmed" && r.tourDate > today ? <span className="text-xs text-muted">{t("applications.attendanceLater")}</span> : attendanceOf(r)}
+                <button data-view type="button" onClick={() => view(r)} className="font-semibold text-terracotta-500 hover:text-terracotta-700">
+                  {t("common.view")}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface max-md:hidden">
         <table className={`w-full text-sm ${oneTour ? "min-w-[640px]" : "min-w-[820px]"}`}>
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
@@ -161,32 +215,7 @@ export default function ApplicationsTable({ rows, oneTour = false }: { rows: App
                   <td className="whitespace-nowrap px-4 py-3">{fmt(r.createdAt, true)}</td>
                   <td className="max-w-[12rem] truncate px-4 py-3" title={name(r)}>{name(r)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-center font-normal">
-                    {r.status === "confirmed" && r.tourDate <= today ? (
-                      <span className="inline-flex gap-1.5">
-                        {([true, false] as const).map((v) => {
-                          const on = attendedOf(r) === v;
-                          return (
-                            <button
-                              key={String(v)}
-                              type="button"
-                              aria-pressed={on}
-                              onClick={() => mark(r, v)}
-                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                                on
-                                  ? v
-                                    ? "border-green-600 bg-green-600 text-white"
-                                    : "border-red-600 bg-red-600 text-white"
-                                  : "border-line bg-surface text-ink hover:border-spruce-500"
-                              }`}
-                            >
-                              {v ? t("applications.came") : t("applications.absent")}
-                            </button>
-                          );
-                        })}
-                      </span>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
+                    {attendanceOf(r)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button data-view type="button" onClick={() => view(r)} className="font-semibold text-terracotta-500 hover:text-terracotta-700">

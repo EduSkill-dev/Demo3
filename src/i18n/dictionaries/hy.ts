@@ -2,6 +2,7 @@
 // back to it for anything not yet translated.
 const hy = {
   common: {
+    pickDate: "Ընտրեք ամսաթիվը",
     tooMany: "Չափազանց շատ փորձեր։ Փորձեք մի փոքր ուշ։",
     loading: "Բեռնվում է...",
     save: "Պահպանել",
@@ -340,6 +341,7 @@ const hy = {
     full: "Լրացված է",
   },
   applications: {
+    attendanceLater: "Ներկայությունը՝ արշավի օրվանից",
     csvNotInPlan: "CSV արտահանումը Ձեր փաթեթում ներառված չէ․ այն հասանելի է Advanced և PRO փաթեթներում։",
     forTour: "«{title}» արշավի հայտերը",
     forTourCount: "Հաստատված հայտեր՝ {count}",
@@ -747,6 +749,8 @@ const hy = {
     emptyList: "Այս ընտրությամբ արշավ չկա։",
   },
   toursPage: {
+    filters: "Ֆիլտրեր",
+    hideFilters: "Թաքցնել ֆիլտրերը",
     monthHikes: "{month} արշավները",
     daysBack: "Նախորդ օրերը",
     daysOn: "Հաջորդ օրերը",

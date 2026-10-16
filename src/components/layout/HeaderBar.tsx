@@ -227,18 +227,33 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
           <ThemeToggle />
         </div>
 
-        {/* Phones and tablets: the greeting stays in the bar, before the menu button. */}
-        <div className="ml-auto flex min-w-0 items-center gap-1 lg:hidden">
-          {user && (
+        {/* Phones and tablets: the greeting, the bell and Log out (or, for a
+            guest, Log in) stay in the bar; the rest is in the menu. */}
+        <div className="ml-auto flex min-w-0 items-center gap-0.5 lg:hidden">
+          {user ? (
             <Link
               href={home!}
               title={homeLabel}
-              className="min-w-0 max-w-[11rem] truncate rounded-lg px-1.5 py-2 text-sm font-semibold text-ink hover:text-terracotta-700 sm:max-w-[14rem]"
+              className="flex min-w-0 max-w-[11rem] items-center gap-1.5 rounded-lg px-1.5 py-2 text-sm font-semibold text-ink hover:text-terracotta-700 sm:max-w-[14rem]"
             >
-              {t("header.hello", { name: user.name || homeLabel })}
+              {/* Phones: just the name (the whole greeting does not fit beside the buttons). */}
+              <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted sm:hidden" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10" cy="7" r="3.2" /><path d="M3.5 17c.9-3 3.4-4.6 6.5-4.6s5.6 1.6 6.5 4.6" /></svg>
+              <span className="truncate sm:hidden">{user.name || homeLabel}</span>
+              <span className="truncate max-sm:hidden">{t("header.hello", { name: user.name || homeLabel })}</span>
+            </Link>
+          ) : (
+            <Link href="/login" className="mr-1 rounded-full border-2 border-spruce-900 px-3.5 py-1.5 text-sm font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink">
+              {t("header.login")}
             </Link>
           )}
           {bell}
+          {user && (
+            <button type="button" onClick={logout} aria-label={t("header.logout")} title={t("header.logout")} className="rounded-lg p-2 text-muted hover:bg-sand hover:text-ink">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+            </button>
+          )}
           {/* On phones the theme switch moves into the menu to leave room for the greeting. */}
           <span className="max-sm:hidden">
             <ThemeToggle />
@@ -268,19 +283,11 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
           </nav>
           <div className="mt-3 space-y-2 border-t border-line pt-4">
             {user ? (
-              <>
-                <Link href={home!} className="block rounded-lg px-3 py-2 text-sm font-semibold text-ink">
-                  {homeLabel}
-                </Link>
-                <button type="button" onClick={logout} className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink">
-                  {t("header.logout")}
-                </button>
-              </>
+              <Link href={home!} className="block rounded-full bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
+                {homeLabel}
+              </Link>
             ) : (
               <>
-                <Link href="/login" className="block rounded-lg border border-line py-2.5 text-center text-sm font-semibold text-ink">
-                  {t("header.login")}
-                </Link>
                 <Link href="/register?as=individual" className="block rounded-full bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
                   {t("header.register")} — {t("header.asIndividual")}
                 </Link>

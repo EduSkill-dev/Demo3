@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DateField from "@/components/ui/DateField";
 import { useRouter } from "next/navigation";
 import { REGIONS, TERRAINS } from "@/lib/catalog";
 import { hasContactDetails } from "@/lib/requests";
@@ -70,11 +71,11 @@ export default function RequestForm({ sights }: { sights: SightOption[] }) {
         </div>
         <div>
           <label htmlFor="rq-from" className={labelClass}>{t("requests.dateFrom")}</label>
-          <input id="rq-from" required type="date" min={today} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={fieldClass} />
+          <DateField id="rq-from" required min={today} value={dateFrom} onChange={setDateFrom} placeholder={t("common.pickDate")} className={fieldClass} />
         </div>
         <div>
           <label htmlFor="rq-to" className={labelClass}>{t("requests.dateTo")}</label>
-          <input id="rq-to" type="date" min={dateFrom || today} value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={fieldClass} />
+          <DateField id="rq-to" min={dateFrom || today} value={dateTo} onChange={setDateTo} placeholder={t("common.pickDate")} className={fieldClass} />
         </div>
       </div>
       <p className={`${hint} !mt-1`}>{t("requests.datesHint")}</p>

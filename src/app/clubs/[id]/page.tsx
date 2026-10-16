@@ -195,7 +195,7 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
               </p>
             )}
             {!isOwner && (
-              <div className="mt-4 rounded-xl border border-line bg-surface p-5">
+              <div className="mt-4 rounded-xl border border-line bg-surface p-5 empty:hidden">
                 <RatingBox target="club" clubId={club.id} noun={club.name} />
               </div>
             )}

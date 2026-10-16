@@ -35,7 +35,7 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-8">
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {stats.map(([label, value, href]) => {
           const body = (
             <>

@@ -5,6 +5,7 @@ import { getViewer } from "@/lib/viewer";
 import { isDay, todayInYerevan } from "@/lib/calendar";
 import AutoSubmitForm from "@/components/calendar/AutoSubmitForm";
 import DateField from "@/components/ui/DateField";
+import FilterPanel from "@/components/tour/FilterPanel";
 
 // The filters both views of the Tours page share. They have the same names
 // in both, so switching between the list and the calendar keeps them.
@@ -99,7 +100,8 @@ export async function ToursFilters({
     `h-9 w-full min-w-0 rounded-lg border-2 bg-surface px-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-terracotta-500/30 ${
       on ? "border-terracotta-500 font-semibold" : "border-line"
     }`;
-  const filtered = !!(f.region || f.terrain || f.club || f.difficulty || f.from || f.to || f.overnight || f.free);
+  const activeCount = [f.region, f.terrain, f.club, f.difficulty, f.from || f.to, f.overnight, f.free].filter(Boolean).length;
+  const filtered = activeCount > 0;
   const check = (name: string, on: boolean, label: string) => (
     <label className={`${field(on)} flex cursor-pointer items-center gap-2`}>
       <input type="checkbox" name={name} value="1" defaultChecked={on} className="h-4 w-4 shrink-0 accent-spruce-500" />
@@ -113,6 +115,7 @@ export async function ToursFilters({
   return (
     <AutoSubmitForm action={action} className="mt-4 rounded-2xl border border-line bg-surface p-3">
       {Object.entries(hidden).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
+      <FilterPanel active={activeCount} found={t("toursPage.results", { count })} show={t("toursPage.filters")} hide={t("toursPage.hideFilters")}>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_12rem]">
         <select name="region" defaultValue={f.region} aria-label={t("toursPage.region")} className={field(!!f.region)}>
           <option value="">{t("toursPage.region")}</option>
@@ -130,7 +133,7 @@ export async function ToursFilters({
           <option value="">{t("toursPage.difficulty")}</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d}>{t(`difficulty.${d}`)}</option>)}
         </select>
-        <span className={`flex min-h-[2.25rem] items-center justify-center text-[15px] font-semibold text-muted max-lg:order-last ${filtered ? "" : "lg:row-span-2"}`}>
+        <span className={`flex min-h-[2.25rem] items-center justify-center text-[15px] font-semibold text-muted max-md:hidden max-lg:order-last ${filtered ? "" : "lg:row-span-2"}`}>
           {t("toursPage.results", { count })}
         </span>
         {date("from", f.from, minDate, t("toursPage.from"))}
@@ -147,6 +150,7 @@ export async function ToursFilters({
           </Link>
         ) : null}
       </div>
+      </FilterPanel>
       <button type="submit" className="sr-only">{t("calendar.apply")}</button>
     </AutoSubmitForm>
   );

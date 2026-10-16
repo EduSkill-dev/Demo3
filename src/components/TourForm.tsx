@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RollcallPicker from "@/components/club/RollcallPicker";
+import DateField from "@/components/ui/DateField";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import type { Tour } from "@/types/database";
@@ -272,11 +273,11 @@ export default function TourForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="date" className={label}>{t("tourForm.date")}</label>
-          <input id="date" required type="date" min={mode === "create" ? today : undefined} value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+          <DateField id="date" required min={mode === "create" ? today : undefined} value={date} onChange={setDate} placeholder={t("common.pickDate")} className={input} />
         </div>
         <div>
           <label htmlFor="end-date" className={label}>{t("tourForm.endDate")}</label>
-          <input id="end-date" type="date" min={date || (mode === "create" ? today : undefined)} value={endDate} onChange={(e) => setEndDate(e.target.value)} className={input} />
+          <DateField id="end-date" min={date || (mode === "create" ? today : undefined)} value={endDate} onChange={setEndDate} placeholder={t("common.pickDate")} className={input} />
           <p className={hint}>{t("tourForm.endDateHint")}</p>
         </div>
         {planner && date && <PlannerPanel date={date} endDate={endDate} regions={regions} exclude={initialTour?.id} />}

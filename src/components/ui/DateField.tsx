@@ -5,25 +5,37 @@ import { useT } from "@/i18n/client";
 import { addMonths, dateWords, monthGrid, monthOf, todayInYerevan } from "@/lib/calendar";
 
 // A date field in the site's look: the browser's own picker cannot be
-// styled, so this one opens a small month of our own. The value travels in a
-// hidden input; choosing a day sends the surrounding (auto-submitting) form.
+// styled, so this one opens a small month of our own. Two ways to use it:
+//   * in a filter form (name, no onChange): the value travels in a hidden
+//     input and choosing a day sends the surrounding auto-submitting form;
+//   * in an ordinary form (onChange): it is a controlled field; `required`
+//     keeps the browser's own "fill this in" check.
 export default function DateField({
   name,
   value,
   min,
   label,
   className = "",
+  onChange,
+  required = false,
+  id,
+  placeholder,
 }: {
-  name: string;
+  name?: string;
   value: string; // YYYY-MM-DD or ""
   min?: string;
-  label: string;
-  className?: string; // the filter box's field look (outlined when set)
+  label?: string; // shown inside the field (filters); forms put theirs above
+  className?: string; // the field's look (outlined when set, etc.)
+  onChange?: (value: string) => void;
+  required?: boolean;
+  id?: string;
+  placeholder?: string;
 }) {
   const t = useT();
   const words = dateWords(t);
   const today = todayInYerevan();
   const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false); // near the right edge the month opens leftwards
   const [month, setMonth] = useState(monthOf(value || (min && min > today ? min : today)));
   const input = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -44,6 +56,7 @@ export default function DateField({
 
   function pick(d: string) {
     setOpen(false);
+    if (onChange) return onChange(d);
     if (!input.current) return;
     input.current.value = d;
     input.current.form?.requestSubmit();
@@ -55,19 +68,27 @@ export default function DateField({
 
   return (
     <div ref={root} className={`relative ${className}`}>
-      <input ref={input} type="hidden" name={name} defaultValue={value} />
+      {onChange ? (
+        // Only for the browser's check of a required field.
+        <input tabIndex={-1} aria-hidden="true" required={required} value={value} onChange={() => {}} className="pointer-events-none absolute bottom-0 left-4 h-px w-px opacity-0" />
+      ) : (
+        <input ref={input} type="hidden" name={name} defaultValue={value} />
+      )}
       <button
+        id={id}
         type="button"
         onClick={() => {
           setMonth(monthOf(value || (min && min > today ? min : today)));
+          const r = root.current?.getBoundingClientRect();
+          setAlignRight(!!r && r.left + 288 > window.innerWidth - 8);
           setOpen((o) => !o);
         }}
         aria-haspopup="dialog"
         aria-expanded={open}
         className="flex h-full w-full min-w-0 items-center gap-2 text-left focus:outline-none"
       >
-        <span className="shrink-0 text-xs font-semibold text-muted">{label}</span>
-        <span className={`min-w-0 flex-1 truncate ${shown ? "" : "text-muted"}`}>{shown || "—"}</span>
+        {label && <span className="shrink-0 text-xs font-semibold text-muted">{label}</span>}
+        <span className={`min-w-0 flex-1 truncate ${shown ? "" : "text-muted"}`}>{shown || placeholder || "—"}</span>
         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <rect x="3" y="4.5" width="14" height="12.5" rx="2" />
           <path d="M3 8.5h14M7 2.5v4M13 2.5v4" />
@@ -75,7 +96,7 @@ export default function DateField({
       </button>
 
       {open && (
-        <div role="dialog" aria-label={label} className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-line bg-surface p-3 font-normal shadow-xl">
+        <div role="dialog" aria-label={label ?? placeholder} className={`absolute ${alignRight ? "right-0" : "left-0"} top-full z-50 mt-2 w-72 rounded-2xl border border-line bg-surface p-3 font-normal shadow-xl`}>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setMonth(addMonths(month, -1))} aria-label={t("calendar.prevMonth")} className={arrow}>‹</button>
             <p className="min-w-0 flex-1 text-center text-sm font-bold text-heading">{`${words.months[+month.slice(5, 7) - 1]} ${month.slice(0, 4)}`}</p>

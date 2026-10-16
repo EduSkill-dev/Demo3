@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { activePackage } from "@/lib/catalog";
+import { activePackage, formatAmd } from "@/lib/catalog";
 import { planConfigOf } from "@/lib/plans/server";
 import { getFormatDate, getT } from "@/i18n/server";
 import { getSightNames } from "@/lib/sights";
@@ -12,6 +12,9 @@ import TourDetails from "@/components/tour/TourDetails";
 import TourSignup from "@/components/TourSignup";
 import AddToCalendar from "@/components/calendar/AddToCalendar";
 import TourShareRow from "@/components/tour/TourShareRow";
+import StickyBookBar from "@/components/tour/StickyBookBar";
+import { getViewer } from "@/lib/viewer";
+
 import { getShareNetworks } from "@/lib/siteSettings";
 import RatingBox from "@/components/RatingBox";
 
@@ -75,17 +78,22 @@ export default async function TourDetailPage({ params }: { params: { id: string 
     author_last_initial: string | null;
   }[]).filter((r) => r.comment?.trim());
   const day = (iso: string) => fmt(iso, "long");
+  // Phones get a bar with the price and "Book" while seats are open.
+  const viewer = await getViewer();
+  const bookable = cap > 0 && taken < cap && tour.date >= new Date().toISOString().slice(0, 10) && viewer?.role !== "club" && viewer?.role !== "admin";
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <main className={`mx-auto max-w-5xl px-4 py-8 sm:px-6 ${bookable ? "max-lg:pb-24" : ""}`}>
+      {bookable && <StickyBookBar price={Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(Number(tour.price)) }) : t("common.free")} label={t("signup.book")} />}
       <BackLink fallback="/tours" label={t("clubPage.back")} />
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="space-y-10">
           <TourDetails tour={{ ...tour, likes: likes.tours.get(tour.id) ?? 0, club: club ? { id: club.id, name: club.name } : null, sights: (tour.sight_ids ?? []).flatMap((id) => (sightNames.has(id) ? [{ id, name: sightNames.get(id)! }] : [])) }} seats={cap ? { taken, cap } : undefined} showPageLink={false} />
 
-          <section>
+          {/* The rating form shows only to someone who may rate; an empty box is hidden, and so is the whole part when there is nothing in it. */}
+          <section className={showReviews ? "" : "[&:has(>div:empty)]:hidden"}>
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
-            <div className="mt-4 rounded-xl border border-line bg-surface p-5">
+            <div className="mt-4 rounded-xl border border-line bg-surface p-5 empty:hidden">
               <RatingBox target="tour" tourId={tour.id} noun={tour.title} />
             </div>
             {showReviews &&
@@ -112,7 +120,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
           </section>
         </div>
 
-        <aside className="h-fit lg:sticky lg:top-24">
+        <aside id="signup" className="h-fit scroll-mt-24 lg:sticky lg:top-24">
           <TourSignup
             tourId={tour.id}
             clubId={tour.club_id}
