@@ -674,6 +674,10 @@ const en: DeepPartial<Dictionary> = {
     mat: "Sleeping mat",
   },
   calendar: {
+    allUpcoming: "All upcoming hikes",
+    rangeFrom: "From {date}",
+    rangeTo: "Until {date}",
+    clearDate: "Clear",
     ended: "Finished",
     downloadMonth: "Download the month's hikes",
     whichCalendar: "Add to which calendar?",
@@ -712,6 +716,7 @@ const en: DeepPartial<Dictionary> = {
     emptyList: "No hikes match this selection.",
   },
   toursPage: {
+    showMoreHikes: "Show {count} more",
     allDays: "All",
     listIntro: "Upcoming hikes, day by day. Finished ones are in the calendar.",
     earlier: "Earlier days",

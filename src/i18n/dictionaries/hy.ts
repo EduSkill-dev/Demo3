@@ -679,6 +679,10 @@ const hy = {
     mat: "Կարեմատ",
   },
   calendar: {
+    allUpcoming: "Բոլոր առաջիկա արշավները",
+    rangeFrom: "Սկսած {date}",
+    rangeTo: "Մինչև {date}",
+    clearDate: "Մաքրել",
     ended: "Ավարտված",
     downloadMonth: "Բեռնել ամսվա արշավները",
     whichCalendar: "Ո՞ր օրացույցին ավելացնել",
@@ -717,6 +721,7 @@ const hy = {
     emptyList: "Այս ընտրությամբ արշավ չկա։",
   },
   toursPage: {
+    showMoreHikes: "Ցույց տալ ևս {count}-ը",
     allDays: "Բոլորը",
     listIntro: "Առաջիկա արշավները՝ ըստ օրերի։ Ավարտվածները տես օրացույցում։",
     earlier: "Ավելի վաղ օրեր",

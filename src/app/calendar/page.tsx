@@ -16,6 +16,7 @@ import {
   dayInWords,
   isDay,
   isMonth,
+  lastDayOf,
   mondayOf,
   monthGrid,
   monthOf,
@@ -26,6 +27,7 @@ import { ToursFilters, ToursHeader, filterQuery, readFilters } from "@/component
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import { seatsLeft } from "@/components/calendar/parts";
 import TourGrid from "@/components/tour/TourGrid";
+import MonthDays, { type MonthCell } from "@/components/calendar/MonthDays";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -36,34 +38,47 @@ export async function generateMetadata(): Promise<Metadata> {
 type Params = Record<string, string | undefined>;
 
 // The calendar view of the Tours page: every club's hikes on a month grid,
-// and under it the chosen day's hikes as the same cards as the list. The
-// whole state is in the URL (month, day, filters), so a view can be shared.
-// The list view is the Tours page itself (/tours).
+// and beside it the hikes of the chosen days as the same cards as the list.
+// The chosen days ARE the filter's From–To: a click on a day sets both to
+// it, a slide over days sets a stretch, and the fields show the same. With
+// no days chosen (after "Clear") every hike still to come is listed. The
+// whole state is in the URL, so a view can be shared. The list view is the
+// Tours page itself (/tours).
 export default async function CalendarPage({ searchParams }: { searchParams: Params }) {
   const t = await getT();
   const words = dateWords(t);
   const today = todayInYerevan();
 
   if (searchParams.view === "list") redirect("/tours");
-  const dayParam = isDay(searchParams.day) ? searchParams.day : null;
-  const fromParam = isDay(searchParams.from) ? searchParams.from : null;
-  const month = isMonth(searchParams.month) ? searchParams.month : dayParam ? monthOf(dayParam) : fromParam ? monthOf(fromParam) : monthOf(today);
+  // Opening the calendar shows today, written into the filter too; an old
+  // ?day= link becomes that day's From–To.
+  if (!Object.values(searchParams).some(Boolean)) redirect(`/calendar?from=${today}&to=${today}`);
+  if (isDay(searchParams.day)) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(searchParams)) if (v && k !== "day") q.set(k, v);
+    q.set("from", searchParams.day);
+    q.set("to", searchParams.day);
+    redirect(`/calendar?${q}`);
+  }
+
+  const supabase = await createClient();
+  const { data: clubRows } = await supabase.from("clubs").select("id, name").order("name");
+  const clubs = (clubRows ?? []) as { id: string; name: string }[];
+  const f = readFilters(searchParams, clubs);
+  const chosen = !!(f.from || f.to);
+  const lo = f.from || today; // only "To" set: from today on
+  const hi = f.to; // "" = no end
+
+  const month = isMonth(searchParams.month) ? searchParams.month : monthOf(f.from || f.to || today);
   const grid = monthGrid(month);
   const gridStart = grid.days[0];
   const gridEnd = grid.days[grid.days.length - 1];
 
-  const supabase = await createClient();
-  const [all, { data: clubRows }] = await Promise.all([
-    getPublicTours({ range: { from: gridStart, to: gridEnd } }),
-    supabase.from("clubs").select("id, name").order("name"),
-  ]);
-  const clubs = (clubRows ?? []) as { id: string; name: string }[];
-  const f = readFilters(searchParams, clubs);
-
-  const tours = all.filter(
+  // One load covers the month on the grid and the chosen stretch.
+  const loadFrom = [gridStart, chosen ? lo : today].sort()[0];
+  const all = await getPublicTours({ range: { from: loadFrom, to: hi ? [gridEnd, hi].sort()[1] : undefined } });
+  const matching = all.filter(
     (x) =>
-      (!f.from || (x.end_date ?? x.date) >= f.from) &&
-      (!f.to || x.date <= f.to) &&
       (!f.region || x.regions.includes(f.region)) &&
       (!f.terrain || x.terrains.includes(f.terrain)) &&
       (!f.club || x.club.id === f.club) &&
@@ -71,22 +86,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
       (!f.overnight || x.overnight) &&
       (!f.free || (seatsLeft(x, today) ?? 0) > 0),
   );
-  const monthCount = tours.filter((x) => x.date <= grid.last && (x.end_date ?? x.date) >= grid.first).length;
-  const byDay = new Map<string, PublicTour[]>(grid.days.map((d) => [d, tours.filter((x) => coversDay(x, d))]));
+  const byDay = new Map<string, PublicTour[]>(grid.days.map((d) => [d, matching.filter((x) => coversDay(x, d))]));
   const count = (d: string) => byDay.get(d)?.length ?? 0;
-
-  // The chosen day: the one in the URL; else today when it has hikes, else
-  // the next day that has some (in another month: its first day with hikes).
-  const inGrid = (d: string) => d >= gridStart && d <= gridEnd;
-  const fallbackFrom = month === monthOf(today) ? today : grid.first;
-  const selected = dayParam && inGrid(dayParam) ? dayParam : (grid.days.find((d) => d >= fallbackFrom && count(d) > 0) ?? fallbackFrom);
-  const dayTours = byDay.get(selected) ?? [];
+  // The cards (and "Found"): the chosen days' hikes, or all still to come.
+  const shown = matching
+    .filter((x) => lastDayOf(x) >= (chosen ? lo : today) && (!hi || x.date <= hi))
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   // Links keep every filter and change only what they are given.
   const state: Record<string, string> = {
     ...filterQuery(f),
-    month,
-    day: dayParam ?? "",
+    month: isMonth(searchParams.month) ? searchParams.month : "",
   };
   const href = (patch: Record<string, string>) => {
     const q = new URLSearchParams();
@@ -94,11 +104,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
     const s = q.toString();
     return s ? `/calendar?${s}` : "/calendar";
   };
-  const dayHref = (d: string) =>
-    href({
-      day: d,
-      month: d >= grid.first && d <= grid.last ? month : monthOf(d),
-    });
+  // A day's link: From and To become that day (the month follows it).
+  const dayHref = (d: string) => href({ from: d, to: d, month: "" });
   const weekend = comingWeekend(today);
   // A year back to a year ahead (the middleware refuses dates beyond that).
   const canPrev = month > addMonths(monthOf(today), -12);
@@ -112,7 +119,32 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
   if (f.region) fileQuery.set("region", f.region);
   if (f.club) fileQuery.set("club", f.club);
   const monthFile = `/calendar.ics?${fileQuery}`;
-  const weekendOn = selected === weekend || selected === addDays(weekend, 1);
+  const weekendOn = f.from === weekend && f.to === addDays(weekend, 1);
+  const todayOn = f.from === today && f.to === today;
+  const heading = !chosen
+    ? t("calendar.allUpcoming")
+    : f.from && f.to
+      ? f.from === f.to
+        ? dayInWords(f.from, words)
+        : monthOf(f.from) === monthOf(f.to)
+          ? `${+f.from.slice(8, 10)}–${dayAndMonth(f.to, words)}`
+          : `${dayAndMonth(f.from, words)} – ${dayAndMonth(f.to, words)}`
+      : f.from
+        ? t("calendar.rangeFrom", { date: dayAndMonth(f.from, words) })
+        : t("calendar.rangeTo", { date: dayAndMonth(f.to, words) });
+  const cells: MonthCell[] = grid.days.map((d) => {
+    const items = byDay.get(d)!;
+    return {
+      d,
+      inMonth: d >= grid.first && d <= grid.last,
+      count: items.length,
+      dots: items.slice(0, 4).map((x) => DIFFICULTY_COLORS[x.difficulty].bar),
+      title: items.map((x) => x.title).join("\n") || undefined,
+      label: items.length ? t("calendar.cellLabel", { date: dayAndMonth(d, words), count: items.length }) : dayAndMonth(d, words),
+    };
+  });
+  // The phone's week strip: the week of the first chosen day.
+  const weekOf = mondayOf(chosen ? lo : today);
 
   const small = "flex h-8 items-center rounded-full border-2 px-3 text-xs font-semibold transition";
   const smallOff = `${small} border-line bg-surface text-ink hover:border-spruce-500`;
@@ -124,7 +156,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
       <ToursHeader view="calendar" filters={f} />
       {/* On wide screens the filters and the month stay in place; only the cards scroll. */}
       <div className="mt-4 lg:sticky lg:top-[72px] lg:z-20 lg:-mx-2 lg:bg-stone lg:px-2 lg:pb-1 lg:pt-3 [&>form]:mt-0">
-        <ToursFilters action="/calendar" filters={f} clubs={clubs} count={monthCount} hidden={{ month }} />
+        <ToursFilters action="/calendar" filters={f} clubs={clubs} count={shown.length} hidden={{ all: chosen ? "" : "1" }} clearHref="/calendar?all=1" />
       </div>
 
       <div className="mt-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
@@ -132,7 +164,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
         <aside className="sticky top-[210px] hidden rounded-2xl border border-line bg-surface p-4 lg:block">
           <div className="flex items-center gap-2">
             {canPrev ? (
-              <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={arrow}>
+              <Link href={href({ month: addMonths(month, -1) })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={arrow}>
                 ‹
               </Link>
             ) : (
@@ -140,7 +172,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
             )}
             <h2 className="min-w-0 flex-1 truncate text-center text-[15px] font-bold text-heading">{monthTitle(month, words)}</h2>
             {canNext ? (
-              <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={arrow}>
+              <Link href={href({ month: addMonths(month, 1) })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={arrow}>
                 ›
               </Link>
             ) : (
@@ -152,39 +184,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
               <span key={w}>{w}</span>
             ))}
           </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {grid.days.map((d) => {
-              const items = byDay.get(d)!;
-              const inMonth = d >= grid.first && d <= grid.last;
-              const on = d === selected;
-              return (
-                <Link
-                  key={d}
-                  href={dayHref(d)}
-                  scroll={false} rel="nofollow"
-                  title={items.map((x) => x.title).join("\n") || undefined}
-                  aria-label={items.length ? t("calendar.cellLabel", { date: dayAndMonth(d, words), count: items.length }) : dayAndMonth(d, words)}
-                  aria-current={on ? "date" : undefined}
-                  className={`flex h-11 flex-col items-center justify-center gap-1 rounded-lg border-2 transition ${
-                    on
-                      ? "border-terracotta-500 bg-terracotta-500/10"
-                      : d === today
-                        ? "border-spruce-500"
-                        : items.length
-                          ? "border-transparent bg-sand hover:border-spruce-500"
-                          : "border-transparent hover:border-line"
-                  } ${inMonth ? "" : "opacity-40"}`}
-                >
-                  <span className={`text-[13px] leading-none ${items.length ? "font-bold text-ink" : "text-muted"}`}>{+d.slice(8, 10)}</span>
-                  <span className="flex h-1.5 gap-0.5">
-                    {items.slice(0, 4).map((x) => (
-                      <span key={x.id} className="h-1.5 w-1.5 rounded-full ring-1 ring-black/10 dark:ring-white/30" style={{ background: DIFFICULTY_COLORS[x.difficulty].bar }} />
-                    ))}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+          <MonthDays cells={cells} from={f.from} to={f.to} today={today} hrefFor={Object.fromEntries(grid.days.map((d) => [d, dayHref(d)]))} />
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
             {DIFFICULTIES.map((d) => (
               <span key={d} className="flex items-center gap-1">
@@ -194,10 +194,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-            <Link href={href({ month: "", day: "" })} scroll={false} rel="nofollow" className={smallOff}>
+            <Link href={dayHref(today)} scroll={false} rel="nofollow" className={todayOn ? smallOn : smallOff}>
               {t("calendar.today")}
             </Link>
-            <Link href={dayHref(weekend)} scroll={false} rel="nofollow" className={weekendOn ? smallOn : smallOff}>
+            <Link href={href({ from: weekend, to: addDays(weekend, 1), month: "" })} scroll={false} rel="nofollow" className={weekendOn ? smallOn : smallOff}>
               {t("calendar.weekend")}
             </Link>
             <a href={monthFile} download className="text-xs font-semibold text-terracotta-700 underline underline-offset-4 hover:text-terracotta-500 dark:text-terracotta-300">
@@ -210,14 +210,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
         <div className="space-y-4 lg:hidden">
           <div className="flex items-center gap-3">
             {canPrev ? (
-              <Link href={href({ month: addMonths(month, -1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={arrow}>
+              <Link href={href({ month: addMonths(month, -1) })} scroll={false} rel="nofollow" aria-label={t("calendar.prevMonth")} className={arrow}>
                 ‹
               </Link>
             ) : (
               <span className={`${arrow} opacity-40`} aria-hidden="true">‹</span>
             )}
             {canNext ? (
-              <Link href={href({ month: addMonths(month, 1), day: "" })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={arrow}>
+              <Link href={href({ month: addMonths(month, 1) })} scroll={false} rel="nofollow" aria-label={t("calendar.nextMonth")} className={arrow}>
                 ›
               </Link>
             ) : (
@@ -226,8 +226,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
             <h2 className="min-w-0 flex-1 truncate text-lg font-bold text-heading">{monthTitle(month, words)}</h2>
           </div>
           <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: 7 }, (_, i) => addDays(mondayOf(selected), i)).map((d, i) => {
-              const on = d === selected;
+            {Array.from({ length: 7 }, (_, i) => addDays(weekOf, i)).map((d, i) => {
+              const on = chosen && (d === lo || d === (hi || lo));
+              const between = chosen && !!hi && d > lo && d < hi;
               return (
                 <Link
                   key={d}
@@ -236,7 +237,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
                   aria-label={count(d) ? t("calendar.cellLabel", { date: dayAndMonth(d, words), count: count(d) }) : dayAndMonth(d, words)}
                   aria-current={on ? "date" : undefined}
                   className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 ${
-                    on ? "border-spruce-500 bg-spruce-500 text-[#FFFDF8]" : `border-line bg-surface text-ink ${d === today ? "border-spruce-500" : ""}`
+                    on
+                      ? "border-terracotta-500 bg-terracotta-500 text-[#FFFDF8]"
+                      : between
+                        ? "border-terracotta-500/40 bg-terracotta-500/10 text-ink"
+                        : `border-line bg-surface text-ink ${d === today ? "border-spruce-500" : ""}`
                   }`}
                 >
                   <span className={`text-[11px] font-semibold ${on ? "" : "text-muted"}`}>{words.weekdaysShort[i]}</span>
@@ -247,10 +252,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
             })}
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-            <Link href={href({ month: "", day: "" })} scroll={false} rel="nofollow" className={`${smallOff} shrink-0`}>
+            <Link href={dayHref(today)} scroll={false} rel="nofollow" className={`${todayOn ? smallOn : smallOff} shrink-0`}>
               {t("calendar.today")}
             </Link>
-            <Link href={dayHref(weekend)} scroll={false} rel="nofollow" className={`${weekendOn ? smallOn : smallOff} shrink-0`}>
+            <Link href={href({ from: weekend, to: addDays(weekend, 1), month: "" })} scroll={false} rel="nofollow" className={`${weekendOn ? smallOn : smallOff} shrink-0`}>
               {t("calendar.weekend")}
             </Link>
             <a href={monthFile} download className={`${smallOff} shrink-0`}>
@@ -259,24 +264,28 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
           </div>
         </div>
 
-        {/* ---------- The chosen day's hikes, as cards ---------- */}
+        {/* ---------- The chosen days' hikes (or all to come), as cards ---------- */}
         <section className="max-lg:mt-6" aria-live="polite">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-heading">
-              {dayInWords(selected, words)}
-              <span className="ml-2 text-sm font-normal text-muted">{t("calendar.tourCount", { count: dayTours.length })}</span>
+            <h2 className="flex flex-wrap items-center gap-x-3 text-lg font-bold text-heading">
+              <span>{heading}</span>
+              <span className="h-5 w-0.5 rounded-full bg-line" aria-hidden="true" />
+              <span className="text-terracotta-500">{t("calendar.tourCount", { count: shown.length })}</span>
             </h2>
             <CopyLinkButton
-              href={href({ day: selected })}
+              href={href({})}
               label={t("calendar.share")}
               copiedLabel={t("calendar.copied")}
               className="flex h-8 items-center justify-center rounded-full border-2 border-spruce-900 px-3 text-xs font-semibold text-ink hover:bg-sand dark:border-line"
             />
           </div>
-          {dayTours.length === 0 ? (
-            <p className="rounded-2xl border border-line bg-surface p-8 text-center text-muted">{t("calendar.emptyDay")}</p>
+          {shown.length === 0 ? (
+            <p className="rounded-2xl border border-line bg-surface p-8 text-center text-muted">
+              {f.from && f.from === f.to ? t("calendar.emptyDay") : t("toursPage.noneInRange")}
+            </p>
           ) : (
-            <TourGrid tours={dayTours} size="sm" columns="sm:grid-cols-2" backHref={href({ day: selected })} />
+            // Eight at first, then four more at a time.
+            <TourGrid key={href({})} tours={shown} size="sm" columns="sm:grid-cols-2" backHref={href({})} first={8} step={4} />
           )}
         </section>
       </div>

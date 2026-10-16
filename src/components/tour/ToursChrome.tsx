@@ -2,8 +2,9 @@ import Link from "next/link";
 import { DIFFICULTIES, REGIONS, TERRAINS } from "@/lib/catalog";
 import { getT } from "@/i18n/server";
 import { getViewer } from "@/lib/viewer";
-import { isDay } from "@/lib/calendar";
+import { isDay, todayInYerevan } from "@/lib/calendar";
 import AutoSubmitForm from "@/components/calendar/AutoSubmitForm";
+import DateField from "@/components/ui/DateField";
 
 // The filters both views of the Tours page share. They have the same names
 // in both, so switching between the list and the calendar keeps them.
@@ -40,6 +41,9 @@ export async function ToursHeader({ view, filters }: { view: "list" | "calendar"
   const segment = (on: boolean) =>
     `flex h-9 items-center rounded-full px-4 text-sm font-semibold ${on ? "bg-spruce-500 text-[#FFFDF8]" : "text-ink hover:text-terracotta-700"}`;
   const q = filterQuery(filters);
+  // The calendar opens on today: From and To are set to it, so the filter
+  // and the month show the same thing.
+  const calendarQ = q.from || q.to ? q : { ...q, from: todayInYerevan(), to: todayInYerevan() };
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -61,7 +65,7 @@ export async function ToursHeader({ view, filters }: { view: "list" | "calendar"
           {view === "calendar" ? (
             <span className={segment(true)} aria-current="page">{t("calendar.switchCalendar")}</span>
           ) : (
-            <Link href={toQuery("/calendar", q)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
+            <Link href={toQuery("/calendar", calendarQ)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
           )}
         </div>
       </div>
@@ -79,6 +83,7 @@ export async function ToursFilters({
   count,
   minDate,
   hidden = {},
+  clearHref,
 }: {
   action: "/tours" | "/calendar";
   filters: TourFilters;
@@ -86,6 +91,7 @@ export async function ToursFilters({
   count: number;
   minDate?: string;
   hidden?: Record<string, string>; // state the form keeps (the month, the day)
+  clearHref?: string; // where "Clear" leads (default: the page with the hidden state only)
 }) {
   const t = await getT();
   const f = filters;
@@ -101,10 +107,7 @@ export async function ToursFilters({
     </label>
   );
   const date = (name: "from" | "to", value: string, min: string | undefined, label: string) => (
-    <label className={`${field(!!value)} flex items-center gap-2 max-sm:col-span-2`}>
-      <span className="shrink-0 text-xs font-semibold text-muted">{label}</span>
-      <input type="date" name={name} min={min} defaultValue={value} aria-label={label} className="h-full min-w-0 flex-1 bg-transparent text-sm focus:outline-none" />
-    </label>
+    <DateField name={name} value={value} min={min} label={label} className={`${field(!!value)} max-sm:col-span-2`} />
   );
 
   return (
@@ -136,7 +139,7 @@ export async function ToursFilters({
         {check("free", f.free, t("calendar.free"))}
         {filtered ? (
           <Link
-            href={toQuery(action, hidden)}
+            href={clearHref ?? toQuery(action, hidden)}
             className="flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-terracotta-500 bg-terracotta-500/10 px-3 text-sm font-bold text-terracotta-700 hover:bg-terracotta-500 hover:text-white max-lg:order-last dark:text-terracotta-300"
           >
             <span aria-hidden="true">✕</span>

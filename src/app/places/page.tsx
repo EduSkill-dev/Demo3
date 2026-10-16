@@ -111,7 +111,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Param
       {shown.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-line bg-surface p-8 text-center text-muted">{t("placesPage.empty")}</p>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-x-7 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((p) => (
             <PlaceCard key={p.id} place={p} t={t} />
           ))}

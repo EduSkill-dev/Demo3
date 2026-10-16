@@ -674,6 +674,10 @@ const ru: DeepPartial<Dictionary> = {
     mat: "Коврик",
   },
   calendar: {
+    allUpcoming: "Все предстоящие походы",
+    rangeFrom: "С {date}",
+    rangeTo: "До {date}",
+    clearDate: "Очистить",
     ended: "Завершён",
     downloadMonth: "Скачать походы месяца",
     whichCalendar: "В какой календарь добавить?",
@@ -712,6 +716,7 @@ const ru: DeepPartial<Dictionary> = {
     emptyList: "По этому выбору походов нет.",
   },
   toursPage: {
+    showMoreHikes: "Показать ещё {count}",
     allDays: "Все",
     listIntro: "Ближайшие походы по дням. Завершённые — в календаре.",
     earlier: "Предыдущие дни",
