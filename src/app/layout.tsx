@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Armenian, Outfit } from "next/font/google";
+import localFont from "next/font/local";
 import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import { I18nProvider } from "@/i18n/client";
@@ -13,12 +13,10 @@ import { FavoritesProvider } from "@/components/FavoritesProvider";
 import "./globals.css";
 
 // Outfit for Latin text and the wordmark, Noto Sans Armenian for Armenian.
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", weight: ["500", "700"] });
-const notoArmenian = Noto_Sans_Armenian({
-  subsets: ["armenian"],
-  variable: "--font-noto-armenian",
-  weight: ["400", "600", "700"],
-});
+// Both are variable fonts kept in ./fonts (SIL Open Font License), so a
+// build never depends on reaching Google Fonts.
+const outfit = localFont({ src: "./fonts/outfit-latin.woff2", weight: "500 700", variable: "--font-outfit", display: "swap" });
+const notoArmenian = localFont({ src: "./fonts/noto-sans-armenian.woff2", weight: "400 700", variable: "--font-noto-armenian", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Culmen", template: "%s" },
