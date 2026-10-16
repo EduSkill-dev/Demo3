@@ -109,11 +109,18 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
                     ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
                   </span>
                 )}
-                {club.phone && (
-                  <a href={`tel:${club.phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">
-                    📞 {club.phone}
+                {/* The club's own public contacts (not the sign-up number). */}
+                {club.contact_phone && (
+                  <a href={`tel:${club.contact_phone.replace(/\s/g, "")}`} className="text-ink hover:text-terracotta-700">
+                    📞 {club.contact_phone}
                   </a>
                 )}
+                {club.contact_email && (
+                  <a href={`mailto:${club.contact_email}`} className="break-all text-ink hover:text-terracotta-700">
+                    ✉️ {club.contact_email}
+                  </a>
+                )}
+                {club.contact_address && <span className="font-semibold text-ink">📍 {club.contact_address}</span>}
               </div>
               {/* The club's own pages on social networks (each checked to be that network). */}
               {socials.length > 0 && (

@@ -22,6 +22,9 @@ export default function ClubProfileForm({ club }: { club: Club }) {
   const [photo, setPhoto] = useState(club.photo_url);
   const [about, setAbout] = useState(club.description ?? "");
   const [phone, setPhone] = useState(club.phone ?? "");
+  const [contact, setContact] = useState({ phone: club.contact_phone ?? "", email: club.contact_email ?? "", address: club.contact_address ?? "" });
+  const contactPhoneBad = !!contact.phone.trim() && !/^[+0-9 ()-]{8,20}$/.test(contact.phone.trim());
+  const contactEmailBad = !!contact.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim());
   const [slug, setSlug] = useState(club.slug ?? "");
   const [focus, setFocus] = useState<string[]>(club.focus ?? []);
   const [social, setSocial] = useState<Record<SocialNet, string>>({
@@ -62,11 +65,22 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     const address = slug.trim().toLowerCase();
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(address) || address.length < 3 || address.length > 40) return setError(t("clubData.slugInvalid"));
     if (wrong.length) return setError(t("clubData.socialWrong", { network: SOCIAL_NAMES[wrong[0]] }));
+    if (contactPhoneBad) return setError(t("clubData.contactPhoneWrong"));
+    if (contactEmailBad) return setError(t("clubData.contactEmailWrong"));
     const pages = Object.fromEntries(SOCIAL_NETS.map((n) => [`${n}_url`, normalizeSocial(n, social[n]) || null]));
     setBusy("info");
     const { error: err } = await createClient()
       .from("clubs")
-      .update({ description: about.trim() || null, phone: phone.trim() || null, focus, slug: address, ...pages })
+      .update({
+        description: about.trim() || null,
+        phone: phone.trim() || null,
+        contact_phone: contact.phone.trim() || null,
+        contact_email: contact.email.trim().toLowerCase() || null,
+        contact_address: contact.address.trim() || null,
+        focus,
+        slug: address,
+        ...pages,
+      })
       .eq("id", club.id);
     setBusy(null);
     if (err) {
@@ -123,9 +137,26 @@ export default function ClubProfileForm({ club }: { club: Club }) {
           <label htmlFor="about" className="mb-1 block text-sm font-medium text-ink">{t("clubData.about")}</label>
           <textarea id="about" rows={6} placeholder={t("clubData.aboutHint")} value={about} onChange={(e) => setAbout(e.target.value)} className={input} />
         </div>
+        {/* Shown on the club page only when filled in. */}
+        <fieldset>
+          <legend className="mb-1 block text-sm font-medium text-ink">{t("clubData.contacts")}</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <input id="contact-phone" type="tel" placeholder={t("clubData.contactPhone")} aria-label={t("clubData.contactPhone")} value={contact.phone} onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))} className={`${input} ${contactPhoneBad ? "!border-red-500" : ""}`} />
+              {contactPhoneBad && <p className="mt-1 text-xs font-semibold text-red-600">{t("clubData.contactPhoneWrong")}</p>}
+            </div>
+            <div>
+              <input id="contact-email" type="email" placeholder={t("clubData.contactEmail")} aria-label={t("clubData.contactEmail")} value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} className={`${input} ${contactEmailBad ? "!border-red-500" : ""}`} />
+              {contactEmailBad && <p className="mt-1 text-xs font-semibold text-red-600">{t("clubData.contactEmailWrong")}</p>}
+            </div>
+            <input id="contact-address" maxLength={160} placeholder={t("clubData.contactAddress")} aria-label={t("clubData.contactAddress")} value={contact.address} onChange={(e) => setContact((c) => ({ ...c, address: e.target.value }))} className={`${input} sm:col-span-2`} />
+          </div>
+          <p className="mt-1 text-xs text-muted">{t("clubData.contactsHint")}</p>
+        </fieldset>
         <div className="max-w-xs">
-          <label htmlFor="phone" className="mb-1 block text-sm font-medium text-ink">{t("clubData.phone")}</label>
+          <label htmlFor="phone" className="mb-1 block text-sm font-medium text-ink">{t("clubData.ownPhone")}</label>
           <input id="phone" type="tel" placeholder="+374 XX XXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} className={input} />
+          <p className="mt-1 text-xs text-muted">{t("clubData.ownPhoneHint")}</p>
         </div>
         <div className="max-w-md">
           <label htmlFor="slug" className="mb-1 block text-sm font-medium text-ink">{t("clubData.slug")}</label>

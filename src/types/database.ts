@@ -34,6 +34,10 @@ export interface Club {
   instagram_url?: string | null;
   facebook_url?: string | null;
   linkedin_url?: string | null;
+  // Public contacts on the club page (optional); `phone` is the sign-up number.
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  contact_address?: string | null;
   tariff: Tariff | null; // the package bought; see activePackage()
   package_ends_at: string | null;
   photo_url: string | null;
