@@ -34,7 +34,7 @@ export const tgEscape = escapeHtml;
 export const suggestionsChatId = () => process.env.TELEGRAM_SUGGESTIONS_CHAT_ID ?? "";
 export const suggestionsReady = () => !!process.env.TELEGRAM_BOT_TOKEN && !!process.env.TELEGRAM_SUGGESTIONS_CHAT_ID;
 
-async function botCall(method: string, payload: Record<string, unknown>): Promise<{ ok: boolean; result?: { message_id?: number } } | null> {
+export async function botCall(method: string, payload: Record<string, unknown>): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string } | null> {
   if (!process.env.TELEGRAM_BOT_TOKEN) return null;
   try {
     const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -42,7 +42,7 @@ async function botCall(method: string, payload: Record<string, unknown>): Promis
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return (await res.json().catch(() => null)) as { ok: boolean; result?: { message_id?: number } } | null;
+    return (await res.json().catch(() => null)) as { ok: boolean; result?: { message_id?: number }; description?: string } | null;
   } catch {
     return null;
   }

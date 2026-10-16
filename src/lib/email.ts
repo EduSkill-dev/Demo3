@@ -422,6 +422,18 @@ export function packageExpiryEmail(input: { to: string; clubName: string; packag
   };
 }
 
+// To a club, on the evening of a hike: some participants are still unmarked.
+export function rollcallReminderEmail(input: { to: string; clubName: string; title: string; tourId: string; unmarked: number }) {
+  const url = `${BASE_URL()}/dashboard/applications?tour=${input.tourId}`;
+  const html = layout(
+    "Նշեք ներկա/բացական",
+    `<p>«${esc(input.clubName)}» ակումբի այսօրվա «${esc(input.title)}» արշավի ${input.unmarked} մասնակցի ներկայությունը դեռ նշված չէ։</p>
+     <p>Նշեք Telegram-ի ցուցակում կամ կայքում․ դրանից է կախված, թե ով կարող է գնահատել արշավը։</p>
+     ${button(url, "Նշել կայքում")}`
+  );
+  return { to: input.to, subject: `Culmen — նշեք «${input.title}» արշավի ներկա/բացական`, html, text: `${input.unmarked} մասնակցի ներկայությունը դեռ նշված չէ։ ${url}` };
+}
+
 // To newsletter subscribers: the hikes published since the last digest.
 export function newsletterDigestEmail(input: {
   to: string;

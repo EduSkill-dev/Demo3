@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.45.4",
     "next": "14.2.15",
     "nodemailer": "^10.0.14",
+    "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
@@ -20,6 +21,7 @@
     "@opennextjs/cloudflare": "^1.14.4",
     "@types/node": "^20.14.10",
     "@types/nodemailer": "^8.0.2",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",

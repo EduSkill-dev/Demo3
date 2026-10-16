@@ -1360,6 +1360,40 @@ async function main() {
         run1.status === 200 && run2.status === 200 && sentReminders.length === 1 && sentReminders[0].days === 2,
         `runs=${run1.status}/${run2.status} reminders=${JSON.stringify(sentReminders)}`);
 
+      // ---------- Roll call by Telegram ----------
+      {
+        const yerevanToday = new Date(Date.now() + 4 * 3600 * 1000).toISOString().slice(0, 10);
+        const bk = (await admin.from('bookings').select('id, tour_id, attended, tours(club_id, date)').eq('user_id', ids.ind).eq('status', 'confirmed').limit(1).single()).data;
+        const owner = bk.tours.club_id === clubA ? 'club' : 'club2';
+        const oldDate = bk.tours.date;
+        await admin.from('tours').update({ date: yerevanToday, end_date: null }).eq('id', bk.tour_id);
+        await signIn(owner);
+        const codeRes = await anon.rpc('club_tg_code');
+        const code = codeRes.data;
+        await signIn(owner === 'club' ? 'club2' : 'club');
+        const othersCode = (await anon.from('club_tg_codes').select('code').eq('code', code)).data || [];
+        const tgS = (body) => fetch(`http://localhost:${DEV_PORT}/api/telegram/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': 'e2e-tg-secret' }, body: JSON.stringify(body) });
+        const startOk = await tgS({ message: { message_id: 1, text: `/start c_${code}`, chat: { id: 555001, type: 'private' }, from: { id: 555001, first_name: 'Ռոլ', last_name: 'Քոլ' } } });
+        await tgS({ message: { message_id: 2, text: '/start c_nope', chat: { id: 555002, type: 'private' }, from: { id: 555002, first_name: 'Օտար' } } });
+        const joined = (await admin.from('club_tg_people').select('id, tg_user_id, name, club_id').in('tg_user_id', [555001, 555002])).data || [];
+        await signIn(owner);
+        const rcIns = await anon.from('tour_rollcall').insert({ tour_id: bk.tour_id, person_id: joined[0]?.id });
+        const tap = async (from, v) => { await tgS({ callback_query: { id: 'q' + from + v, from: { id: from }, data: `rc:${bk.id}:${v}` } }); return (await admin.from('bookings').select('attended').eq('id', bk.id).single()).data.attended; };
+        const byStranger = await tap(555002, 1);
+        const came = await tap(555001, 1);
+        const cleared = await tap(555001, 1);
+        const absent = await tap(555001, 0);
+        const rcAnon = await fetch(`http://localhost:${DEV_PORT}/api/cron/rollcall`);
+        const rcRun = await fetch(`http://localhost:${DEV_PORT}/api/cron/rollcall`, { headers: { Authorization: 'Bearer e2e-cron-secret' } });
+        check('roll call: the club link connects a person in Telegram (a wrong code does not, other clubs never see the code), only the hike\'s people mark attendance with the buttons, the job is guarded',
+          !!code && othersCode.length === 0 && startOk.status === 200 && joined.length === 1 && joined[0].name === 'Ռոլ Քոլ' && !rcIns.error
+            && byStranger === bk.attended && came === true && cleared === null && absent === false && rcAnon.status === 401 && rcRun.status === 200,
+          `code=${!!code} others=${othersCode.length} start=${startOk.status} joined=${JSON.stringify(joined)} rc=${rcIns.error?.message} taps=${byStranger}/${came}/${cleared}/${absent} cron=${rcAnon.status}/${rcRun.status}`);
+        await admin.from('club_tg_people').delete().in('tg_user_id', [555001, 555002]);
+        await admin.from('bookings').update({ attended: bk.attended }).eq('id', bk.id);
+        await admin.from('tours').update({ date: oldDate, rollcall_sent_at: null, rollcall_reminded_at: null }).eq('id', bk.tour_id);
+      }
+
     }
   } catch (e) {
     console.log('ERROR:', e.message);

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import RollcallPicker from "@/components/club/RollcallPicker";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import type { Tour } from "@/types/database";
@@ -70,6 +71,20 @@ export default function TourForm({
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Who gets the roll-call list in Telegram. Editing: this hike's people; a
+  // new listing: the people of the club's latest one.
+  const [rollcall, setRollcall] = useState<string[]>([]);
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const query = supabase.from("tours").select("id, tour_rollcall!inner(person_id)");
+      const { data } = initialTour
+        ? await query.eq("id", initialTour.id).limit(1)
+        : await query.eq("club_id", clubId).order("created_at", { ascending: false }).limit(1);
+      const row = (data as { tour_rollcall: { person_id: string }[] }[] | null)?.[0];
+      if (row) setRollcall(row.tour_rollcall.map((r) => r.person_id));
+    })();
+  }, [clubId, initialTour?.id]);
 
   // What the chosen places say about the hike.
   const chosen = useMemo(() => sightIds.map((id) => sights.find((s) => s.id === id)).filter((s): s is SightOption => !!s), [sightIds, sights]);
@@ -108,6 +123,7 @@ export default function TourForm({
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError(t("tourForm.errPrice"));
     if (!coordinatorPhone.trim()) return setError(t("tourForm.errPhone"));
     if (!meetingPoint.trim() || !meetingTime) return setError(t("tourForm.errMeeting"));
+    if (rollcall.length === 0) return setError(t("rollcall.errNone"));
 
     setSaving(true);
     const supabase = createClient();
@@ -155,8 +171,21 @@ export default function TourForm({
         ? await supabase.from("tours").insert(payload).select("id").single()
         : await supabase.from("tours").update(payload).eq("id", initialTour!.id);
 
+    if (dbError) {
+      setSaving(false);
+      return setError(serverErrorMessage(t, dbError.message));
+    }
+    // The hike's roll-call people.
+    const savedId = mode === "create" ? (created as { id: string } | null)?.id : initialTour!.id;
+    if (savedId) {
+      await supabase.from("tour_rollcall").delete().eq("tour_id", savedId);
+      const { error: rcError } = await supabase.from("tour_rollcall").insert(rollcall.map((person_id) => ({ tour_id: savedId, person_id })));
+      if (rcError) {
+        setSaving(false);
+        return setError(rcError.message);
+      }
+    }
     setSaving(false);
-    if (dbError) return setError(serverErrorMessage(t, dbError.message));
 
     // The database trigger already wrote one notification per follower; this
     // turns them into emails — fire-and-forget so a slow mail server never
@@ -293,6 +322,15 @@ export default function TourForm({
         </div>
       </div>
       {mode === "edit" && <p className={hint}>{t("tourForm.changeNotice")}</p>}
+
+      {/* Who marks attendance: required. */}
+      <section className="space-y-3 rounded-xl border-2 border-[#229ED9]/40 bg-surface p-4">
+        <div>
+          <p className="text-sm font-semibold text-ink">{t("rollcall.formTitle")} <span className="text-red-600">*</span></p>
+          <p className={hint}>{t("rollcall.formHint")}</p>
+        </div>
+        <RollcallPicker clubId={clubId} value={rollcall} onChange={setRollcall} />
+      </section>
 
       <div>
         <label htmlFor="desc" className={label}>{t("tourForm.description")}</label>
