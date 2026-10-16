@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const items: ShellItem[] = [
     { href: "/admin", label: "Ընդհանուր" },
+    { href: "/admin/notifications", label: "Ծանուցումներ" },
     ...(can(me, "pages") ? [{ href: "/admin/pages", label: "Կայքի էջեր" }] : []),
     ...(can(me, "pages") ? [{ href: "/admin/sights", label: "Տեսարժան վայրեր" }] : []),
     ...(can(me, "pages") ? [{ href: "/admin/share", label: "Սոց. ցանցեր" }] : []),

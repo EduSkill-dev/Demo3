@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getMyClub } from "@/lib/myClub";
@@ -26,7 +27,8 @@ type Raw = {
   } | null;
 };
 
-export default async function ApplicationsPage() {
+// All the club's applications, or one hike's (?tour=<id>, from the listings).
+export default async function ApplicationsPage({ searchParams }: { searchParams: { tour?: string } }) {
   const mine = await getMyClub();
   if (!mine) redirect("/login");
   const { club, limits } = mine;
@@ -44,11 +46,12 @@ export default async function ApplicationsPage() {
     ((tourRows ?? []) as { id: string; title: string; date: string; max_participants: number; status: string }[]).map((x) => [x.id, x])
   );
 
+  const only = searchParams.tour && tours.has(searchParams.tour) ? tours.get(searchParams.tour)! : null;
   const { data } = tours.size
     ? await supabase
         .from("bookings")
         .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, attended, profiles(first_name, last_name, birth_date, age, gender, email, phone)")
-        .in("tour_id", [...tours.keys()])
+        .in("tour_id", only ? [only.id] : [...tours.keys()])
         .order("created_at", { ascending: false })
     : { data: [] };
 
@@ -76,17 +79,31 @@ export default async function ApplicationsPage() {
   const used = rows.filter((r) => r.status === "confirmed" && r.tourDate >= today).length;
   const max = limits.maxListings * limits.maxPerTour;
 
+  const csvClass = "rounded-full border-2 px-4 py-2 text-sm font-semibold";
   return (
     <div className="space-y-5">
+      {only && (
+        <div>
+          <Link href="/dashboard/applications" className="text-sm font-semibold text-muted hover:text-terracotta-700">{t("applications.allApplications")}</Link>
+          <h2 className="mt-1 text-lg font-bold text-heading">{t("applications.forTour", { title: only.title })}</h2>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-semibold text-ink">{t("applications.counter", { used, max })}</p>
-        {limits.config.registrants_csv_export && rows.length > 0 && (
-          <a data-view href="/api/club/registrants" download className="rounded-full border-2 border-spruce-900 px-4 py-2 text-sm font-semibold text-ink hover:bg-sand dark:border-line">
+        <p className="font-semibold text-ink">{only ? t("applications.forTourCount", { count: rows.filter((r) => r.status === "confirmed").length }) : t("applications.counter", { used, max })}</p>
+        {/* CSV: the plan decides; without it the button is there but off. */}
+        {limits.config.registrants_csv_export ? (
+          rows.length > 0 && (
+            <a data-view href={only ? `/api/club/registrants?tour=${only.id}` : "/api/club/registrants"} download className={`${csvClass} border-spruce-900 text-ink hover:bg-sand dark:border-line`}>
+              {t("applications.exportCsv")}
+            </a>
+          )
+        ) : (
+          <span className={`${csvClass} cursor-not-allowed border-line text-muted opacity-60`} title={t("applications.csvNotInPlan")} aria-disabled="true">
             {t("applications.exportCsv")}
-          </a>
+          </span>
         )}
       </div>
-      <ApplicationsTable rows={rows} />
+      <ApplicationsTable rows={rows} oneTour={!!only} />
     </div>
   );
 }

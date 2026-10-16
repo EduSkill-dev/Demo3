@@ -9,11 +9,11 @@ import { useState } from "react";
 export default function TeamCard({ name, role, bio, photo, moreLabel }: { name: string; role: string | null; bio: string | null; photo: string | null; moreLabel: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <li className="flex flex-col items-center rounded-2xl border border-line bg-surface px-4 pb-3 pt-5 text-center shadow-sm">
-      <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-sand bg-sand">
-        {photo ? <img src={photo} alt={name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-4xl">🧭</div>}
+    <li className="flex flex-col items-center rounded-2xl border border-line bg-surface px-4 pb-3 pt-2 text-center shadow-sm">
+      <div className="h-[8.5rem] w-[8.5rem] overflow-hidden rounded-full border-4 border-sand bg-sand">
+        {photo ? <img src={photo} alt={name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-5xl">🧭</div>}
       </div>
-      <div className="mt-3 flex min-h-[2.75rem] items-center justify-center">
+      <div className="mt-1 flex min-h-[2.5rem] items-center justify-center">
         <p className="line-clamp-2 text-[17px] font-bold leading-snug text-heading" title={name}>
           {name}
         </p>

@@ -10,6 +10,7 @@ import CountBadge from "@/components/ui/CountBadge";
 import type { Difficulty, TourStatus } from "@/types/database";
 import SharePanel from "./SharePanel";
 import type { ShareNetwork } from "@/lib/share";
+import { SortButton, sortRows, type SortState } from "@/components/admin/Sortable";
 
 export type ListingRow = {
   id: string;
@@ -49,9 +50,17 @@ export default function AnnouncementsTable({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState<ListingRow | null>(null);
+  // The nearest hike first; past ones the latest first. Place, date and region sort.
+  const [sortUp, setSortUp] = useState<SortState>({ col: "date", dir: "asc" });
+  const [sortPast, setSortPast] = useState<SortState>({ col: "date", dir: "desc" });
+  const getters = {
+    title: (r: ListingRow) => r.title,
+    date: (r: ListingRow) => r.date,
+    region: (r: ListingRow) => r.regions.map((x) => t(`region.${x}`)).join(", ") || null,
+  };
 
   const upcoming = rows.filter((r) => !r.past);
-  const past = rows.filter((r) => r.past).reverse();
+  const past = rows.filter((r) => r.past);
 
   async function run(id: string, action: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(id);
@@ -75,15 +84,19 @@ export default function AnnouncementsTable({
 
   const day = (d: string) => fmt(d, "short");
 
-  const table = (list: ListingRow[], kind: "upcoming" | "past") => (
+  const table = (all: ListingRow[], kind: "upcoming" | "past") => {
+    const sort = kind === "upcoming" ? sortUp : sortPast;
+    const onSort = kind === "upcoming" ? setSortUp : setSortPast;
+    const list = sortRows(all, getters, sort);
+    return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
       <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-4 py-3">{t("announcements.colPlace")}</th>
+            <th className="px-4 py-3"><SortButton label={t("announcements.colPlace")} col="title" sort={sort} onSort={onSort} /></th>
             <th className="px-4 py-3">{t("announcements.colApplications")}</th>
-            <th className="px-4 py-3">{t("announcements.colDate")}</th>
-            <th className="px-4 py-3">{t("announcements.colRegion")}</th>
+            <th className="px-4 py-3"><SortButton label={t("announcements.colDate")} col="date" sort={sort} onSort={onSort} /></th>
+            <th className="px-4 py-3"><SortButton label={t("announcements.colRegion")} col="region" sort={sort} onSort={onSort} /></th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
@@ -111,7 +124,7 @@ export default function AnnouncementsTable({
                 )}
               </td>
               <td className="px-4 py-3">
-                <Link href="/dashboard/applications" className="relative inline-flex items-start pr-3 font-semibold text-ink hover:text-terracotta-700">
+                <Link href={`/dashboard/applications?tour=${r.id}`} className="relative inline-flex items-start pr-3 font-semibold text-ink hover:text-terracotta-700">
                   <span className={r.taken >= r.cap && r.cap > 0 ? "text-red-600" : ""}>
                     {r.taken}/{r.cap}
                   </span>
@@ -177,7 +190,8 @@ export default function AnnouncementsTable({
         </tbody>
       </table>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">

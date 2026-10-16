@@ -23,7 +23,7 @@ export default function TourGrid({
   const [open, setOpen] = useState<PublicTour | null>(null);
   return (
     <>
-      <div className={`grid ${size === "sm" ? "gap-4" : "gap-6"} ${columns}`}>
+      <div className={`grid ${size === "sm" ? "gap-x-7 gap-y-8" : "gap-x-8 gap-y-10"} ${columns}`}>
         {tours.map((tour) => (
           <TourCard
             key={tour.id}

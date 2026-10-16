@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getT } from "@/i18n/server";
 import { getViewer } from "@/lib/viewer";
+import { adminUnread } from "@/lib/adminEvents";
 import HeaderBar, { type HeaderUser } from "./HeaderBar";
 
 // Rendered on the server from the session cookie, so the right buttons show
@@ -11,7 +12,7 @@ export default async function SiteHeader() {
 
   let headerUser: HeaderUser | null = null;
   if (viewer?.role === "admin") {
-    headerUser = { role: "admin", name: "", unread: 0 };
+    headerUser = { role: "admin", name: "", unread: await adminUnread(viewer.id) };
   } else if (viewer) {
     // The bell: unread notifications, for individuals and clubs alike.
     const supabase = await createClient();

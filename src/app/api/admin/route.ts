@@ -13,6 +13,7 @@ import { REPORT_KEYS, cleanReportItems } from "@/lib/report/items";
 import { sendToNewsChannel } from "@/lib/telegram";
 import { adminDisplayName, answerSuggestion, answerSupport } from "@/lib/messages";
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
+import { markAdminEventsSeen } from "@/lib/adminEvents";
 import { DIFFICULTIES, REGIONS, TERRAINS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
 import { DICTIONARIES } from "@/i18n/translate";
@@ -354,6 +355,12 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const { error } = await ctx.db.from("profiles").update({ passport_bio: null }).eq("id", userId).eq("role", "individual");
     if (error) return fail(error.message, 500);
     await logActivity({ actor: ctx.me.userId, action: "admin.bio_cleared", targetType: "profile", targetId: userId, ip: ctx.ip });
+    return NextResponse.json({ ok: true });
+  },
+
+  // The bell's list was seen: everything up to now stops counting.
+  async "events.seen"(ctx) {
+    await markAdminEventsSeen(ctx.me.userId);
     return NextResponse.json({ ok: true });
   },
 

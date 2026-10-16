@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
+import { SortButton, sortRows, type SortState } from "@/components/admin/Sortable";
 
 export type ApplicationRow = {
   id: string;
@@ -38,8 +39,10 @@ function ageFrom(birth: string | null, legacyAge: number | null): number | null 
   return age;
 }
 
-// Newest first; unread rows in bold. Opening one marks it read.
-export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) {
+// Newest first (the listing and date headers sort); unread rows in bold.
+// Opening one marks it read.
+// oneTour: the page of one hike, so its title is not repeated on every row.
+export default function ApplicationsTable({ rows, oneTour = false }: { rows: ApplicationRow[]; oneTour?: boolean }) {
   const t = useT();
   const fmtDate = useFormatDate();
   const router = useRouter();
@@ -47,6 +50,7 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
   const [read, setRead] = useState<Set<string>>(new Set());
   const [marks, setMarks] = useState<Record<string, boolean | null>>({});
   const [markError, setMarkError] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortState>({ col: "date", dir: "desc" });
   const today = new Date().toISOString().slice(0, 10);
   const attendedOf = (r: ApplicationRow) => (r.id in marks ? marks[r.id] : r.attended);
 
@@ -81,6 +85,7 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
   if (rows.length === 0) {
     return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("applications.empty")}</p>;
   }
+  const sorted = sortRows(rows, { tour: (r) => r.tourTitle, date: (r) => r.createdAt }, sort);
 
   const p = open?.person;
   const age = open ? ageFrom(p?.birth_date ?? null, p?.age ?? null) : null;
@@ -117,32 +122,44 @@ export default function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) 
       <p className="mb-2 text-xs text-muted">{t("applications.attendanceHint")}</p>
       {markError && <p className="mb-2 text-sm text-red-600">{markError}</p>}
       <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[700px] text-sm">
+        <table className={`w-full text-sm ${oneTour ? "min-w-[640px]" : "min-w-[820px]"}`}>
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-3">{t("applications.colTour")}</th>
+              {!oneTour && <th className="px-4 py-3"><SortButton label={t("applications.colTour")} col="tour" sort={sort} onSort={setSort} /></th>}
               <th className="px-4 py-3">{t("applications.colApplication")}</th>
-              <th className="px-4 py-3">{t("applications.colDate")}</th>
+              <th className="px-4 py-3"><SortButton label={t("applications.colDate")} col="date" sort={sort} onSort={setSort} /></th>
+              <th className="px-4 py-3">{t("applications.colName")}</th>
               <th className="px-4 py-3 text-center">{t("applications.colAttendance")}</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {sorted.map((r) => {
               const unread = r.unread && !read.has(r.id);
               return (
                 <tr key={r.id} className={`border-b border-line last:border-0 ${unread ? "font-bold text-ink" : "text-ink"}`}>
-                  <td className="px-4 py-3">
-                    {unread && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-600 align-middle" aria-hidden />}
-                    {r.tourTitle}
-                    {r.status === "cancelled" && (
+                  {!oneTour && (
+                    <td className="px-4 py-3">
+                      {unread && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-600 align-middle" aria-hidden />}
+                      {r.tourTitle}
+                      {r.status === "cancelled" && (
+                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                          {t("applications.cancelled")}
+                        </span>
+                      )}
+                    </td>
+                  )}
+                  <td className="whitespace-nowrap px-4 py-3">
+                    {oneTour && unread && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-600 align-middle" aria-hidden />}
+                    {r.seq}/{r.cap}
+                    {oneTour && r.status === "cancelled" && (
                       <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
                         {t("applications.cancelled")}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">{r.seq}/{r.cap}</td>
                   <td className="whitespace-nowrap px-4 py-3">{fmt(r.createdAt, true)}</td>
+                  <td className="max-w-[12rem] truncate px-4 py-3" title={name(r)}>{name(r)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-center font-normal">
                     {r.status === "confirmed" && r.tourDate <= today ? (
                       <span className="inline-flex gap-1.5">

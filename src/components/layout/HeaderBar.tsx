@@ -119,9 +119,9 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
   );
 
   const bell =
-    user && user.role !== "admin" ? (
+    user ? (
       <Link
-        href={user.role === "club" ? "/dashboard/notifications" : "/account/notifications"}
+        href={user.role === "admin" ? "/admin/notifications" : user.role === "club" ? "/dashboard/notifications" : "/account/notifications"}
         aria-label={t("header.notifications")}
         title={t("header.notifications")}
         className="relative rounded-lg p-2 text-muted hover:bg-sand hover:text-ink"

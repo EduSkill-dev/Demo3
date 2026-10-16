@@ -215,12 +215,13 @@ export default function TourSignup({
           </Link>
         ) : isPast ? (
           <p className="text-sm text-muted">{t("signup.past")}</p>
-        ) : role === "club" ? (
+        ) : role === "club" || role === "admin" ? (
+          // Only individuals book: a club or admin account sees the button, plainly off.
           <div className="space-y-2">
-            <button type="button" disabled className={primary}>
+            <button type="button" disabled aria-disabled="true" className="w-full cursor-not-allowed rounded-full border border-line bg-sand py-3 font-semibold text-muted">
               {t("signup.book")}
             </button>
-            <p className="text-xs text-muted">{t("signup.clubsCannot")}</p>
+            <p className="text-xs text-muted">{role === "club" ? t("signup.clubsCannot") : t("signup.adminsCannot")}</p>
           </div>
         ) : showPay ? (
           <PaymentSheet
