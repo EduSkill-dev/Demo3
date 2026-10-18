@@ -16,6 +16,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  // Scanners probe for files the site does not have (/phpinfo.php, /.env,
+  // /gcp-key.json…) and send other methods to pages. Each such request used
+  // to build the whole "not found" page and ran into the CPU limit of the
+  // free Workers plan; it is answered here, before anything is built.
+  const refused = refuseProbe(request);
+  if (refused) return refused;
+
   // Crawlers follow the calendar's month and day links without end (years
   // back and ahead, every filter). A date more than a year from today is
   // refused here, before any page is built ("gone", so crawlers drop it).
@@ -122,4 +129,32 @@ function outsideDateWindow(request: NextRequest): boolean {
     if (m && Math.abs(monthIndex(+m[1], +m[2]) - current) > 12) return true;
   }
   return false;
+}
+
+// The first part of every address the site serves (pages, routes, files).
+const KNOWN_ROOTS = new Set([
+  "", "about", "account", "admin", "api", "auth", "calendar", "calendar.ics", "clubs", "contact", "dashboard", "faq",
+  "help", "hikers", "login", "newsletter", "places", "privacy", "receipts", "register", "requests", "terms", "tours",
+  "robots.txt", "sitemap.xml", "icon.svg", ".well-known", "_next", "brand", "images", "favicon.ico",
+]);
+// File kinds the site never serves, anywhere.
+const PROBE_FILE = /\.(php\d?|phtml|asp|aspx|jsp|cgi|pl|env|ini|sql|sqlite|db|bak|old|orig|swp|log|ya?ml|toml|config|conf|git|svn|htaccess|htpasswd|ds_store|pem|key)$/i;
+
+const NOT_FOUND_HTML = '<!doctype html><html lang="hy"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Էջը չի գտնվել · Culmen</title><body style="font-family:system-ui,sans-serif;background:#faf6ee;color:#12332d;display:grid;place-items:center;min-height:90vh;margin:0;text-align:center"><div><h1 style="font-size:1.5rem">Էջը չի գտնվել</h1><p><a href="/" style="color:#c9491f">Culmen-ի գլխավոր էջ</a></p></div></body></html>';
+
+function refuseProbe(request: NextRequest): NextResponse | null {
+  if (process.env.NODE_ENV === "development") return null; // the dev server has its own /__nextjs… routes
+  const path = request.nextUrl.pathname;
+  const root = path.split("/")[1] ?? "";
+  const isApi = root === "api" || root === "auth" || root === "calendar.ics";
+  // Pages are only read; forms and buttons talk to /api.
+  if (!isApi && request.method !== "GET" && request.method !== "HEAD") {
+    return new NextResponse(null, { status: 405, headers: { Allow: "GET, HEAD" } });
+  }
+  const segments = path.split("/").filter(Boolean);
+  const hidden = segments.some((s) => s.startsWith(".") && s !== ".well-known");
+  if (!KNOWN_ROOTS.has(root) || hidden || PROBE_FILE.test(path)) {
+    return new NextResponse(NOT_FOUND_HTML, { status: 404, headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex", "cache-control": "public, max-age=3600" } });
+  }
+  return null;
 }
