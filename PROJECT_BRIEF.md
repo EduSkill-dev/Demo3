@@ -1,4 +1,4 @@
-# Highland — hiking & tour aggregator for Armenia
+# Culmen (formerly Highland) — hiking & tour aggregator for Armenia
 
 ## What this is
 A web platform (mobile version later) that aggregates Armenia's hiking clubs and

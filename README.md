@@ -1,12 +1,13 @@
-# Highland — starter scaffold
+# Culmen
 
-This is the initial Next.js + Supabase scaffold for the Highland hiking
-platform, matching `PROJECT_BRIEF.md`.
+Culmen (formerly Highland) is a hiking platform for Armenia: clubs publish
+hikes, people book them. Next.js + Supabase, hosted on Cloudflare Workers;
+the original brief is `PROJECT_BRIEF.md`.
 
 ## Testing
 
 ```
-node scripts/e2e-flows.cjs          # 35 end-to-end checks, live database
+node scripts/e2e-flows.cjs          # end-to-end checks (144 today), live database
 node scripts/run-sql.cjs <file.sql>  # apply a migration from the terminal
 node scripts/run-sql.cjs -e "select 1"
 ```

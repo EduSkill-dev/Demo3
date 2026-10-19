@@ -6,7 +6,7 @@
  *   node scripts/seed-demo.cjs           # create (or re-create) the demo data
  *   node scripts/seed-demo.cjs --remove  # delete it again
  *
- * Every demo account uses an @highland.test address, so it is easy to spot
+ * Every demo account uses an @culmen.test address, so it is easy to spot
  * and to remove. Reads .env.local (needs SUPABASE_SERVICE_ROLE_KEY).
  */
 const fs = require('fs');
@@ -21,7 +21,7 @@ const env = Object.fromEntries(
 );
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const DOMAIN = '@highland.test';
+const DOMAIN = '@culmen.test';
 const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 const inDays = (n) => new Date(Date.now() + n * 86400000).toISOString();
 
@@ -119,7 +119,7 @@ async function main() {
     if (tourError) throw new Error(`${c.key} tours: ${tourError.message}`);
     console.log(`✓ ${c.name} (${c.tariff}) — ${c.tours.length} hikes`);
   }
-  console.log('\nDemo club logins: demo-<arcivner|tavush|syunik>@highland.test / Demo-<key>-2026!');
+  console.log('\nDemo club logins: demo-<arcivner|tavush|syunik>@culmen.test / Demo-<key>-2026!');
 }
 
 main().catch((e) => {
