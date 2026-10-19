@@ -13,6 +13,7 @@ import { REPORT_KEYS, cleanReportItems } from "@/lib/report/items";
 import { sendToNewsChannel } from "@/lib/telegram";
 import { adminDisplayName, answerSuggestion, answerSupport } from "@/lib/messages";
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
+import { platformNewsEmail, sendEmailBatch } from "@/lib/email";
 import { markAdminEventsSeen } from "@/lib/adminEvents";
 import { DIFFICULTIES, REGIONS, TERRAINS, addOneMonth, isPackageId } from "@/lib/catalog";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
@@ -390,19 +391,49 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     return NextResponse.json({ ok: true });
   },
 
+  // A platform post for individuals and/or clubs (Gor, 2026-10-19):
+  //   * every account in the audience gets it on the site (the bell) — the
+  //     database trigger on news_posts writes those notifications;
+  //   * clubs also get it in the Telegram channel;
+  //   * by email: those with "notifications from the platform" on, or —
+  //     when it is important — everyone in the audience.
   async "news.post"(ctx, body) {
     if (!can(ctx.me, "news")) return fail(FORBIDDEN, 403);
     const text = typeof body.body === "string" ? body.body.trim() : "";
+    const toIndividuals = body.toIndividuals === true;
+    const toClubs = body.toClubs === true;
+    const important = body.important === true;
     if (!text) return fail("Գրեք գրառման տեքստը։");
     if (text.length > 4000) return fail("Գրառումը կարող է լինել առավելագույնը 4000 նիշ։");
-    const sent = await sendToNewsChannel(text);
-    // The channel's bot may already have reported this post (api/telegram/news): one row either way.
-    const row = { author_id: ctx.me.userId, author_label: ctx.me.email, body: text, tg_message_id: "id" in sent ? sent.id : null };
-    if ("id" in sent) await ctx.db.from("news_posts").upsert(row, { onConflict: "tg_message_id" });
-    else await ctx.db.from("news_posts").insert(row);
-    if ("error" in sent) return fail(`Գրառումը չհրապարակվեց՝ ${sent.error}`, 502);
-    await logActivity({ actor: ctx.me.userId, action: "admin.news_posted", targetType: "news", targetLabel: text.slice(0, 80), ip: ctx.ip });
-    return NextResponse.json({ ok: true });
+    if (!toIndividuals && !toClubs) return fail("Ընտրեք, թե ում համար է գրառումը՝ անհատներին, ակումբներին կամ երկուսին։");
+
+    const { data: row, error } = await ctx.db
+      .from("news_posts")
+      .insert({ author_id: ctx.me.userId, author_label: ctx.me.email, body: text, to_individuals: toIndividuals, to_clubs: toClubs, important })
+      .select("id")
+      .single();
+    if (error || !row) return fail(error?.message ?? "Չստացվեց պահել գրառումը։", 500);
+
+    let channelError: string | null = null;
+    if (toClubs) {
+      const sent = await sendToNewsChannel(text);
+      if ("id" in sent) await ctx.db.from("news_posts").update({ tg_message_id: sent.id }).eq("id", (row as { id: number }).id);
+      else channelError = sent.error;
+    }
+
+    const roles = [...(toIndividuals ? ["individual"] : []), ...(toClubs ? ["club"] : [])];
+    let q = ctx.db.from("profiles").select("email, role").in("role", roles).eq("status", "active");
+    if (!important) q = q.eq("platform_news", true);
+    const { data: people } = await q;
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://bolbol.am";
+    const mail = await sendEmailBatch(
+      ((people ?? []) as { email: string; role: string }[]).map((p) =>
+        platformNewsEmail({ to: p.email, body: text, important, settingsUrl: `${origin}${p.role === "club" ? "/dashboard/notifications" : "/account/notifications"}` })
+      )
+    );
+    await ctx.db.from("news_posts").update({ emailed: mail.sent }).eq("id", (row as { id: number }).id);
+    await logActivity({ actor: ctx.me.userId, action: "admin.news_posted", targetType: "news", targetLabel: text.slice(0, 80), ip: ctx.ip, meta: { toIndividuals, toClubs, important, emailed: mail.sent } });
+    return NextResponse.json({ ok: true, emailed: mail.sent, channelError });
   },
 
   // Super admin only: what a plan costs and allows. Every capability named in

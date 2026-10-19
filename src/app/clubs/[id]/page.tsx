@@ -111,9 +111,9 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
             <div className="min-w-0 flex-1">
               <h1 className="font-serif text-3xl font-semibold text-heading">{club.name}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                {showRating && rating && (
+                {showRating && (
                   <span className="font-semibold text-terracotta-500">
-                    ★ {Number(rating.average).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating.count })}</span>
+                    ★ {Number(rating?.average ?? 0).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating?.count ?? 0 })}</span>
                   </span>
                 )}
                 {/* The club's own public contacts (not the sign-up number). */}

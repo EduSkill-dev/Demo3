@@ -69,9 +69,8 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
       tourTitle: tour.title,
       tourDate: tour.date,
       cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
-      // Booked without an account: the details they gave.
+      // Booked without an account: the details they gave (the club is not told which).
       person: b.profiles ?? (b.guests ? { ...b.guests, age: null } : null),
-      guest: !b.profiles && !!b.guests,
       attended: b.attended,
       emergency: b.emergency_contact_name && b.emergency_contact_phone ? { name: b.emergency_contact_name, phone: b.emergency_contact_phone } : null,
     };

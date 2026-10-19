@@ -32,6 +32,11 @@ const en: DeepPartial<Dictionary> = {
     cancelConfirm: "Are you sure you want to cancel the booking?",
     cancelled: "The booking is cancelled. We emailed you and the club.",
   },
+  photoTips: {
+    tours: "Best: landscape photos at 4:3 or 3:2, at least 1600 pixels wide. The site scales them to 1600px and crops cards from the centre, so keep the subject in the middle. The first photo shows on the card and when shared.",
+    club: "A square (1:1) logo or photo, at least 800×800 pixels. The site scales it to 800px and crops it from the centre in places.",
+    portrait: "A square (1:1) portrait with the face in the middle, at least 600×600 pixels. The site scales it and shows it in a circle, cropping the edges.",
+  },
   common: {
     pickDate: "Pick a date",
     tooMany: "Too many attempts. Please try again a little later.",
@@ -366,7 +371,6 @@ const en: DeepPartial<Dictionary> = {
     full: "Full",
   },
   applications: {
-    guestTag: "guest",
     attendanceLater: "Attendance from the hike day",
     csvNotInPlan: "CSV export is not in your plan: it comes with the Advanced and PRO plans.",
     forTour: "Applications for “{title}”",

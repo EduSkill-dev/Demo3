@@ -39,7 +39,7 @@ export default async function ClubsPage() {
           {list.map((club) => {
             const pkg = activePackage(club);
             const r = ratingOf.get(club.id);
-            const rating = pkg && clubConfig(plans, club).public_show_rating && r ? { average: Number(r.average), count: r.count } : null;
+            const rating = pkg && clubConfig(plans, club).public_show_rating ? { average: Number(r?.average ?? 0), count: r?.count ?? 0 } : null;
             return <ClubCard key={club.id} club={club} rating={rating} upcoming={upcoming.get(club.id) ?? 0} t={t} />;
           })}
         </div>

@@ -35,8 +35,11 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
         return t("account.notifCancelled", { title: tour });
       case "tour_changed":
         return t("account.notifChanged", { title: tour });
-      default:
-        return n.message;
+      default: {
+        // A platform post can be long: its first line, cut short (the whole text opens in View).
+        const first = n.message.split("\n")[0];
+        return first.length > 90 ? `${first.slice(0, 88)}…` : first;
+      }
     }
   };
   const text = (n: NotificationRow) => {
@@ -122,7 +125,7 @@ export default function NotificationsTable({ rows }: { rows: NotificationRow[] }
         {open && (
           <div className="space-y-4 text-sm text-ink">
             <p className="text-xs text-muted">{when(open.created_at)}</p>
-            <p className="leading-6">{text(open)}</p>
+            <p className="whitespace-pre-line leading-6">{text(open)}</p>
             {open.tours && open.kind !== "tour_cancelled" && (
               <Link href={`/tours/${open.tours.id}`} className="inline-block rounded-full bg-spruce-500 px-4 py-2 font-semibold text-white hover:bg-spruce-900">
                 {t("account.openTour")}

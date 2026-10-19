@@ -95,10 +95,9 @@ export default function AccountsTable({
                   {/* A fixed width, so long names and addresses are cut with "…" (full text on hover). */}
                   <div className="w-[13rem] 2xl:w-[20rem]">
                     <span className="block truncate font-medium text-ink" title={r.name}>{r.name || "—"}</span>
-                    <span className="block truncate text-xs text-muted" title={`${r.email}${r.phone ? ` · ${r.phone}` : ""}`}>
-                      {r.email}
-                      {r.phone ? ` · ${r.phone}` : ""}
-                    </span>
+                    {/* The phone under the address, so the row stays narrow. */}
+                    <span className="block truncate text-xs text-muted" title={r.email}>{r.email}</span>
+                    {r.phone && <span className="block truncate text-xs text-muted">{r.phone}</span>}
                   </div>
                 </td>
                 {extraHeader && (
@@ -117,7 +116,7 @@ export default function AccountsTable({
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
                 </td>
                 <td className={`${td} text-center`}>
-                  <div className="flex items-start justify-center gap-1.5">
+                  <div className="flex max-w-[17rem] flex-wrap items-start justify-center gap-1.5">
                     <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
                     {shareNetworks && r.shareBlocked && (
                       <ClubShareEditor userId={r.userId} label={r.name || r.email} blocked={r.shareBlocked} platform={shareNetworks} />

@@ -8,6 +8,7 @@ import { uploadImage, removeStored, IMAGE_ACCEPT } from "@/lib/storage";
 import { MIN_PASSWORD, authErrorMessage, confirmUrl } from "@/lib/authErrors";
 import { useT } from "@/i18n/client";
 import type { Profile } from "@/types/database";
+import InfoTip from "@/components/ui/InfoTip";
 
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
@@ -130,6 +131,7 @@ export default function ProfileSettings({
           <div className="flex flex-wrap gap-2">
             <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-spruce-500">
               {busy === "photo" ? "..." : t("account.changePhoto")}
+              <InfoTip text={t("photoTips.portrait")} />
               <input
                 type="file"
                 accept={IMAGE_ACCEPT}

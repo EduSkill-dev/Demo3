@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage, removeStored, IMAGE_ACCEPT } from "@/lib/storage";
 import { useT } from "@/i18n/client";
 import type { ClubGuide } from "@/types/database";
+import InfoTip from "@/components/ui/InfoTip";
 
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
@@ -87,10 +88,13 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
 
       {draft && (
         <form onSubmit={save} className="mt-4 grid max-w-2xl gap-4 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[6rem_1fr]">
-          <label className="group relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-line bg-sand text-xs text-muted">
-            {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : t("clubData.guidePhoto")}
-            <input type="file" accept={IMAGE_ACCEPT} className="sr-only" onChange={(e) => setDraft({ ...draft, file: e.target.files?.[0] ?? null })} />
-          </label>
+          <div className="flex flex-col items-center gap-1">
+            <label className="group relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-line bg-sand text-xs text-muted">
+              {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : t("clubData.guidePhoto")}
+              <input type="file" accept={IMAGE_ACCEPT} className="sr-only" onChange={(e) => setDraft({ ...draft, file: e.target.files?.[0] ?? null })} />
+            </label>
+            <InfoTip text={t("photoTips.portrait")} />
+          </div>
           <div className="space-y-3">
             <input required aria-label={t("clubData.guideName")} placeholder={t("clubData.guideName")} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={input} />
             {/* Free text with suggestions: clubs name positions their own way. */}

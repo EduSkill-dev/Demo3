@@ -142,6 +142,45 @@ export async function sendEmail(input: {
   }
 }
 
+// Many letters at once (a platform post): Resend takes up to 100 per call,
+// so a thousand recipients are ten requests — well inside a Worker's
+// limits. Without Resend they go one by one (Gmail), at most 40 per call.
+export async function sendEmailBatch(
+  messages: { to: string; subject: string; html: string; text: string }[]
+): Promise<{ sent: number; skipped: number; failed: number }> {
+  const out = { sent: 0, skipped: 0, failed: 0 };
+  const real = messages.filter((m) => m.to && !UNDELIVERABLE.test(m.to));
+  out.skipped = messages.length - real.length;
+  if (process.env.EMAIL_DISABLED || real.length === 0) return { ...out, skipped: messages.length };
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    for (const m of real.slice(0, 40)) {
+      const r = await sendEmail(m);
+      if (r.ok) out.sent++;
+      else if (r.skipped) out.skipped++;
+      else out.failed++;
+    }
+    out.skipped += Math.max(0, real.length - 40);
+    return out;
+  }
+  const from = process.env.EMAIL_FROM || "Culmen <onboarding@resend.dev>";
+  for (let i = 0; i < real.length; i += 100) {
+    const chunk = real.slice(i, i + 100);
+    try {
+      const res = await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(chunk.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html, text: m.text }))),
+      });
+      if (res.ok) out.sent += chunk.length;
+      else out.failed += chunk.length;
+    } catch {
+      out.failed += chunk.length;
+    }
+  }
+  return out;
+}
+
 /* ---------------------------------------------------------------- templates */
 
 export function bookingConfirmationEmail(input: {
@@ -159,8 +198,8 @@ export function bookingConfirmationEmail(input: {
     row("Արշավ", input.tourTitle),
     row("Ամսաթիվ", input.date),
     row("Ակումբ", input.clubName),
-    input.meetingPoint ? row("Հավաքի վայր", input.meetingPoint) : "",
-    input.meetingTime ? row("Հավաքի ժամ", input.meetingTime.slice(0, 5)) : "",
+    input.meetingPoint ? row("Մեկնարկի վայր", input.meetingPoint) : "",
+    input.meetingTime ? row("Մեկնարկի ժամ", input.meetingTime.slice(0, 5)) : "",
     row("Չեղարկում", `մինչև ${input.cancelHours ?? DEFAULT_CANCEL_HOURS} ժամ առաջ`),
   ].join("");
 
@@ -435,6 +474,17 @@ export function rollcallReminderEmail(input: { to: string; clubName: string; tit
      ${button(url, "Նշել կայքում")}`
   );
   return { to: input.to, subject: `Culmen — նշեք «${input.title}» արշավի ներկա/բացական`, html, text: `${input.unmarked} մասնակցի ներկայությունը դեռ նշված չէ։ ${url}` };
+}
+
+// A platform post by email (admin area → News). An important one says so.
+export function platformNewsEmail(input: { to: string; body: string; important: boolean; settingsUrl: string }) {
+  const title = input.important ? "Կարևոր տեղեկություն Culmen-ից" : "Նորություն Culmen-ից";
+  const html = layout(
+    title,
+    `<p style="white-space:pre-line">${esc(input.body)}</p>
+     ${input.important ? "" : `<p style="color:#5b6b66;font-size:13px">Այս նամակները կարող եք անջատել Ձեր էջի «Ծանուցումներ» բաժնում՝ <a href="${input.settingsUrl}">${input.settingsUrl}</a></p>`}`
+  );
+  return { to: input.to, subject: `Culmen — ${input.important ? "կարևոր տեղեկություն" : "նորություն"}`, html, text: input.body };
 }
 
 // To newsletter subscribers: the hikes published since the last digest.

@@ -8,6 +8,7 @@ import type { Sight } from "@/lib/sights";
 import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import { adminAction, adminButton, adminGhost, adminInlineInput, adminInput } from "./adminApi";
 import { SortButton, sortRows, type SortState } from "./Sortable";
+import InfoTip from "@/components/ui/InfoTip";
 
 type Draft = {
   id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string; difficulty: string; active: boolean;
@@ -139,7 +140,10 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
         </div>
         <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <div>
-            <span className="mb-1 block text-sm font-medium text-ink">Նկար</span>
+            <span className="mb-1 block text-sm font-medium text-ink">
+              Նկար
+              <InfoTip text="Հորիզոնական նկար՝ 4:3 կամ 3:2 հարաբերությամբ, առնվազն 1600 պիքսել լայնությամբ։ Կայքը նկարը կփոքրացնի մինչև 1600px, իսկ քարտերում ավտոմատ կկտրի կենտրոնից, ուստի գլխավորը թող լինի նկարի մեջտեղում։" />
+            </span>
             {draft.photo_url ? (
               <img src={draft.photo_url} alt="" className="h-32 w-full rounded-lg object-cover" />
             ) : (

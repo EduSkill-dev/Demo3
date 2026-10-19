@@ -15,6 +15,7 @@ import { serverErrorMessage } from "@/lib/serverErrors";
 import { useT } from "@/i18n/client";
 import PlannerPanel from "@/components/club/PlannerPanel";
 import { DIFFICULTY_COLORS } from "@/lib/calendar";
+import InfoTip from "@/components/ui/InfoTip";
 
 const MAX_PHOTOS = 5;
 
@@ -392,6 +393,7 @@ export default function TourForm({
       <div>
         <label htmlFor="photos" className={label}>
           {t("tourForm.photos", { count: previews.length, max: MAX_PHOTOS })}
+          <InfoTip text={t("photoTips.tours")} />
         </label>
         <input
           id="photos"

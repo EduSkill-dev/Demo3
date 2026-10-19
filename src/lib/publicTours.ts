@@ -10,7 +10,8 @@ export type PublicClubInfo = {
   id: string;
   name: string;
   photo: string | null;
-  // Present only when the club's package shows ratings to the public.
+  // Present when the club's package shows ratings to the public — 0/5 (0)
+  // until the first review.
   rating: { average: number; count: number } | null;
 };
 
@@ -74,7 +75,7 @@ export async function getPublicTours(
         id: clubs!.id,
         name: clubs!.name,
         photo: clubs!.photo_url,
-        rating: clubConfig(plans, clubs).public_show_rating && r ? { average: Number(r.average), count: r.count } : null,
+        rating: clubConfig(plans, clubs).public_show_rating ? { average: Number(r?.average ?? 0), count: r?.count ?? 0 } : null,
       },
       likes: likes.tours.get(tour.id) ?? 0,
       sights: (tour.sight_ids ?? []).flatMap((id) => (sightNames.has(id) ? [{ id, name: sightNames.get(id)! }] : [])),

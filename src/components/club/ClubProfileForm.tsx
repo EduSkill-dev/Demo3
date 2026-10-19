@@ -10,6 +10,7 @@ import { useT } from "@/i18n/client";
 import type { Club } from "@/types/database";
 import { SOCIAL_EXAMPLES, SOCIAL_NAMES, SOCIAL_NETS, normalizeSocial, socialOk, type SocialNet } from "@/lib/socialLinks";
 import SocialIcon, { SOCIAL_COLOR } from "@/components/club/SocialIcon";
+import InfoTip from "@/components/ui/InfoTip";
 
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
@@ -104,7 +105,10 @@ export default function ClubProfileForm({ club }: { club: Club }) {
           )}
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium text-ink">{t("clubData.photo")}</p>
+          <p className="text-sm font-medium text-ink">
+            {t("clubData.photo")}
+            <InfoTip text={t("photoTips.club")} />
+          </p>
           <div className="flex flex-wrap gap-2">
             <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:border-spruce-500">
               {busy === "photo" ? "..." : t("clubData.upload")}

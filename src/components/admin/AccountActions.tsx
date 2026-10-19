@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ACCOUNT_LIMITS, type AccountLimit, type AccountStatus } from "@/lib/adminLabels";
-import { adminAction, adminDanger, adminGhost } from "./adminApi";
+import { adminAction, adminGhost } from "./adminApi";
 
 // Ask, call /api/admin for this account, refresh the list.
 function useAccountAction(userId: string) {
@@ -58,15 +58,20 @@ export default function AccountActions({ userId, status, label }: { userId: stri
             Արգելափակել
           </button>
         )}
+        {/* Delete: a red bin, to save room in the row. */}
         <button
           type="button"
           disabled={busy}
-          className={`${adminDanger} ${compact}`}
+          aria-label="Ջնջել հաշիվը"
+          title="Ջնջել հաշիվը"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/40"
           onClick={() =>
             run({ action: "account.delete" }, `Ջնջե՞լ «${label}» հաշիվը իր ամբողջ տվյալներով։ Այս գործողությունը հետ բերել հնարավոր չէ։`)
           }
         >
-          Ջնջել
+          <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3.5 5.5h13M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M5.5 5.5l.8 10.6a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10.6M8.5 9v5M11.5 9v5" />
+          </svg>
         </button>
       </div>
       {error && <p className="mt-1 text-right text-xs text-red-600">{error}</p>}
@@ -88,7 +93,7 @@ export function LimitSwitches({
 
   return (
     <div>
-      <div className="flex justify-center gap-1.5">
+      <div className="flex flex-wrap justify-center gap-1.5">
         {limits.map((l) => {
           const name = ACCOUNT_LIMITS[l.key].label;
           return (

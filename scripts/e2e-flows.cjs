@@ -499,7 +499,7 @@ async function main() {
     const nextJs = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
     devServer = spawn(process.execPath, [nextJs, 'dev', '--port', String(DEV_PORT)], {
       stdio: 'pipe',
-      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', TELEGRAM_SUGGESTIONS_CHAT_ID: '-100456', MAIL_INBOUND_SECRET: 'e2e-mail-secret', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
+      env: { ...process.env, ...env, CRON_SECRET: 'e2e-cron-secret', TELEGRAM_WEBHOOK_SECRET: 'e2e-tg-secret', TELEGRAM_CHAT_ID: '-100123', TELEGRAM_SUGGESTIONS_CHAT_ID: '-100456', TELEGRAM_NEWS_CHANNEL_ID: '-100789', MAIL_INBOUND_SECRET: 'e2e-mail-secret', EMAIL_DISABLED: '1', NEXT_DIST_DIR: '.next-e2e' },
       shell: false,
     });
     devServer.on('error', (err) => console.error('     dev server error:', err.message));
@@ -1432,6 +1432,27 @@ async function main() {
         if (regUser) await admin.from('bookings').delete().eq('tour_id', tourId).eq('user_id', regUser.id);
         await admin.from('guests').delete().like('email', `e2e-%-${stamp}@example.com`);
         await admin.from('tours').update({ price: before.price, date: before.date, status: before.status, max_participants: before.max_participants }).eq('id', tourId);
+      }
+
+      // ---------- Platform posts: whom they reach ----------
+      {
+        const tag = `E2E post ${stamp}`;
+        const none = await act({ action: 'news.post', body: tag + ' none' }, superCookie);
+        const byInd = await api('/api/admin', { action: 'news.post', body: tag, toIndividuals: true }, indCookie);
+        const toInd = await act({ action: 'news.post', body: tag + ' ind', toIndividuals: true }, superCookie);
+        const toClubImportant = await act({ action: 'news.post', body: tag + ' club', toClubs: true, important: true }, superCookie);
+        const notes = (await admin.from('notifications').select('user_id, message').like('message', `%${tag}%`)).data || [];
+        const got = (id, suffix) => notes.some((n) => n.user_id === id && n.message.endsWith(suffix));
+        const reachedEmails = (await admin.from('profiles').select('email').in('id', [...new Set(notes.map((n) => n.user_id))])).data || [];
+        const realReached = reachedEmails.filter((r) => !/@example\.com$/i.test(r.email)).length; // test addresses only
+        const posts = (await admin.from('news_posts').select('to_individuals, to_clubs, important, tg_message_id').like('body', `${tag}%`)).data || [];
+        check('platform posts: an admin chooses individuals and/or clubs; everyone chosen gets it on the bell (an important one marked), the others do not, a test post never reaches real accounts',
+          none.status === 400 && byInd.status >= 401 && toInd.status === 200 && toClubImportant.status === 200
+            && got(ids.ind, 'ind') && !got(ids.club, 'ind') && got(ids.club, 'club') && !got(ids.ind, 'club')
+            && notes.some((n) => n.user_id === ids.club && n.message.startsWith('❗')) && realReached === 0 && posts.length === 2,
+          `none=${none.status} byInd=${byInd.status} ind=${toInd.status} club=${toClubImportant.status} ${JSON.stringify(toClubImportant.body)} notes=${notes.length} real=${realReached} posts=${JSON.stringify(posts)}`);
+        await admin.from('notifications').delete().like('message', `%${tag}%`);
+        await admin.from('news_posts').delete().like('body', `${tag}%`);
       }
 
     }

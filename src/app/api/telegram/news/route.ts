@@ -23,6 +23,14 @@ async function handlePOST(req: Request) {
   if (update.edited_channel_post) {
     await db.from("news_posts").update({ body: text }).eq("tg_message_id", post.message_id);
   } else {
+    // Written in the admin area a moment ago (its channel id may not be saved
+    // yet): attach the id to that row instead of storing the post again.
+    const since = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { data: mine } = await db.from("news_posts").select("id").eq("body", text).is("tg_message_id", null).gte("created_at", since).limit(1).maybeSingle();
+    if (mine) {
+      await db.from("news_posts").update({ tg_message_id: post.message_id }).eq("id", (mine as { id: number }).id);
+      return NextResponse.json({ ok: true });
+    }
     await db
       .from("news_posts")
       .upsert({ body: text, tg_message_id: post.message_id, author_label: post.author_signature ? `Telegram · ${post.author_signature}` : "Telegram" }, { onConflict: "tg_message_id", ignoreDuplicates: true });
