@@ -44,7 +44,7 @@ export default function TourCard({
   const clubHref = `/clubs/${tour.club.id}${backHref ? `?back=${encodeURIComponent(backHref)}` : ""}`;
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-terracotta-300/70 hover:shadow-lg">
       <div className="relative">
         <CardPhotos photos={tour.photo_urls ?? []} title={tour.title} className="h-52" onOpen={onOpen} />
         {ended ? (
@@ -141,7 +141,7 @@ export default function TourCard({
                 </span>
               )}
             </p>
-            <p className="shrink-0 whitespace-nowrap font-bold text-heading">
+            <p className="shrink-0 whitespace-nowrap font-bold text-terracotta-700 dark:text-terracotta-300">
               {Number(tour.price) > 0 ? t("common.perPerson", { price: formatAmd(tour.price) }) : t("common.free")}
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function TourCard({
             data-view
             type="button"
             onClick={onOpen}
-            className="mt-3 w-full rounded-full bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-card hover:bg-spruce-900"
+            className="mt-3 w-full rounded-lg bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-card hover:bg-spruce-900"
           >
             {t("toursPage.seeMore")}
           </button>

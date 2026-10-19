@@ -24,7 +24,7 @@ export default function FilterPanel({ active, found, show, hide, children }: { a
           {open ? hide : show}
           {active > 0 && <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-terracotta-500 px-1.5 text-xs font-bold text-white">{active}</span>}
         </button>
-        <span className="text-[15px] font-semibold text-muted">{found}</span>
+        <span className="rounded-full bg-apricot-100 px-3 py-1 text-sm font-bold text-apricot-700 dark:bg-apricot-500/20 dark:text-apricot-300">{found}</span>
       </div>
       <div className={open ? "max-md:mt-3" : "max-md:hidden"}>{children}</div>
     </>

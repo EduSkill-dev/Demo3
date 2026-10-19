@@ -81,7 +81,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   const used = rows.filter((r) => r.status === "confirmed" && r.tourDate >= today).length;
   const max = limits.maxListings * limits.maxPerTour;
 
-  const csvClass = "rounded-full border-2 px-4 py-2 text-sm font-semibold";
+  const csvClass = "rounded-lg border-2 px-4 py-2 text-sm font-semibold";
   return (
     <div className="space-y-5">
       {only && (

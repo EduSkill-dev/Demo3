@@ -82,8 +82,8 @@ export default function SupportChat() {
         <h2 className="font-serif text-xl font-semibold text-heading">{t("support.title")}</h2>
         <p className="mt-2 text-ink">{t("support.guestText")}</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/login?next=/help" className="rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">{t("header.login")}</Link>
-          <Link href="/register" className="rounded-full border-2 border-spruce-900 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line">{t("header.register")}</Link>
+          <Link href="/login?next=/help" className="rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">{t("header.login")}</Link>
+          <Link href="/register" className="rounded-lg border-2 border-spruce-900 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line">{t("header.register")}</Link>
         </div>
         <p className="mt-4 text-sm text-muted">{t("support.guestForm")}</p>
       </section>
@@ -126,7 +126,7 @@ export default function SupportChat() {
           />
           <div className="mt-2 flex items-center justify-between gap-3">
             <span className="text-xs text-muted">{text.length}/{MAX}</span>
-            <button data-view type="submit" disabled={busy || !text.trim()} className="rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
+            <button data-view type="submit" disabled={busy || !text.trim()} className="rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
               {busy ? "..." : t("support.send")}
             </button>
           </div>

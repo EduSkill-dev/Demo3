@@ -42,7 +42,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center">
         <p className="text-muted">{t("account.toursEmpty")}</p>
-        <Link href="/tours" className="mt-4 inline-block rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
+        <Link href="/tours" className="mt-4 inline-block rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
           {t("account.findTours")}
         </Link>
       </div>

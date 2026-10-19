@@ -54,7 +54,7 @@ export default function TelegramConnect({ allowNew = false }: { allowNew?: boole
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#229ED9] px-5 text-sm font-semibold text-white hover:opacity-90"
+          className="flex h-11 items-center justify-center gap-2 rounded-lg bg-[#229ED9] px-5 text-sm font-semibold text-white hover:opacity-90"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
             <path d="M21.9 4.3 18.7 19.4c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.2-8.3c.4-.4-.1-.6-.6-.2L6.1 13 1.3 11.5c-1-.3-1.1-1 .2-1.5L20.5 2.7c.9-.3 1.7.2 1.4 1.6z" />

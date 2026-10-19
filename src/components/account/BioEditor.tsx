@@ -51,7 +51,7 @@ export default function BioEditor({ userId, initial }: { userId: string; initial
         <span className={`text-xs ${text.length > BIO_MAX ? "font-bold text-red-600" : "text-muted"}`}>{text.length}/{BIO_MAX}</span>
       </div>
       <div className="mt-2 flex items-center gap-3">
-        <button type="submit" disabled={busy || !!problem || text.trim() === initial.trim()} className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
+        <button type="submit" disabled={busy || !!problem || text.trim() === initial.trim()} className="rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
           {busy ? "..." : t("passport.bioSave")}
         </button>
         {saved && <span className="text-sm font-semibold text-spruce-700 dark:text-spruce-300">{t("passport.bioSaved")}</span>}

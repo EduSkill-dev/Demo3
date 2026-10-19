@@ -18,7 +18,7 @@ export default async function CustomTourCta() {
         </div>
         <Link
           href={viewer ? "/account/requests/new" : "/requests/new"}
-          className="shrink-0 rounded-full bg-apricot-500 px-6 py-3 text-center font-bold text-spruce-900 hover:bg-apricot-300"
+          className="shrink-0 rounded-lg bg-apricot-500 px-6 py-3 text-center font-bold text-spruce-900 hover:bg-apricot-300"
         >
           {t("custom.button")}
         </Link>

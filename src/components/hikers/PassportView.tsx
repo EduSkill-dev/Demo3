@@ -6,7 +6,7 @@ import BadgeMedal from "@/components/hikers/BadgeMedal";
 
 // Round on the cards; on the passport itself a large square with soft corners.
 export function HikerAvatar({ name, photo, size = "md" }: { name: string; photo: string | null; size?: "md" | "lg" }) {
-  const box = size === "lg" ? "h-32 w-32 rounded-3xl text-4xl sm:h-36 sm:w-36" : "h-14 w-14 rounded-full text-lg";
+  const box = size === "lg" ? "h-32 w-32 rounded-2xl text-4xl sm:h-36 sm:w-36" : "h-14 w-14 rounded-full text-lg";
   return photo ? (
     <img src={photo} alt="" className={`${box} shrink-0 object-cover shadow-sm`} />
   ) : (

@@ -48,7 +48,7 @@ export default function TourGrid({
           <button
             type="button"
             onClick={() => setLimit((n) => n + step)}
-            className="rounded-full border-2 border-spruce-900 px-6 py-2.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line"
+            className="rounded-lg border-2 border-spruce-900 px-6 py-2.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line"
           >
             {t("toursPage.showMoreHikes")}
           </button>

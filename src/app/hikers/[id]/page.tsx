@@ -51,7 +51,7 @@ export default async function HikerPage({ params }: { params: { id: string } }) 
         </div>
         {/* Their own words (if they wrote any). */}
         {bio && (
-          <blockquote className="relative flex flex-col justify-center rounded-3xl border border-line bg-surface px-6 py-5 lg:ml-6">
+          <blockquote className="relative flex flex-col justify-center rounded-2xl border border-line bg-surface px-6 py-5 lg:ml-6">
             <span className="absolute -top-3 left-5 font-serif text-5xl leading-none text-apricot-500" aria-hidden="true">“</span>
             <p className="whitespace-pre-line break-words text-[15px] leading-relaxed text-ink">{bio}</p>
             {admin && can(admin, "individuals") && <ClearBioButton userId={hiker.id} name={hiker.name} />}

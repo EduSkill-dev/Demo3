@@ -17,10 +17,10 @@ export default function PageError({ error, reset }: { error: Error & { digest?: 
       <h1 className="font-serif text-2xl font-semibold text-heading">{t("errors.pageTitle")}</h1>
       <p className="mt-3 text-muted">{t("errors.pageText")}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <button data-view type="button" onClick={reset} className="rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
+        <button data-view type="button" onClick={reset} className="rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
           {t("errors.tryAgain")}
         </button>
-        <a href="/" className="rounded-full border-2 border-spruce-900 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line">
+        <a href="/" className="rounded-lg border-2 border-spruce-900 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line">
           {t("errors.goHome")}
         </a>
       </div>

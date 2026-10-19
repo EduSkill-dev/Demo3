@@ -16,6 +16,6 @@ export const fieldClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 export const labelClass = "mb-1 block text-sm font-medium text-ink";
 export const primaryButton =
-  "rounded-full bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-lg bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50";
 export const ghostButton =
   "rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink hover:border-spruce-500 disabled:cursor-not-allowed disabled:opacity-50";

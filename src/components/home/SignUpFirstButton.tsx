@@ -36,7 +36,7 @@ export default function SignUpFirstButton({
         <div className="mt-3 rounded-2xl border border-apricot-300 bg-apricot-100 p-3 text-sm text-spruce-900" role="status">
           <p className="font-semibold">{t("home.needAccount")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Link href={`/register?as=individual&next=${encodeURIComponent(href)}`} className="rounded-full bg-spruce-500 px-4 py-1.5 font-semibold text-white hover:bg-spruce-900">
+            <Link href={`/register?as=individual&next=${encodeURIComponent(href)}`} className="rounded-lg bg-spruce-500 px-4 py-1.5 font-semibold text-white hover:bg-spruce-900">
               {t("header.register")}
             </Link>
             <Link href={`/login?next=${encodeURIComponent(href)}`} className="rounded-full border-2 border-spruce-900 px-4 py-1 font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-white">

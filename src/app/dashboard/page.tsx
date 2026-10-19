@@ -100,11 +100,11 @@ export default async function AnnouncementsPage() {
           {t("announcements.counter", { used: limits.used, max: limits.maxListings })}
         </p>
         {canAdd ? (
-          <Link href="/dashboard/listings/new" className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
+          <Link href="/dashboard/listings/new" className="rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
             {t("announcements.new")}
           </Link>
         ) : (
-          <span aria-disabled className="cursor-not-allowed rounded-full bg-spruce-500/40 px-4 py-2 text-sm font-semibold text-white">
+          <span aria-disabled className="cursor-not-allowed rounded-lg bg-spruce-500/40 px-4 py-2 text-sm font-semibold text-white">
             {t("announcements.new")}
           </span>
         )}

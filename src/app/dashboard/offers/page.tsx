@@ -43,7 +43,7 @@ export default async function ClubOffersPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-muted">{t("requests.myOffersIntro")}</p>
-        <Link href="/requests" className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
+        <Link href="/requests" className="rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
           {t("requests.browse")}
         </Link>
       </div>

@@ -19,10 +19,10 @@ export default async function ClubNewsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
         <p className="text-ink">{t("clubNews.intro")}</p>
         <div className="flex flex-wrap gap-2">
-          <a href="https://t.me/culmens_community" target="_blank" rel="noopener noreferrer" className="rounded-full border-2 border-spruce-900 px-4 py-1.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line">
+          <a href="https://t.me/culmens_community" target="_blank" rel="noopener noreferrer" className="rounded-lg border-2 border-spruce-900 px-4 py-1.5 text-sm font-semibold text-ink hover:bg-sand dark:border-line">
             Telegram
           </a>
-          <a href="/help" className="rounded-full bg-spruce-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-spruce-900">
+          <a href="/help" className="rounded-lg bg-spruce-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-spruce-900">
             {t("clubNews.ask")}
           </a>
         </div>

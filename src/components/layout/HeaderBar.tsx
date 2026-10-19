@@ -100,7 +100,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
     }`;
   // Secondary button: transparent, 2px Spruce 900 border and text.
   const secondary =
-    "rounded-full border-2 border-spruce-900 px-4 py-1.5 text-sm font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink dark:hover:bg-ink dark:hover:text-spruce-900";
+    "rounded-lg border-2 border-spruce-900 px-4 py-1.5 text-sm font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink dark:hover:bg-ink dark:hover:text-spruce-900";
 
   const registerMenu = (
     <div
@@ -213,7 +213,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
                   aria-haspopup="menu"
                   aria-expanded={registerOpen}
                   onClick={() => setRegisterOpen((v) => !v)}
-                  className="flex items-center gap-1 rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900"
+                  className="flex items-center gap-1 rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900"
                 >
                   {t("header.register")}
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 8l5 5 5-5" /></svg>
@@ -242,7 +242,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
               <span className="truncate max-sm:hidden">{t("header.hello", { name: user.name || homeLabel })}</span>
             </Link>
           ) : (
-            <Link href="/login" className="mr-1 rounded-full border-2 border-spruce-900 px-3.5 py-1.5 text-sm font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink">
+            <Link href="/login" className="mr-1 rounded-lg border-2 border-spruce-900 px-3.5 py-1.5 text-sm font-semibold text-spruce-900 hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink">
               {t("header.login")}
             </Link>
           )}
@@ -283,12 +283,12 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
           </nav>
           <div className="mt-3 space-y-2 border-t border-line pt-4">
             {user ? (
-              <Link href={home!} className="block rounded-full bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
+              <Link href={home!} className="block rounded-lg bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
                 {homeLabel}
               </Link>
             ) : (
               <>
-                <Link href="/register?as=individual" className="block rounded-full bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
+                <Link href="/register?as=individual" className="block rounded-lg bg-spruce-500 py-2.5 text-center text-sm font-semibold text-white">
                   {t("header.register")} — {t("header.asIndividual")}
                 </Link>
                 <Link href="/register/club" className="block rounded-lg border border-terracotta-500 py-2.5 text-center text-sm font-semibold text-terracotta-700 dark:text-terracotta-300">

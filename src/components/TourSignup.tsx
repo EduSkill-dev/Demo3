@@ -189,7 +189,7 @@ export default function TourSignup({
   );
 
   const primary =
-    "w-full rounded-full bg-spruce-500 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:bg-spruce-500/50";
+    "w-full rounded-lg bg-terracotta-500 py-3 font-semibold text-white shadow-sm hover:bg-terracotta-700 disabled:cursor-not-allowed disabled:bg-terracotta-500/50";
 
   return (
     <div className={bare ? "" : "rounded-2xl border border-line bg-surface p-5"}>

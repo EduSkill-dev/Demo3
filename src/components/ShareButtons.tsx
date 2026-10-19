@@ -5,7 +5,7 @@ import { useT } from "@/i18n/client";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import { SHARE_NETWORKS, shareHref, type ShareNetwork } from "@/lib/share";
 
-const pill = "flex h-11 items-center justify-center rounded-full border-2 border-spruce-900 px-4 text-sm font-semibold text-ink hover:bg-sand dark:border-line";
+const pill = "flex h-11 items-center justify-center rounded-lg border-2 border-spruce-900 px-4 text-sm font-semibold text-ink hover:bg-sand dark:border-line";
 
 // Sharing a hike: copy its link, or send it to one of the social networks
 // the admins switched on (`networks`; none = only the copy button). A

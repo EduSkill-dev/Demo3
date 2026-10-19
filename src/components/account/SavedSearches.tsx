@@ -205,7 +205,7 @@ export default function SavedSearches({
           <button
             type="submit"
             disabled={busy || full}
-            className="rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50"
+            className="rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50"
           >
             {t("searches.add")}
           </button>

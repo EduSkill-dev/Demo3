@@ -55,7 +55,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
     return (
       <main className="mx-auto max-w-3xl px-4 py-20 text-center">
         <h1 className="font-serif text-2xl font-semibold text-heading">{t("toursPage.empty")}</h1>
-        <Link href="/tours" className="mt-6 inline-block rounded-full bg-spruce-500 px-5 py-3 font-semibold text-white">
+        <Link href="/tours" className="mt-6 inline-block rounded-lg bg-spruce-500 px-5 py-3 font-semibold text-white">
           {t("home.allTours")}
         </Link>
       </main>
@@ -169,7 +169,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
               />
               <AddToCalendar
                 tour={{ id: tour.id, title: tour.title, date: tour.date, end_date: tour.end_date ?? null, place: tour.regions.map((r) => t(`region.${r}`)).join(", "), club: club?.name ?? "" }}
-                className="flex h-10 items-center gap-2 rounded-full border-2 border-line px-3.5 text-xs font-semibold text-ink hover:border-spruce-500"
+                className="flex h-10 items-center gap-2 rounded-lg border-2 border-line px-3.5 text-xs font-semibold text-ink hover:border-spruce-500"
               />
             </div>
           )}

@@ -47,7 +47,7 @@ export default async function AccountRequestsPage() {
         {paused ? (
           <span className="max-w-sm text-xs text-red-600">{t("errors.requestsPaused")}</span>
         ) : open < MAX_OPEN_REQUESTS ? (
-          <Link href="/account/requests/new" className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
+          <Link href="/account/requests/new" className="rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
             {t("requests.newButton")}
           </Link>
         ) : (

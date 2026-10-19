@@ -430,7 +430,7 @@ export default function TourForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-full bg-spruce-500 px-5 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-spruce-500 px-5 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? t("tourForm.saving") : mode === "create" ? t("tourForm.create") : t("tourForm.save")}
         </button>

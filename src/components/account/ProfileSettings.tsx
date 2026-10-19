@@ -177,7 +177,7 @@ export default function ProfileSettings({
           )}
         </div>
         <NoteLine note={notes.profile ?? null} />
-        <button type="submit" disabled={busy === "profile"} className="rounded-full bg-spruce-500 px-5 py-2.5 font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
+        <button type="submit" disabled={busy === "profile"} className="rounded-lg bg-spruce-500 px-5 py-2.5 font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
           {busy === "profile" ? "..." : t("account.saveProfile")}
         </button>
       </form>

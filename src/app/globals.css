@@ -6,27 +6,45 @@
    The four brand families (Spruce, Terracotta, Sand, Apricot) are fixed
    colours in the Tailwind theme; these are the surfaces and text that the
    dark theme swaps. */
+/* 2026-10-20: less beige — a clean warm-white page, white cards, softer
+   panels and neutral borders; the colour comes from Spruce, Terracotta and
+   Apricot accents (about 60 / 30 / 10). */
 :root {
-  --c-stone: 251 246 236;   /* Sand 50  — page background */
-  --c-sand: 243 234 218;    /* Sand 100 — tinted panels */
-  --c-surface: 255 253 248; /* card */
+  --c-stone: 247 246 242;   /* page background: warm white */
+  --c-sand: 240 236 227;    /* tinted panels */
+  --c-surface: 255 255 255; /* cards */
   --c-ink: 18 51 45;        /* Spruce 900 — body text */
   --c-muted: 72 88 83;      /* Moss, a shade darker for small text on sand */
-  --c-line: 230 217 194;    /* Sand 200 — borders */
+  --c-line: 227 223 214;    /* borders: neutral, a touch warm */
   --c-heading: 18 51 45;    /* Spruce 900 */
   color-scheme: light;
 }
 
 .dark {
-  --c-stone: 11 30 27;
-  --c-sand: 24 46 41;
-  --c-surface: 17 39 35;
+  --c-stone: 10 27 24;
+  --c-sand: 26 50 45;
+  --c-surface: 19 43 38;
   --c-ink: 236 240 234;
   --c-muted: 158 176 169;
-  --c-line: 42 68 62;
+  --c-line: 46 74 67;
   --c-heading: 220 235 230; /* Spruce 100 */
   color-scheme: dark;
 }
+
+/* A page's title carries a short Terracotta stroke under it — the warm
+   accent that ties the pages together (centred titles centre it too). */
+main h1.font-serif::after {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 4px;
+  margin-top: 0.5rem;
+  border-radius: 2px;
+  background: #c9491f;
+}
+main h1.font-serif.text-center::after,
+main .text-center > h1.font-serif::after { margin-left: auto; margin-right: auto; }
+.dark main h1.font-serif::after { background: #ee7f58; }
 
 /* Keyboard focus: a Terracotta ring, everywhere. */
 :focus-visible {

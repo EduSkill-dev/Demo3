@@ -18,7 +18,7 @@ export const metres = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, 
 export default function PlaceCard({ place, t }: { place: Place; t: T }) {
   const href = `/places/${place.id}`;
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-terracotta-300/70 hover:shadow-lg">
       <Link href={href} className="block" aria-label={place.name}>
         {place.photo ? (
           <img src={place.photo} alt="" loading="lazy" className="h-48 w-full object-cover" />

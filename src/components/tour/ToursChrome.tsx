@@ -53,7 +53,7 @@ export async function ToursHeader({ view, filters }: { view: "list" | "calendar"
       </div>
       <div className="flex flex-wrap items-center gap-3">
         {viewer?.role === "club" && (
-          <Link href="/dashboard/listings/new" className="rounded-full bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
+          <Link href="/dashboard/listings/new" className="rounded-lg bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
             {t("announcements.new")}
           </Link>
         )}
@@ -133,8 +133,8 @@ export async function ToursFilters({
           <option value="">{t("toursPage.difficulty")}</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d}>{t(`difficulty.${d}`)}</option>)}
         </select>
-        <span className={`flex min-h-[2.25rem] items-center justify-center text-[15px] font-semibold text-muted max-md:hidden max-lg:order-last ${filtered ? "" : "lg:row-span-2"}`}>
-          {t("toursPage.results", { count })}
+        <span className={`flex min-h-[2.25rem] items-center justify-center max-md:hidden max-lg:order-last ${filtered ? "" : "lg:row-span-2"}`}>
+          <span className="rounded-full bg-apricot-100 px-3.5 py-1 text-[15px] font-bold text-apricot-700 dark:bg-apricot-500/20 dark:text-apricot-300">{t("toursPage.results", { count })}</span>
         </span>
         {date("from", f.from, minDate, t("toursPage.from"))}
         {date("to", f.to, f.from || minDate, t("toursPage.to"))}

@@ -27,7 +27,7 @@ export default function GuestCancelButton({ token, name }: { token: string; name
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink">{t("guest.cancelAsk", { name })}</p>
-      <button type="button" onClick={cancel} disabled={state === "busy"} className="w-full rounded-full border-2 border-red-600 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:text-red-300">
+      <button type="button" onClick={cancel} disabled={state === "busy"} className="w-full rounded-lg border-2 border-red-600 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:text-red-300">
         {state === "busy" ? "…" : t("guest.cancelButton")}
       </button>
       {error && <p className="text-sm text-red-600">{error}</p>}

@@ -170,7 +170,7 @@ export default function GuestBookingForm({ tourId, price, source }: { tourId: st
             {error.login && <Link href={loginHref} className="font-semibold underline">{t("header.login")}</Link>}
           </p>
         )}
-        <button type="submit" disabled={busy} className="w-full rounded-full bg-spruce-500 py-3 font-semibold text-white hover:bg-spruce-900 disabled:cursor-not-allowed disabled:bg-spruce-500/50">
+        <button type="submit" disabled={busy} className="w-full rounded-lg bg-terracotta-500 py-3 font-semibold text-white shadow-sm hover:bg-terracotta-700 disabled:cursor-not-allowed disabled:bg-terracotta-500/50">
           {busy ? t("signup.booking") : price > 0 ? t("signup.bookAndPay", { price: formatAmd(price) }) : t("signup.book")}
         </button>
       </form>

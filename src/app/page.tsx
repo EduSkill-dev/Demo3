@@ -42,9 +42,9 @@ export default async function HomePage() {
     { value: num(counts.users), label: t("home.statUsers") },
     { value: num(counts.clubs), label: t("home.statClubs") },
   ];
-  const primary = "inline-flex items-center rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-spruce-900";
+  const primary = "inline-flex items-center rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-spruce-900";
   const secondary =
-    "inline-flex items-center rounded-full border-2 border-spruce-900 px-5 py-2 text-sm font-semibold text-spruce-900 transition hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink dark:hover:bg-ink dark:hover:text-spruce-900";
+    "inline-flex items-center rounded-lg border-2 border-spruce-900 px-5 py-2 text-sm font-semibold text-spruce-900 transition hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink dark:hover:bg-ink dark:hover:text-spruce-900";
   const individual = viewer?.role === "individual";
   const ways = [
     {
@@ -94,11 +94,11 @@ export default async function HomePage() {
           {/* Who was most active: the hiker of the quarter, and under it the
               club of the month (see src/lib/spotlight.ts). */}
           <div className="space-y-4">
-            <article className="flex items-center gap-5 rounded-[28px] bg-card p-4 text-spruce-900 shadow-xl">
+            <article className="flex items-center gap-5 rounded-2xl bg-card p-4 text-spruce-900 shadow-xl">
               {spotlight.hiker?.photo ? (
-                <img src={spotlight.hiker.photo} alt={spotlight.hiker.name} className="h-36 w-36 shrink-0 rounded-[20px] object-cover sm:h-52 sm:w-52" />
+                <img src={spotlight.hiker.photo} alt={spotlight.hiker.name} className="h-36 w-36 shrink-0 rounded-xl object-cover sm:h-52 sm:w-52" />
               ) : (
-                <span className="flex h-36 w-36 shrink-0 items-center justify-center rounded-[20px] bg-spruce-100 text-spruce-700 sm:h-52 sm:w-52" aria-hidden="true">
+                <span className="flex h-36 w-36 shrink-0 items-center justify-center rounded-xl bg-spruce-100 text-spruce-700 sm:h-52 sm:w-52" aria-hidden="true">
                   <svg viewBox="0 0 32 32" className="h-16 w-16 sm:h-24 sm:w-24" fill="currentColor">
                     <path d="M13 7 3 26h12Z" opacity=".55" />
                     <path d="M20 12 11 26h18Z" />
@@ -120,7 +120,7 @@ export default async function HomePage() {
               </div>
             </article>
 
-            <article className="flex items-center gap-5 rounded-[28px] bg-card p-4 text-spruce-900 shadow-xl">
+            <article className="flex items-center gap-5 rounded-2xl bg-card p-4 text-spruce-900 shadow-xl">
               {spotlight.club?.photo ? (
                 <img src={spotlight.club.photo} alt={spotlight.club.name} className="h-24 w-24 shrink-0 rounded-full object-contain sm:h-28 sm:w-28" />
               ) : (
@@ -155,13 +155,13 @@ export default async function HomePage() {
 
       {/* ---------- The platform in numbers, over the hero's edge ---------- */}
       <section className="relative z-10 mx-auto -mt-10 max-w-6xl px-4 sm:px-6">
-        <div className="grid grid-cols-2 overflow-hidden rounded-[28px] border border-line bg-surface shadow-xl lg:grid-cols-4">
+        <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl lg:grid-cols-4">
           {stats.map((s, i) => (
             <div
               key={s.label}
               className={`flex flex-col items-center gap-1 px-4 py-6 text-center ${i % 2 === 1 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""}`}
             >
-              <span className="text-[34px] font-bold leading-none text-heading">{s.value}</span>
+              <span className="text-[34px] font-bold leading-none text-terracotta-500 dark:text-terracotta-300">{s.value}</span>
               <span className="text-sm text-muted">{s.label}</span>
             </div>
           ))}
@@ -174,7 +174,7 @@ export default async function HomePage() {
         <p className="mx-auto mt-2 max-w-2xl text-center text-muted">{t("home.waysIntro")}</p>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
           {ways.map((w) => (
-            <article key={w.key} className="flex flex-col rounded-[28px] border border-line bg-surface p-6 shadow-sm transition hover:shadow-md">
+            <article key={w.key} className="flex flex-col rounded-2xl border border-line bg-surface p-6 shadow-sm transition hover:shadow-md">
               <div className="flex items-center gap-4">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: w.tint, color: w.ink }} aria-hidden="true">
                   <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">

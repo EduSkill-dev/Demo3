@@ -83,7 +83,7 @@ export default function SharePanel({
             onChange={(e) => setText(e.target.value)}
             className="mt-2 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30"
           />
-          <button data-view type="button" onClick={copy} className="mt-2 rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
+          <button data-view type="button" onClick={copy} className="mt-2 rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
             {copied ? t("calendar.copied") : t("share.copyText")}
           </button>
         </section>

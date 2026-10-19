@@ -36,7 +36,7 @@ export default async function AboutPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-apricot-300">Culmen</p>
           <h1 className="mt-4 max-w-2xl font-serif text-4xl font-semibold leading-tight sm:text-5xl">{t("about.heroTitle")}</h1>
           <p className="mt-5 max-w-xl text-lg leading-7 text-white/80">{t("about.heroText")}</p>
-          <Link href="/tours" className="mt-8 inline-flex rounded-full bg-apricot-500 px-5 py-3 text-sm font-bold text-spruce-900 transition hover:bg-apricot-300">
+          <Link href="/tours" className="mt-8 inline-flex rounded-lg bg-apricot-500 px-5 py-3 text-sm font-bold text-spruce-900 transition hover:bg-apricot-300">
             {t("about.heroCta")}
           </Link>
         </div>
@@ -79,7 +79,7 @@ export default async function AboutPage() {
             <p className="mt-1 text-sm text-muted">{t("about.ctaText")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/tours" className="rounded-full bg-spruce-500 px-5 py-3 text-sm font-semibold text-white hover:bg-spruce-900">
+            <Link href="/tours" className="rounded-lg bg-spruce-500 px-5 py-3 text-sm font-semibold text-white hover:bg-spruce-900">
               {t("about.ctaFind")}
             </Link>
             <Link href="/register" className="rounded-lg border border-line px-5 py-3 text-sm font-semibold text-ink hover:bg-surface">

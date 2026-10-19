@@ -106,7 +106,7 @@ export default function GuidesEditor({ clubId, initial }: { clubId: string; init
             </datalist>
             <textarea rows={3} aria-label={t("clubData.guideBio")} placeholder={t("clubData.guideBioHint")} value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} className={input} />
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className="rounded-full bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
+              <button type="submit" disabled={busy} className="rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
                 {busy ? "..." : t("clubData.saveGuide")}
               </button>
               <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">

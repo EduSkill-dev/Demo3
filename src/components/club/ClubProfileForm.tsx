@@ -237,7 +237,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
         </fieldset>
         {error && <p className="text-sm text-red-600">{error}</p>}
         {message && <p className="text-sm font-medium text-green-700">{message}</p>}
-        <button type="submit" disabled={busy === "info"} className="rounded-full bg-spruce-500 px-5 py-2.5 font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
+        <button type="submit" disabled={busy === "info"} className="rounded-lg bg-spruce-500 px-5 py-2.5 font-semibold text-white hover:bg-spruce-900 disabled:opacity-50">
           {busy === "info" ? "..." : t("clubData.saveInfo")}
         </button>
       </form>

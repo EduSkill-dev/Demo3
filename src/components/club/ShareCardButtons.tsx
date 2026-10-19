@@ -21,7 +21,7 @@ export default function ShareCardButtons({ card, text }: { card: CardTour; text:
     if (how === "downloaded") setNote(t("share.cardDownloaded"));
   }
 
-  const pill = "flex h-11 items-center justify-center gap-2 rounded-full border-2 border-[#D62976] px-4 text-sm font-semibold text-ink hover:bg-[#D62976]/10 disabled:opacity-50";
+  const pill = "flex h-11 items-center justify-center gap-2 rounded-lg border-2 border-[#D62976] px-4 text-sm font-semibold text-ink hover:bg-[#D62976]/10 disabled:opacity-50";
   return (
     <div>
       <div className="flex flex-wrap gap-2">

@@ -105,7 +105,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Param
           </AutoSubmitForm>
         </div>
         {/* Right: how many were found, in the middle of the free space. */}
-        <span className="flex flex-1 items-center justify-center py-1 text-[15px] font-semibold text-muted">{t("placesPage.found", { count: found.length })}</span>
+        <span className="flex flex-1 items-center justify-center py-1"><span className="rounded-full bg-apricot-100 px-3.5 py-1 text-[15px] font-bold text-apricot-700 dark:bg-apricot-500/20 dark:text-apricot-300">{t("placesPage.found", { count: found.length })}</span></span>
       </div>
 
       {shown.length === 0 ? (
@@ -123,7 +123,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Param
           <Link
             href={href({ show: String(show + PAGE) })}
             scroll={false}
-            className="rounded-full border-2 border-spruce-900 px-6 py-2.5 text-sm font-semibold text-ink hover:bg-spruce-900 hover:text-card dark:border-ink dark:hover:bg-ink dark:hover:text-spruce-900"
+            className="rounded-lg border-2 border-spruce-900 px-6 py-2.5 text-sm font-semibold text-ink hover:bg-spruce-900 hover:text-card dark:border-ink dark:hover:bg-ink dark:hover:text-spruce-900"
           >
             {t("placesPage.showMore")}
           </Link>

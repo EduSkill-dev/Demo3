@@ -36,7 +36,7 @@ const config: Config = {
         serif: ["var(--font-outfit)", "var(--font-noto-armenian)", "system-ui", "sans-serif"],
       },
       borderRadius: {
-        "2xl": "1.5rem", // cards: 24px
+        "2xl": "1rem", // cards: 16px (Gor, 2026-10-20); text buttons use rounded-lg (8px)
       },
       keyframes: {
         // Rhythm of the classic "made with love" heart; scales evenly.

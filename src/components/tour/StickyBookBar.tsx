@@ -30,7 +30,7 @@ export default function StickyBookBar({ price, label, target = "signup" }: { pri
             e.preventDefault();
             document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
-          className="rounded-full bg-spruce-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900"
+          className="rounded-lg bg-terracotta-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-terracotta-700"
         >
           {label}
         </a>

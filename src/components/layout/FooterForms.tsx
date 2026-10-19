@@ -96,7 +96,7 @@ export function NewsletterForm({ viewer }: { viewer: FooterViewer | null }) {
           <button
             type="submit"
             disabled={busy}
-            className="shrink-0 rounded-full bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
+            className="shrink-0 rounded-lg bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
           >
             {t("footer.subscribe")}
           </button>
@@ -149,7 +149,7 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
           <button
             type="submit"
             disabled={state === "busy"}
-            className="rounded-full bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
+            className="rounded-lg bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
           >
             {t("footer.send")}
           </button>

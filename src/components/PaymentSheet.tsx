@@ -152,7 +152,7 @@ export default function PaymentSheet({
         <button
           type="submit"
           disabled={busy}
-          className="flex-1 rounded-full bg-spruce-500 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-spruce-500 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900 disabled:opacity-50"
         >
           {busy ? t("payment.processing") : submitLabel || t("payment.pay", { amount: formatAmd(amount) })}
         </button>
