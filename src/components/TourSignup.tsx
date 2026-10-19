@@ -8,6 +8,7 @@ import { DEFAULT_CANCEL_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { parseEmergency } from "@/lib/emergency";
 import { useT } from "@/i18n/client";
+import GuestBookingForm from "@/components/tour/GuestBookingForm";
 import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
 
 type BookingRow = { id: string; status: "confirmed" | "cancelled" };
@@ -49,6 +50,7 @@ export default function TourSignup({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPay, setShowPay] = useState(false);
+  const [guestOpen, setGuestOpen] = useState(false);
   // Optional emergency contact, pre-filled from the one saved earlier.
   const [emName, setEmName] = useState("");
   const [emPhone, setEmPhone] = useState("");
@@ -245,9 +247,14 @@ export default function TourSignup({
             </button>
           </div>
         ) : !signedIn ? (
-          <button type="button" onClick={book} disabled={closed} className={primary}>
-            {t("signup.loginToBook")}
-          </button>
+          // Not signed in: "Book" opens the short form (or Google / sign-in above it).
+          guestOpen ? (
+            <GuestBookingForm tourId={tourId} price={price} source={sourceOf} />
+          ) : (
+            <button type="button" onClick={() => setGuestOpen(true)} disabled={closed || full} className={primary}>
+              {closed ? t("signup.closed") : full ? t("signup.full") : t("signup.book")}
+            </button>
+          )
         ) : (
           <>
           {emergencyFields}

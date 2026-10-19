@@ -11,7 +11,7 @@
   --c-sand: 243 234 218;    /* Sand 100 — tinted panels */
   --c-surface: 255 253 248; /* card */
   --c-ink: 18 51 45;        /* Spruce 900 — body text */
-  --c-muted: 91 107 102;    /* Moss — secondary text */
+  --c-muted: 72 88 83;      /* Moss, a shade darker for small text on sand */
   --c-line: 230 217 194;    /* Sand 200 — borders */
   --c-heading: 18 51 45;    /* Spruce 900 */
   color-scheme: light;

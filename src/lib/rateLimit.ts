@@ -37,6 +37,7 @@ const FORMS = {
   newsletter: { ip: 5, all: 40 },
   contact: { ip: 5, all: 30 },
   register: { ip: 4, all: 30 },
+  booking: { ip: 6, all: 60 }, // bookings without an account
 } as const;
 export type PublicForm = keyof typeof FORMS;
 

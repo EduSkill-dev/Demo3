@@ -10,7 +10,8 @@ export type Viewer = {
   emailConfirmed: boolean;
   role: "individual" | "club" | "admin";
   frozen: boolean; // signed in, but may only look
-  platformNews: boolean; // receives platform news (digest, updates)
+  platformNews: boolean; // receives platform news (updates, rule changes)
+  newToursDigest: boolean; // receives the email about new hikes
   firstName: string | null;
   phone: string | null; // the club's phone for a club, else the person's
   club: { id: string; name: string } | null;
@@ -25,10 +26,10 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!user) return null;
 
   const [{ data: profile }, { data: club }] = await Promise.all([
-    supabase.from("profiles").select("role, status, first_name, phone, platform_news").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("role, status, first_name, phone, platform_news, new_tours_digest").eq("id", user.id).maybeSingle(),
     supabase.from("clubs").select("id, name, phone").eq("owner_id", user.id).maybeSingle(),
   ]);
-  const p = profile as { role: Viewer["role"]; status: string; first_name: string | null; phone: string | null; platform_news: boolean } | null;
+  const p = profile as { role: Viewer["role"]; status: string; first_name: string | null; phone: string | null; platform_news: boolean; new_tours_digest: boolean } | null;
   if (!p || p.status === "blocked") return null;
   const c = club as { id: string; name: string; phone: string | null } | null;
 
@@ -39,6 +40,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     role: p.role,
     frozen: p.status !== "active",
     platformNews: p.platform_news,
+    newToursDigest: p.new_tours_digest,
     firstName: p.first_name,
     phone: c?.phone || p.phone || null,
     club: c ? { id: c.id, name: c.name } : null,

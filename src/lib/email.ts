@@ -153,6 +153,7 @@ export function bookingConfirmationEmail(input: {
   meetingPoint: string | null;
   meetingTime: string | null;
   cancelHours?: number;
+  cancelUrl?: string; // a guest (no account) cancels through this link
 }) {
   const rows = [
     row("Արշավ", input.tourTitle),
@@ -166,7 +167,9 @@ export function bookingConfirmationEmail(input: {
   const html = layout(
     "Ամրագրումդ հաստատված է",
     `<p>Բարև ${input.firstName ?? ""}, դու ամրագրել ես արշավը։</p>${table(rows)}
-     ${button(`${BASE_URL()}/tours`, "Տեսնել արշավները")}`
+     ${input.cancelUrl
+       ? `<p>Չեղարկելու համար օգտվիր այս հղումից (մինչև ${input.cancelHours ?? DEFAULT_CANCEL_HOURS} ժամ առաջ)՝</p>${button(input.cancelUrl, "Չեղարկել ամրագրումը")}`
+       : button(`${BASE_URL()}/tours`, "Տեսնել արշավները")}`
   );
   return {
     to: input.to,

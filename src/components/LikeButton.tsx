@@ -54,7 +54,7 @@ export default function LikeButton({
     return (
       <span
         data-like={kind}
-        title={`${label}: ${shown} · ${t("like.onlyParticipants")}`}
+        title={t("like.onlyParticipants")}
         className={`inline-flex items-center gap-1 font-semibold ${text} ${shown > 0 ? tone : "text-muted"}`}
       >
         {icon}

@@ -2,6 +2,36 @@ import type { DeepPartial } from "../translate";
 import type { Dictionary } from "./hy";
 
 const en: DeepPartial<Dictionary> = {
+  time: {
+    hour: "Hour",
+    minutes: "Minutes",
+    done: "Done",
+    pick: "Pick a time",
+  },
+  guest: {
+    haveAccount: "Have an account? Bookings and history in one place",
+    loginEmail: "Log in with email",
+    orQuick: "or book without signing up",
+    createAccount: "Sign up to Culmen with these details",
+    createAccountHint: "Only a password is added — next time there is nothing to fill in.",
+    consentStart: "By booking you agree to the",
+    terms: "terms",
+    and: "and",
+    privacy: "privacy policy",
+    consentEnd: ". Your details go to the club running the hike.",
+    booked: "Booked",
+    bookedText: "We sent the details and a cancel link to {email}.",
+    confirmAccount: "To activate the account, confirm your email with the link we sent. The booking then shows in your account.",
+    cancelNotFound: "The booking was not found or the link is wrong.",
+    toTours: "See hikes",
+    toTour: "The hike page",
+    alreadyCancelled: "This booking is already cancelled.",
+    tooLate: "A booking can be cancelled only up to {hours} hours before the hike. Please contact the club.",
+    cancelAsk: "{name}, cancel the booking?",
+    cancelButton: "Cancel the booking",
+    cancelConfirm: "Are you sure you want to cancel the booking?",
+    cancelled: "The booking is cancelled. We emailed you and the club.",
+  },
   common: {
     pickDate: "Pick a date",
     tooMany: "Too many attempts. Please try again a little later.",
@@ -336,6 +366,7 @@ const en: DeepPartial<Dictionary> = {
     full: "Full",
   },
   applications: {
+    guestTag: "guest",
     attendanceLater: "Attendance from the hike day",
     csvNotInPlan: "CSV export is not in your plan: it comes with the Advanced and PRO plans.",
     forTour: "Applications for “{title}”",
@@ -416,6 +447,7 @@ const en: DeepPartial<Dictionary> = {
     uploadFailed: "The photo did not upload: {message}",
   },
   tourForm: {
+    freeQuestion: "Is the hike free? If so, press Publish again; if not, enter the price.",
     errMeeting: "Enter the meeting point and time.",
     places: "Places the hike visits",
     placesHint: "Choose one or more places. The region, kind of terrain and difficulty follow from them.",
@@ -469,6 +501,10 @@ const en: DeepPartial<Dictionary> = {
     changeNotice: "If people have already signed up, they will be notified when the date or meeting details change.",
   },
   account: {
+    prefNews: "Notifications from the platform",
+    prefNewsHint: "Updates, rule changes and important announcements.",
+    prefTours: "Notifications about all new hikes",
+    prefToursHint: "An email about newly published hikes. Notifications about your own hikes come either way.",
     newsOff: "Turn off platform news",
     newsOnHint: "You receive platform news: new hikes and updates.",
     newsOffHint: "Platform news are off. Notifications about your own hikes and favourite clubs keep coming.",
@@ -544,7 +580,9 @@ const en: DeepPartial<Dictionary> = {
     meetingTime: "Meeting time",
     cancellation: "Cancellation",
     cancellationText: "up to {hours} hours before",
-    whatToBring: "What to bring",
+    whatToBring: "What to bring?",
+    organiser: "Organiser",
+    commentsOnlyAfter: "comments can be left only after taking part in the hike",
     club: "Club",
     yes: "Yes",
     no: "No",
@@ -610,6 +648,13 @@ const en: DeepPartial<Dictionary> = {
     errNone: "Choose who marks attendance (Telegram).",
   },
   share: {
+    picture: "A picture for Instagram",
+    pictureHint: "A ready picture with the hike photo, name, date and club. Phones open the share sheet (Instagram is in it); computers download it.",
+    cardPost: "Post picture",
+    cardStory: "Story picture",
+    cardDownloaded: "The picture was downloaded. Post it on Instagram and copy the text above.",
+    cardFailed: "This browser could not make the picture.",
+    instagramPicture: "The picture was downloaded and the text with the link copied. Post the picture on Instagram with the text as its caption.",
     on: "Share on {network}",
     button: "Share",
     title: "Share the hike",
@@ -1021,7 +1066,7 @@ const en: DeepPartial<Dictionary> = {
     sight: "Love this place",
     club: "Like the club",
     tour: "Like the hike",
-    onlyParticipants: "participants can like it after the hike",
+    onlyParticipants: "Only those who took part can like it, after the hike",
   },
   nav: {
     club: {

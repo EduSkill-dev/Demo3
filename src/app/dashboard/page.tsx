@@ -45,6 +45,7 @@ export default async function AnnouncementsPage() {
       cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
       unread: mineB.filter((b) => !b.read_at).length,
       past: tour.date < today,
+      photo: tour.photo_urls?.[0] ?? null,
     };
   });
 

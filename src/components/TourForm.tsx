@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RollcallPicker from "@/components/club/RollcallPicker";
 import DateField from "@/components/ui/DateField";
+import TimeField from "@/components/ui/TimeField";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, IMAGE_ACCEPT } from "@/lib/storage";
 import type { Tour } from "@/types/database";
@@ -62,6 +63,11 @@ export default function TourForm({
   const [cancelHours, setCancelHours] = useState(source?.cancel_hours ?? DEFAULT_CANCEL_HOURS);
   const [maxParticipants, setMaxParticipants] = useState(String(source?.max_participants ?? (seatCap || "")));
   const [price, setPrice] = useState(source?.price != null ? String(source.price) : "0");
+  // A new listing left at 0 ֏ without touching the price: one question first,
+  // "Is the hike free?" — the next press of Publish means yes.
+  const [priceTouched, setPriceTouched] = useState(mode === "edit");
+  const [freeAsked, setFreeAsked] = useState(false);
+  const priceRef = useRef<HTMLInputElement>(null);
   const [coordinatorPhone, setCoordinatorPhone] = useState(source?.coordinator_phone ?? clubPhone);
   const [meetingPoint, setMeetingPoint] = useState(source?.meeting_point ?? "");
   const [meetingTime, setMeetingTime] = useState((source?.meeting_time ?? "").slice(0, 5));
@@ -122,6 +128,12 @@ export default function TourForm({
     if (endDate && endDate < date) return setError(t("tourForm.errEndDate"));
     if (!Number.isInteger(Number(maxParticipants)) || Number(maxParticipants) < 1) return setError(t("tourForm.errCapacity"));
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError(t("tourForm.errPrice"));
+    if (Number(price) === 0 && !priceTouched && !freeAsked) {
+      setFreeAsked(true);
+      priceRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      priceRef.current?.focus({ preventScroll: true });
+      return;
+    }
     if (!coordinatorPhone.trim()) return setError(t("tourForm.errPhone"));
     if (!meetingPoint.trim() || !meetingTime) return setError(t("tourForm.errMeeting"));
     if (rollcall.length === 0) return setError(t("rollcall.errNone"));
@@ -292,7 +304,21 @@ export default function TourForm({
         </div>
         <div>
           <label htmlFor="price" className={label}>{t("tourForm.price")}</label>
-          <input id="price" required type="number" min={0} step="100" value={price} onChange={(e) => setPrice(e.target.value)} className={input} />
+          {freeAsked && Number(price) === 0 && <p className="mb-1.5 text-sm font-bold text-red-600" role="alert">{t("tourForm.freeQuestion")}</p>}
+          <input
+            ref={priceRef}
+            id="price"
+            required
+            type="number"
+            min={0}
+            step="100"
+            value={price}
+            onChange={(e) => {
+              setPrice(e.target.value);
+              setPriceTouched(true);
+            }}
+            className={`${input} ${freeAsked && Number(price) === 0 ? "!border-red-500 ring-2 ring-red-500/30" : ""}`}
+          />
           <p className={hint}>{t("tourForm.priceHint")}</p>
         </div>
         <div className="sm:col-span-2">
@@ -319,7 +345,7 @@ export default function TourForm({
         </div>
         <div>
           <label htmlFor="mtime" className={label}>{t("tourForm.meetingTime")}</label>
-          <input id="mtime" required type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className={input} />
+          <TimeField id="mtime" required value={meetingTime} onChange={setMeetingTime} placeholder={t("time.pick")} className={input} />
         </div>
       </div>
       {mode === "edit" && <p className={hint}>{t("tourForm.changeNotice")}</p>}

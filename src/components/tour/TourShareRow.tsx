@@ -4,15 +4,17 @@ import { useState } from "react";
 import { useT } from "@/i18n/client";
 import SocialIcon, { SOCIAL_COLOR } from "@/components/club/SocialIcon";
 import { shareHref } from "@/lib/share";
+import { drawShareCard, shareOrDownload, type CardTour } from "@/lib/shareCard";
 
 type Net = "facebook" | "instagram";
 
-// Facebook and Instagram buttons on a hike's page (before "My calendar").
-// The link carries ?ref=<network>, so the club's report counts who came
-// from where. Facebook opens its share window; Instagram has none on the
-// web: phones get the system share sheet (Instagram is in it), computers
-// get the link copied and Instagram opened.
-export default function TourShareRow({ path, text, nets }: { path: string; text: string; nets: Net[] }) {
+// Facebook and Instagram buttons on a hike's page (before "Add to my
+// calendar"). The link carries ?ref=<network>, so the club's report counts
+// who came from where. Facebook opens its share window (the preview comes
+// from the page's Open Graph data). Instagram takes pictures, not links: the
+// button draws the hike's post picture — phones share it through the system
+// sheet, computers download it — and copies the link for the caption.
+export default function TourShareRow({ path, text, nets, card }: { path: string; text: string; nets: Net[]; card: Omit<CardTour, "url"> }) {
   const t = useT();
   const [note, setNote] = useState<string | null>(null);
   if (nets.length === 0) return null;
@@ -24,22 +26,15 @@ export default function TourShareRow({ path, text, nets }: { path: string; text:
       window.open(shareHref("facebook", url, text), "_blank", "noopener,noreferrer");
       return;
     }
-    const touch = window.matchMedia("(pointer: coarse)").matches;
-    if (touch && navigator.share) {
-      try {
-        await navigator.share({ title: text, url });
-        return;
-      } catch {
-        /* closed, or not allowed: fall back to copying */
-      }
-    }
     try {
-      await navigator.clipboard.writeText(url);
-      setNote(t("share.instagramCopied"));
+      await navigator.clipboard.writeText(`${text}\n${url}`);
     } catch {
-      window.prompt(t("share.copyLink"), url);
+      /* no clipboard: the picture still carries the address */
     }
-    window.open(shareHref("instagram", url, text), "_blank", "noopener,noreferrer");
+    const blob = await drawShareCard({ ...card, url: `${window.location.origin}${path}` }, "post");
+    if (!blob) return setNote(t("share.cardFailed"));
+    const how = await shareOrDownload(blob, "culmen-instagram.jpg", `${text}\n${url}`);
+    if (how === "downloaded") setNote(t("share.instagramPicture"));
   }
 
   return (

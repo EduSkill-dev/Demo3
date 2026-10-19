@@ -8,6 +8,13 @@ import { useFormatDate, useT } from "@/i18n/client";
 import FramedPhoto from "@/components/ui/FramedPhoto";
 import LikeButton from "@/components/LikeButton";
 
+// One picture per thing to bring, so the list reads at a glance.
+const BRING_ICONS: Record<string, string> = {
+  boots: "🥾", warm_clothes: "🧥", rain_jacket: "☔", hat: "🧢", sunglasses: "🕶️", sunscreen: "🧴", water: "💧", food: "🥪", backpack: "🎒",
+  poles: "🎿", headlamp: "🔦", first_aid: "🩹", id_card: "🪪", cash: "💵", swimsuit: "🩱", sleeping_bag: "🛌", tent: "⛺", mat: "🧘",
+};
+
+
 export type TourForDetails = Pick<
   Tour,
   | "id" | "title" | "description" | "regions" | "terrains" | "date" | "max_participants" | "photo_urls"
@@ -113,9 +120,12 @@ export default function TourDetails({
       <div>
         {tour.club && (
           <div className="flex items-center justify-between gap-3">
-            <Link href={`/clubs/${tour.club.id}`} className="text-xs font-semibold uppercase tracking-wide text-terracotta-500 hover:text-terracotta-700">
-              {tour.club.name}
-            </Link>
+            <p className="text-sm text-muted">
+              {t("tour.organiser")}՝{" "}
+              <Link href={`/clubs/${tour.club.id}`} className="font-semibold text-terracotta-700 underline decoration-terracotta-500/50 underline-offset-4 hover:decoration-terracotta-500 dark:text-terracotta-300">
+                {tour.club.name}
+              </Link>
+            </p>
           </div>
         )}
         <div className="mt-1 flex items-start justify-between gap-3">
@@ -140,17 +150,23 @@ export default function TourDetails({
       </dl>
 
       {((tour.bring_items ?? []).length > 0 || tour.notes) && (
-        <div className="rounded-xl bg-sand/70 p-4">
-          <p className="font-semibold text-heading">{t("tour.whatToBring")}</p>
+        <section className="rounded-2xl border border-line bg-sand/50 p-4 sm:p-5">
+          <h4 className="flex items-center gap-2 text-lg font-bold text-heading">
+            <span aria-hidden="true">🎒</span>
+            {t("tour.whatToBring")}
+          </h4>
           {(tour.bring_items ?? []).length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5">
+            <ul className="mt-3 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3">
               {(tour.bring_items ?? []).map((k) => (
-                <li key={k} className="rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-ink">{t(`bring.${k}`)}</li>
+                <li key={k} className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-ink shadow-sm">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sand text-base" aria-hidden="true">{BRING_ICONS[k] ?? "•"}</span>
+                  <span className="min-w-0">{t(`bring.${k}`)}</span>
+                </li>
               ))}
             </ul>
           )}
-          {tour.notes && <p className="mt-2 whitespace-pre-line text-ink">{tour.notes}</p>}
-        </div>
+          {tour.notes && <p className="mt-3 whitespace-pre-line leading-6 text-ink">{tour.notes}</p>}
+        </section>
       )}
 
       {showPageLink && (

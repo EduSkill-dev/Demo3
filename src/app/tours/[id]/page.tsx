@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { cache } from "react";
+import { dateWords, dayAndMonth, dayInWords } from "@/lib/calendar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { activePackage, formatAmd } from "@/lib/catalog";
@@ -20,17 +22,29 @@ import RatingBox from "@/components/RatingBox";
 
 type TourWithClub = Tour & { clubs: Club | null };
 
-async function getTour(id: string): Promise<TourWithClub | null> {
+// Read once per request: the page and its metadata share it.
+const getTour = cache(async (id: string): Promise<TourWithClub | null> => {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const supabase = await createClient();
   const { data } = await supabase.from("tours").select("*, clubs(*)").eq("id", id).maybeSingle();
   return (data as TourWithClub | null) ?? null;
-}
+});
 
+// The link preview: the hike's name, "date · regions · club", and its first
+// photo (else the Culmen card from the root layout).
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const tour = await getTour(params.id);
   if (!tour) return { title: { absolute: "Culmen" } };
-  return { title: `${tour.title}`, description: tour.description ?? tour.title };
+  const t = await getT();
+  const words = dateWords(t);
+  const when = tour.end_date && tour.end_date > tour.date ? `${dayAndMonth(tour.date, words)} – ${dayAndMonth(tour.end_date, words)}` : dayInWords(tour.date, words);
+  const line = [when, tour.regions.map((r) => t(`region.${r}`)).join(", "), tour.clubs?.name].filter(Boolean).join(" · ");
+  const photo = tour.photo_urls?.[0];
+  return {
+    title: tour.title,
+    description: line,
+    openGraph: { type: "website", siteName: "Culmen", title: tour.title, description: line, url: `/tours/${tour.id}`, ...(photo ? { images: [{ url: photo, alt: tour.title }] } : {}) },
+  };
 }
 
 // The shareable page of one hike: full details, sign-up and its reviews.
@@ -92,7 +106,9 @@ export default async function TourDetailPage({ params }: { params: { id: string 
 
           {/* The rating form shows only to someone who may rate; an empty box is hidden, and so is the whole part when there is nothing in it. */}
           <section className={showReviews ? "" : "[&:has(>div:empty)]:hidden"}>
-            <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
+            <h2 className="font-serif text-xl font-semibold text-heading">
+              {t("clubPage.comments")} <span className="font-sans text-sm font-normal text-muted">({t("tour.commentsOnlyAfter")})</span>
+            </h2>
             <div className="mt-4 rounded-xl border border-line bg-surface p-5 empty:hidden">
               <RatingBox target="tour" tourId={tour.id} noun={tour.title} />
             </div>
@@ -140,11 +156,20 @@ export default async function TourDetailPage({ params }: { params: { id: string 
               <TourShareRow
                 path={`/tours/${tour.id}`}
                 text={`${tour.title} · ${club?.name ?? ""}`}
+                card={{
+                  title: tour.title,
+                  when: tour.end_date && tour.end_date > tour.date ? `${dayAndMonth(tour.date, dateWords(t))} – ${dayAndMonth(tour.end_date, dateWords(t))}` : dayInWords(tour.date, dateWords(t)),
+                  place: tour.regions.map((r) => t(`region.${r}`)).join(", "),
+                  club: club?.name ?? "",
+                  photo: tour.photo_urls?.[0] ?? null,
+                  organiserLabel: t("tour.organiser"),
+                  signUpLabel: t("share.signUp"),
+                }}
                 nets={(await getShareNetworks()).filter((n): n is "facebook" | "instagram" => (n === "facebook" || n === "instagram") && !(club?.share_blocked ?? []).includes(n))}
               />
               <AddToCalendar
                 tour={{ id: tour.id, title: tour.title, date: tour.date, end_date: tour.end_date ?? null, place: tour.regions.map((r) => t(`region.${r}`)).join(", "), club: club?.name ?? "" }}
-                className="flex items-center gap-2 rounded-full border-2 border-line px-4 py-2 text-sm font-semibold text-ink hover:border-spruce-500"
+                className="flex h-10 items-center gap-2 rounded-full border-2 border-line px-3.5 text-xs font-semibold text-ink hover:border-spruce-500"
               />
             </div>
           )}

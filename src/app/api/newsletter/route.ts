@@ -26,8 +26,8 @@ async function handlePOST(req: Request) {
   const viewer = await getViewer();
   if (viewer && viewer.emailConfirmed && viewer.role !== "admin") {
     if (viewer.frozen) return NextResponse.json({ error: { message: FROZEN } }, { status: 403 });
-    if (viewer.platformNews) return NextResponse.json({ ok: true, state: "already" });
-    const { error } = await admin.from("profiles").update({ platform_news: true }).eq("id", viewer.id);
+    if (viewer.platformNews && viewer.newToursDigest) return NextResponse.json({ ok: true, state: "already" });
+    const { error } = await admin.from("profiles").update({ platform_news: true, new_tours_digest: true }).eq("id", viewer.id);
     if (error) return NextResponse.json({ error: { message: error.message } }, { status: 400 });
     return NextResponse.json({ ok: true, state: "subscribed" });
   }
@@ -41,9 +41,9 @@ async function handlePOST(req: Request) {
   }
 
   // An address that belongs to an account is managed from that account.
-  const { data: account } = await admin.from("profiles").select("platform_news, role").eq("email", email).maybeSingle();
-  const acc = account as { platform_news: boolean; role: string } | null;
-  if (acc && acc.role !== "admin") return NextResponse.json({ ok: true, state: acc.platform_news ? "already" : "account" });
+  const { data: account } = await admin.from("profiles").select("new_tours_digest, role").eq("email", email).maybeSingle();
+  const acc = account as { new_tours_digest: boolean; role: string } | null;
+  if (acc && acc.role !== "admin") return NextResponse.json({ ok: true, state: acc.new_tours_digest ? "already" : "account" });
 
   type Row = { id: string; token: string; confirmed_at: string | null; unsubscribed_at: string | null; sent_at: string | null };
   const columns = "id, token, confirmed_at, unsubscribed_at, sent_at";

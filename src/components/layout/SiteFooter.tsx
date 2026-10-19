@@ -13,7 +13,7 @@ export default async function SiteFooter() {
   // visitor forms are not for them.
   const who = await getViewer();
   const isAdmin = who?.role === "admin";
-  const viewer: FooterViewer | null = who?.email && who.emailConfirmed ? { email: who.email, phone: who.phone, news: who.platformNews } : null;
+  const viewer: FooterViewer | null = who?.email && who.emailConfirmed ? { email: who.email, phone: who.phone, news: who.newToursDigest } : null;
 
   return (
     <footer className="mt-auto bg-spruce-900 text-white">

@@ -5,6 +5,7 @@ import { useT } from "@/i18n/client";
 import { dateWords, dayAndMonth, dayInWords } from "@/lib/calendar";
 import Modal from "@/components/ui/Modal";
 import ShareButtons from "@/components/ShareButtons";
+import ShareCardButtons from "@/components/club/ShareCardButtons";
 import type { Difficulty } from "@/types/database";
 import type { ShareNetwork } from "@/lib/share";
 
@@ -17,6 +18,7 @@ export type ShareTour = {
   difficulty: Difficulty;
   overnight: boolean;
   left: number; // free seats
+  photo: string | null;
 };
 
 // "Share" for one active listing: a ready announcement text the club can
@@ -84,6 +86,25 @@ export default function SharePanel({
           <button data-view type="button" onClick={copy} className="mt-2 rounded-full bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
             {copied ? t("calendar.copied") : t("share.copyText")}
           </button>
+        </section>
+        <section className="border-t border-line pt-4">
+          <h3 className="text-sm font-semibold text-ink">{t("share.picture")}</h3>
+          <p className="mt-0.5 text-xs text-muted">{t("share.pictureHint")}</p>
+          <div className="mt-3">
+            <ShareCardButtons
+              text={text}
+              card={{
+                title: tour.title,
+                when: `${dayInWords(tour.date, words)}${many ? ` – ${dayAndMonth(tour.endDate!, words)}` : ""}`,
+                place: tour.regions.map((r) => t(`region.${r}`)).join(", "),
+                club: clubName,
+                photo: tour.photo,
+                url: url.replace(/\?ref=link$/, ""),
+                organiserLabel: t("tour.organiser"),
+                signUpLabel: t("share.signUp"),
+              }}
+            />
+          </div>
         </section>
         <section className="border-t border-line pt-4">
           <h3 className="text-sm font-semibold text-ink">{t("share.link")}</h3>

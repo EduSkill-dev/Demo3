@@ -25,6 +25,7 @@ type Raw = {
     email: string;
     phone: string | null;
   } | null;
+  guests: { first_name: string; last_name: string; birth_date: string; gender: string; email: string; phone: string } | null;
 };
 
 // All the club's applications, or one hike's (?tour=<id>, from the listings).
@@ -50,7 +51,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   const { data } = tours.size
     ? await supabase
         .from("bookings")
-        .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, attended, profiles(first_name, last_name, birth_date, age, gender, email, phone)")
+        .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, attended, profiles(first_name, last_name, birth_date, age, gender, email, phone), guests(first_name, last_name, birth_date, gender, email, phone)")
         .in("tour_id", only ? [only.id] : [...tours.keys()])
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -68,7 +69,9 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
       tourTitle: tour.title,
       tourDate: tour.date,
       cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
-      person: b.profiles,
+      // Booked without an account: the details they gave.
+      person: b.profiles ?? (b.guests ? { ...b.guests, age: null } : null),
+      guest: !b.profiles && !!b.guests,
       attended: b.attended,
       emergency: b.emergency_contact_name && b.emergency_contact_phone ? { name: b.emergency_contact_name, phone: b.emergency_contact_phone } : null,
     };

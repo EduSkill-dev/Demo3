@@ -27,6 +27,7 @@ export type ApplicationRow = {
     phone: string | null;
   } | null;
   attended: boolean | null; // the club's roll call: true came, false did not, null not marked
+  guest?: boolean; // booked without an account
   emergency: { name: string; phone: string } | null; // left by the participant, for this hike's organiser only
 };
 
@@ -155,6 +156,7 @@ export default function ApplicationsTable({ rows, oneTour = false }: { rows: App
                 <p className={`min-w-0 text-ink ${unread ? "font-bold" : "font-semibold"}`}>
                   {unread && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-600 align-middle" aria-hidden />}
                   {name(r)}
+                  {r.guest && <span className="ml-1.5 rounded-full bg-sand px-1.5 py-0.5 text-[10px] font-semibold text-muted">{t("applications.guestTag")}</span>}
                 </p>
                 <span className="shrink-0 font-semibold text-ink">{r.seq}/{r.cap}</span>
               </div>
@@ -213,7 +215,7 @@ export default function ApplicationsTable({ rows, oneTour = false }: { rows: App
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">{fmt(r.createdAt, true)}</td>
-                  <td className="max-w-[12rem] truncate px-4 py-3" title={name(r)}>{name(r)}</td>
+                  <td className="max-w-[12rem] truncate px-4 py-3" title={name(r)}>{name(r)}{r.guest && <span className="ml-1.5 rounded-full bg-sand px-1.5 py-0.5 text-[10px] font-semibold text-muted">{t("applications.guestTag")}</span>}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-center font-normal">
                     {attendanceOf(r)}
                   </td>

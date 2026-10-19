@@ -59,16 +59,18 @@ async function say(chatId: number, html: string) {
 /* ---------------------------------------------------------------- list */
 
 type Tour = { id: string; title: string; date: string; meeting_time: string | null; meeting_point: string | null };
-type Row = { id: string; seq: number; attended: boolean | null; profiles: { first_name: string | null; last_name: string | null; phone: string | null } | null };
+type Person = { first_name: string | null; last_name: string | null; phone: string | null };
+type Row = { id: string; seq: number; attended: boolean | null; profiles: Person | null; guests?: Person | null };
 
 async function participants(db: Db, tourId: string): Promise<Row[]> {
   const { data } = await db
     .from("bookings")
-    .select("id, seq, attended, profiles(first_name, last_name, phone)")
+    .select("id, seq, attended, profiles(first_name, last_name, phone), guests(first_name, last_name, phone)")
     .eq("tour_id", tourId)
     .eq("status", "confirmed")
     .order("seq");
-  return (data ?? []) as unknown as Row[];
+  // A guest (no account) is listed with the details they gave.
+  return ((data ?? []) as unknown as Row[]).map((r) => ({ ...r, profiles: r.profiles ?? r.guests ?? null }));
 }
 
 const personName = (r: Row) => [r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(" ") || "—";

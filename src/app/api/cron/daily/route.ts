@@ -87,14 +87,15 @@ async function handleGET(req: Request) {
 
   let digests = 0;
   if (tours.length) {
-    // Every registered account that has not switched platform news off…
+    // Every registered account with "notifications about all new hikes" on
+    // (clubs start with it off)…
     const { data: accounts } = await admin
       .from("profiles")
       .select("email, role")
       .in("role", ["individual", "club"])
       .eq("status", "active")
-      .eq("platform_news", true);
-    const { data: optedOut } = await admin.from("profiles").select("email").eq("platform_news", false);
+      .eq("new_tours_digest", true);
+    const { data: optedOut } = await admin.from("profiles").select("email").eq("new_tours_digest", false);
     const registered = new Map(((accounts ?? []) as { email: string; role: string }[]).map((a) => [a.email.toLowerCase(), a.role]));
     const silent = new Set(((optedOut ?? []) as { email: string }[]).map((a) => a.email.toLowerCase()));
     // …plus visitors who confirmed their address (an address that belongs to

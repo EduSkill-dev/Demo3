@@ -13,6 +13,7 @@ type Row = {
   source: string | null;
   tours: { title: string; date: string } | null;
   profiles: { first_name: string | null; last_name: string | null; birth_date: string | null; age: number | null; gender: string | null; email: string; phone: string | null } | null;
+  guests: { first_name: string; last_name: string; birth_date: string; gender: string; email: string; phone: string } | null; // booked without an account
 };
 
 function age(birth: string | null, legacy: number | null): string {
@@ -53,11 +54,13 @@ async function handleGET(req: Request) {
   const { data } = ids.length
     ? await supabase
         .from("bookings")
-        .select("seq, status, created_at, emergency_contact_name, emergency_contact_phone, attended, source, tours(title, date), profiles(first_name, last_name, birth_date, age, gender, email, phone)")
+        .select("seq, status, created_at, emergency_contact_name, emergency_contact_phone, attended, source, tours(title, date), profiles(first_name, last_name, birth_date, age, gender, email, phone), guests(first_name, last_name, birth_date, gender, email, phone)")
         .in("tour_id", ids)
         .order("created_at", { ascending: true })
     : { data: [] };
   const rows = ((data ?? []) as unknown as Row[]).sort((a, b) => (a.tours?.date ?? "").localeCompare(b.tours?.date ?? "") || a.seq - b.seq);
+  // A guest (no account) is listed with the details they gave.
+  for (const r of rows) if (!r.profiles && r.guests) r.profiles = { ...r.guests, age: null };
 
   const header = ["Արշավ", "Ամսաթիվ", "Հայտի համար", "Անուն", "Ազգանուն", "Հեռախոս", "Էլ. հասցե", "Տարիք", "Սեռ", "Կարգավիճակ", "Գրանցվել է", "Արտակարգ կոնտակտ", "Արտակարգ կոնտակտի հեռախոս", "Ներկայություն", "Որտեղից է եկել"];
   const lines = rows.map((r) =>

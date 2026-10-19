@@ -18,9 +18,19 @@ import "./globals.css";
 const outfit = localFont({ src: "./fonts/outfit-latin.woff2", weight: "500 700", variable: "--font-outfit", display: "swap" });
 const notoArmenian = localFont({ src: "./fonts/noto-sans-armenian.woff2", weight: "400 700", variable: "--font-noto-armenian", display: "swap" });
 
+// Link previews (Facebook, Telegram, WhatsApp, Viber…): pages without their
+// own picture show the Culmen card. Addresses are made absolute from the site URL.
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bolbol.am"),
   title: { default: "Culmen", template: "%s" },
-  description: "Find and book hikes and tours from clubs across Armenia.",
+  description: "Հայաստանի արշավական ակումբներն ու նրանց արշավները՝ մեկ հարթակում։",
+  openGraph: {
+    type: "website",
+    siteName: "Culmen",
+    locale: "hy_AM",
+    images: [{ url: "/brand/og-default.jpg", width: 1200, height: 630, alt: "Culmen" }],
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default async function RootLayout({

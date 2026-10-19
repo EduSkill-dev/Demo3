@@ -26,6 +26,7 @@ export type ListingRow = {
   cap: number; // seats the package allows for this tour (B)
   unread: number; // applications or cancellations the club has not opened
   past: boolean;
+  photo: string | null; // the first photo, for the Instagram picture
 };
 
 // The club's listings: Place · Applications A/B (+ unread badge) · Date ·
@@ -206,7 +207,7 @@ export default function AnnouncementsTable({
       {table(upcoming, "upcoming")}
       {sharing && (
         <SharePanel
-          tour={{ id: sharing.id, title: sharing.title, date: sharing.date, endDate: sharing.endDate, regions: sharing.regions, difficulty: sharing.difficulty, overnight: sharing.overnight, left: Math.max(0, sharing.cap - sharing.taken) }}
+          tour={{ id: sharing.id, title: sharing.title, date: sharing.date, endDate: sharing.endDate, regions: sharing.regions, difficulty: sharing.difficulty, overnight: sharing.overnight, left: Math.max(0, sharing.cap - sharing.taken), photo: sharing.photo }}
           clubName={clubName}
           networks={shareNetworks}
           blocked={shareBlocked}

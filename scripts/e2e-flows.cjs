@@ -612,13 +612,15 @@ async function main() {
         subConfirmed.body.state === 'already' && asAccount.body.state === 'already' && asMember.body.state === 'already',
         `guest=${subConfirmed.body.state} accountEmail=${asAccount.body.state} signedIn=${asMember.body.state}`);
       await signIn('ind');
-      const newsOff = await anon.from('profiles').update({ platform_news: false }).eq('id', ids.ind).select('platform_news');
+      const newsOff = await anon.from('profiles').update({ new_tours_digest: false }).eq('id', ids.ind).select('new_tours_digest');
       const offState = await api('/api/newsletter', { email: email('ind') });
       const backOn = await api('/api/newsletter', {}, await cookieFor('ind'));
-      const newsNow = (await admin.from('profiles').select('platform_news').eq('id', ids.ind).single()).data?.platform_news;
-      check('platform news: an account switches them off itself and back on from the footer',
-        newsOff.data?.[0]?.platform_news === false && offState.body.state === 'account' && backOn.body.state === 'subscribed' && newsNow === true,
-        `off=${JSON.stringify(newsOff.data)} guestAsk=${offState.body.state} on=${backOn.body.state} now=${newsNow}`);
+      const newsNow = (await admin.from('profiles').select('new_tours_digest').eq('id', ids.ind).single()).data?.new_tours_digest;
+      const clubPrefs = (await admin.from('profiles').select('platform_news, new_tours_digest').eq('id', ids.club2).single()).data;
+      check('news switches: an account turns the new-hike emails off itself and back on from the footer; a club starts with platform news on and new-hike emails off',
+        newsOff.data?.[0]?.new_tours_digest === false && offState.body.state === 'account' && backOn.body.state === 'subscribed' && newsNow === true
+          && clubPrefs?.platform_news === true && clubPrefs?.new_tours_digest === false,
+        `off=${JSON.stringify(newsOff.data)} guestAsk=${offState.body.state} on=${backOn.body.state} now=${newsNow} club=${JSON.stringify(clubPrefs)}`);
       await page(`/newsletter/unsubscribe?token=${subRow?.token}`);
       const unsubRow = (await admin.from('newsletter_subscribers').select('unsubscribed_at').eq('email', subEmail).single()).data;
       check('HTTP newsletter: the unsubscribe link works', !!unsubRow?.unsubscribed_at, JSON.stringify(unsubRow));
@@ -1367,6 +1369,7 @@ async function main() {
         const owner = bk.tours.club_id === clubA ? 'club' : 'club2';
         const oldDate = bk.tours.date;
         await admin.from('tours').update({ date: yerevanToday, end_date: null }).eq('id', bk.tour_id);
+        await admin.from('bookings').update({ attended: null }).eq('id', bk.id); // start unmarked, whatever earlier checks left
         await signIn(owner);
         const codeRes = await anon.rpc('club_tg_code');
         const code = codeRes.data;
@@ -1387,11 +1390,48 @@ async function main() {
         const rcRun = await fetch(`http://localhost:${DEV_PORT}/api/cron/rollcall`, { headers: { Authorization: 'Bearer e2e-cron-secret' } });
         check('roll call: the club link connects a person in Telegram (a wrong code does not, other clubs never see the code), only the hike\'s people mark attendance with the buttons, the job is guarded',
           !!code && othersCode.length === 0 && startOk.status === 200 && joined.length === 1 && joined[0].name === 'Ռոլ Քոլ' && !rcIns.error
-            && byStranger === bk.attended && came === true && cleared === null && absent === false && rcAnon.status === 401 && rcRun.status === 200,
+            && byStranger === null && came === true && cleared === null && absent === false && rcAnon.status === 401 && rcRun.status === 200,
           `code=${!!code} others=${othersCode.length} start=${startOk.status} joined=${JSON.stringify(joined)} rc=${rcIns.error?.message} taps=${byStranger}/${came}/${cleared}/${absent} cron=${rcAnon.status}/${rcRun.status}`);
         await admin.from('club_tg_people').delete().in('tg_user_id', [555001, 555002]);
         await admin.from('bookings').update({ attended: bk.attended }).eq('id', bk.id);
         await admin.from('tours').update({ date: oldDate, rollcall_sent_at: null, rollcall_reminded_at: null }).eq('id', bk.tour_id);
+      }
+
+      // ---------- Booking without an account ----------
+      {
+        const before = (await admin.from('tours').select('price, date, status, max_participants').eq('id', tourId).single()).data;
+        await admin.from('tours').update({ price: 0, status: 'active', date: inDays(20).slice(0, 10), max_participants: 30 }).eq('id', tourId);
+        const guest = (extra) => api('/api/bookings/guest', { action: 'book', tour_id: tourId, firstName: 'Հյուր', lastName: 'Թեստ', email: email('guest'), phone: '+374 91 ' + String(stamp).slice(-6), birthDate: '1990-01-02', gender: 'female', ...extra });
+        const g1 = await guest({ source: 'instagram' });
+        const g2 = await guest();
+        const taken = await api('/api/bookings/guest', { action: 'book', tour_id: tourId, firstName: 'A', lastName: 'B', email: email('ind'), phone: '+374 91 000001', birthDate: '1990-01-02', gender: 'male' });
+        const bad = await api('/api/bookings/guest', { action: 'book', tour_id: tourId, firstName: 'A', lastName: 'B', email: 'nope', phone: '1', birthDate: 'x', gender: 'x' });
+        const gRow = (await admin.from('guests').select('id, first_name').eq('email', email('guest')).single()).data;
+        const gBook = (await admin.from('bookings').select('id, status, user_id, guest_id, cancel_token, source').eq('tour_id', tourId).eq('guest_id', gRow?.id ?? '00000000-0000-0000-0000-000000000000').maybeSingle()).data;
+        // the club sees the guest among its applications (RLS on guests)
+        await signIn('club'); // tourA is club A's
+        const clubSees = (await anon.from('bookings').select('id, guests(first_name)').eq('id', gBook?.id ?? '')).data || [];
+        await signIn('ind');
+        const indSees = (await anon.from('guests').select('id')).data || [];
+        const wrongToken = await api('/api/bookings/guest', { action: 'cancel', token: '00000000-0000-0000-0000-000000000000' });
+        const cancel = await api('/api/bookings/guest', { action: 'cancel', token: gBook?.cancel_token });
+        const afterCancel = (await admin.from('bookings').select('status').eq('id', gBook?.id ?? '').single()).data;
+        // ticking "create an account": signed up, and the booking moves to the account once the email is confirmed
+        const regEmail = email('guestreg');
+        const g3 = await api('/api/bookings/guest', { action: 'book', tour_id: tourId, firstName: 'Նոր', lastName: 'Հաշիվ', email: regEmail, phone: '+374 93 ' + String(stamp).slice(-6), birthDate: '1992-03-04', gender: 'male', createAccount: true, password: 'E2e-guest-pass-1' });
+        const regUser = (await admin.from('profiles').select('id').eq('email', regEmail).maybeSingle()).data;
+        if (regUser) { ids.guestreg = regUser.id; await admin.auth.admin.updateUserById(regUser.id, { email_confirm: true }); }
+        const adopted = regUser ? (await admin.from('bookings').select('user_id, guest_id, status').eq('tour_id', tourId).eq('user_id', regUser.id).maybeSingle()).data : null;
+        check('guest booking: book without an account (the club sees the guest, others do not), one per email, an account holder is sent to sign in, the email link cancels, "create an account" moves the booking to the account once confirmed',
+          g1.status === 200 && g2.status === 409 && taken.status === 409 && taken.body?.code === 'account_exists' && bad.status === 400
+            && gBook?.status === 'confirmed' && !gBook.user_id && gBook.source === 'instagram' && clubSees[0]?.guests?.first_name === 'Հյուր' && indSees.length === 0
+            && wrongToken.status === 404 && cancel.status === 200 && afterCancel?.status === 'cancelled'
+            && g3.status === 200 && g3.body?.account === 'created' && adopted?.guest_id === null && adopted?.status === 'confirmed',
+          `g1=${g1.status} ${JSON.stringify(g1.body)} g2=${g2.status} taken=${taken.status}/${taken.body?.code} bad=${bad.status} book=${JSON.stringify(gBook)} club=${JSON.stringify(clubSees)} ind=${indSees.length} wrong=${wrongToken.status} cancel=${cancel.status} after=${afterCancel?.status} g3=${g3.status} ${JSON.stringify(g3.body)} adopted=${JSON.stringify(adopted)}`);
+        await admin.from('bookings').delete().eq('tour_id', tourId).is('user_id', null);
+        if (regUser) await admin.from('bookings').delete().eq('tour_id', tourId).eq('user_id', regUser.id);
+        await admin.from('guests').delete().like('email', `e2e-%-${stamp}@example.com`);
+        await admin.from('tours').update({ price: before.price, date: before.date, status: before.status, max_participants: before.max_participants }).eq('id', tourId);
       }
 
     }

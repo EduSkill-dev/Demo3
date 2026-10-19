@@ -17,10 +17,10 @@ export default async function NotificationsPage() {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  const { data: profile } = await supabase.from("profiles").select("platform_news").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("platform_news, new_tours_digest").eq("id", user.id).single();
   return (
     <div className="space-y-4">
-      <NewsToggle userId={user.id} newsOn={(profile as { platform_news?: boolean } | null)?.platform_news !== false} />
+      <NewsToggle userId={user.id} newsOn={(profile as { platform_news?: boolean } | null)?.platform_news !== false} toursOn={(profile as { new_tours_digest?: boolean } | null)?.new_tours_digest === true} />
       <NotificationsTable rows={(data ?? []) as unknown as NotificationRow[]} />
     </div>
   );

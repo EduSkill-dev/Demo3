@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -30,7 +31,7 @@ type Review = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // The address is the club's slug; an old /clubs/<id> link still finds it.
-async function getClub(key: string) {
+const getClub = cache(async (key: string) => {
   const supabase = await createClient();
   const byId = UUID.test(key);
   const { data } = await supabase
@@ -39,11 +40,17 @@ async function getClub(key: string) {
     .eq(byId ? "id" : "slug", byId ? key : decodeURIComponent(key).toLowerCase())
     .maybeSingle();
   return data as Club | null;
-}
+});
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const club = await getClub(params.id);
-  return { title: club ? club.name : { absolute: "Culmen" } };
+  if (!club) return { title: { absolute: "Culmen" } };
+  const about = club.description?.replace(/\s+/g, " ").slice(0, 180) || club.name;
+  return {
+    title: club.name,
+    description: about,
+    openGraph: { title: club.name, description: about, url: `/clubs/${club.slug ?? club.id}`, ...(club.photo_url ? { images: [{ url: club.photo_url, alt: club.name }] } : {}) },
+  };
 }
 
 export default async function ClubDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { back?: string } }) {

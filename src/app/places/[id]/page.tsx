@@ -15,7 +15,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const place = UUID.test(params.id) ? await getPlace(params.id) : null;
   if (!place) return {};
   const t = await getT();
-  return { title: place.name, description: place.description ?? `${place.name} · ${t(`region.${place.region}`)}` };
+  const description = place.description ?? `${place.name} · ${t(`region.${place.region}`)}`;
+  return { title: place.name, description, openGraph: { title: place.name, description, url: `/places/${place.id}`, ...(place.photo ? { images: [{ url: place.photo, alt: place.name }] } : {}) } };
 }
 
 const DIFFICULTY_CHIP: Record<string, string> = {
