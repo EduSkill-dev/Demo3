@@ -1343,6 +1343,28 @@ async function main() {
           && seenByAdmin.includes('Լոգեր') && !seenByAdmin.includes(email('super')),
         `actions=${[...new Set(logRows.map((r) => r.action))].join(',')} pageOk=${seenByAdmin.includes('Լոգեր')} leak=${seenByAdmin.includes(email('super'))}`);
 
+      // Admin sign-in safety: 5 wrong passwords lock a regular admin until a
+      // new one-time password; the super admin can block an admin.
+      {
+        const login = (password) => api('/api/auth/login', { email: email('adm'), password });
+        for (let i = 0; i < 5; i++) await login('wrong-' + i);
+        const lockedTry = await login('wrong-again');
+        const lockedRow = (await admin.from('admins').select('locked').eq('user_id', ids.adm).single()).data;
+        const reset = await act({ action: 'admin.resetPassword', userId: ids.adm }, superCookie);
+        const afterReset = await login(reset.body?.password ?? '');
+        const block = await act({ action: 'admin.block', userId: ids.adm, blocked: true }, superCookie);
+        const blockedTry = await login(reset.body?.password ?? '');
+        const byRegular = await api('/api/admin', { action: 'admin.block', userId: ids.adm, blocked: false }, indCookie);
+        const unblock = await act({ action: 'admin.block', userId: ids.adm, blocked: false }, superCookie);
+        const nav = await act({ action: 'nav.save', order: ['logs', 'home', 'BAD KEY'] }, superCookie);
+        const navRow = (await admin.from('admins').select('nav_order').eq('user_id', ids.super).single()).data;
+        await act({ action: 'nav.save', order: [] }, superCookie);
+        check('admin safety: 5 wrong passwords lock a regular admin (a new one-time password opens it), the super admin blocks and unblocks, each admin keeps their own menu order',
+          lockedTry.status === 403 && lockedTry.body?.error?.code === 'admin_locked' && lockedRow?.locked === true
+            && reset.status === 200 && afterReset.status === 200 && block.status === 200 && blockedTry.status === 403 && blockedTry.body?.error?.code === 'admin_blocked'
+            && byRegular.status >= 401 && unblock.status === 200 && nav.status === 200 && JSON.stringify(navRow?.nav_order) === JSON.stringify(['logs', 'home']),
+          `locked=${lockedTry.status}/${lockedTry.body?.error?.code} row=${JSON.stringify(lockedRow)} reset=${reset.status} after=${afterReset.status} block=${block.status} blockedTry=${blockedTry.status}/${blockedTry.body?.error?.code} regular=${byRegular.status} unblock=${unblock.status} nav=${JSON.stringify(navRow)}`);
+      }
       const delAdmin = await act({ action: 'admin.delete', userId: ids.adm }, superCookie);
       const goneAdmin = (await admin.auth.admin.getUserById(ids.adm)).data?.user;
       check('admin: the super admin removes an admin', delAdmin.status === 200 && !goneAdmin, `status=${delAdmin.status}`);

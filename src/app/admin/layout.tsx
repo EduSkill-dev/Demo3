@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import DashboardShell, { type ShellItem } from "@/components/ui/DashboardShell";
 import PasswordForm from "@/components/admin/PasswordForm";
 import { can, getAdmin } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
+import AdminNav, { type NavEntry } from "@/components/admin/AdminNav";
 
 export const metadata: Metadata = { title: "Ադմինի վահանակ", robots: { index: false } };
 
@@ -24,28 +26,35 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
-  const items: ShellItem[] = [
-    { href: "/admin", label: "Ընդհանուր" },
-    { href: "/admin/notifications", label: "Ծանուցումներ" },
-    ...(can(me, "pages") ? [{ href: "/admin/pages", label: "Կայքի էջեր" }] : []),
-    ...(can(me, "pages") ? [{ href: "/admin/sights", label: "Տեսարժան վայրեր" }] : []),
-    ...(can(me, "pages") ? [{ href: "/admin/share", label: "Սոց. ցանցեր" }] : []),
-    ...(can(me, "tours") ? [{ href: "/admin/tours", label: "Հայտարարություններ" }] : []),
-    ...(can(me, "clubs") ? [{ href: "/admin/clubs", label: "Ակումբներ" }] : []),
-    ...(me.isSuper ? [{ href: "/admin/plans", label: "Փաթեթներ" }] : []),
-    ...(can(me, "individuals") ? [{ href: "/admin/individuals", label: "Անհատներ" }] : []),
-    ...(can(me, "individuals") ? [{ href: "/admin/requests", label: "Անհատների հայտեր" }] : []),
-    ...(me.isSuper ? [{ href: "/admin/admins", label: "Ադմիններ" }] : []),
-    ...(can(me, "news") ? [{ href: "/admin/news", label: "Հարթակի նորություններ" }] : []),
-    ...(can(me, "messages") ? [{ href: "/admin/messages", label: "Հաղորդագրություններ" }] : []),
-    { href: "/admin/logs", label: "Լոգեր" },
-    { href: "/admin/errors", label: "Սխալներ" },
-    { href: "/admin/security", label: "Պաշտպանություն" },
-    { href: "/admin/password", label: "Գաղտնաբառ" },
+  // Gor's order (2026-10-20); an admin sees only the sections they may
+  // manage, and may arrange them their own way (admins.nav_order).
+  const settings = [
+    ...(me.isSuper ? [{ key: "admins", href: "/admin/admins", label: "Ադմիններ" }] : []),
+    ...(me.isSuper ? [{ key: "plans", href: "/admin/plans", label: "Փաթեթներ" }] : []),
+    ...(can(me, "pages") ? [{ key: "sights", href: "/admin/sights", label: "Տեսարժան վայրեր" }] : []),
+    ...(can(me, "pages") ? [{ key: "pages", href: "/admin/pages", label: "Կայքի էջերը" }] : []),
+    ...(can(me, "pages") ? [{ key: "share", href: "/admin/share", label: "Սոց. ցանցեր" }] : []),
+    ...(can(me, "news") ? [{ key: "news", href: "/admin/news", label: "Հարթակի նորությունները" }] : []),
   ];
+  const entries: NavEntry[] = [
+    { key: "home", href: "/admin", label: "Ընդհանուր" },
+    { key: "notifications", href: "/admin/notifications", label: "Ծանուցումներ" },
+    ...(can(me, "clubs") ? [{ key: "clubs", href: "/admin/clubs", label: "Ակումբներ" }] : []),
+    ...(can(me, "tours") ? [{ key: "tours", href: "/admin/tours", label: "Հայտարարություններ" }] : []),
+    ...(can(me, "individuals") ? [{ key: "individuals", href: "/admin/individuals", label: "Անհատներ" }] : []),
+    ...(can(me, "individuals") ? [{ key: "requests", href: "/admin/requests", label: "Անհատների հայտեր" }] : []),
+    ...(settings.length ? [{ key: "settings", label: "Հարթակի կարգավորումներ", children: settings }] : []),
+    ...(can(me, "messages") ? [{ key: "messages", href: "/admin/messages", label: "Հաղորդագրություններ" }] : []),
+    { key: "logs", href: "/admin/logs", label: "Լոգեր" },
+    { key: "errors", href: "/admin/errors", label: "Սխալներ" },
+    { key: "security", href: "/admin/security", label: "Պաշտպանություն" },
+    { key: "me", href: "/admin/password", label: "Ադմինի տվյալներ" },
+  ];
+  const items: ShellItem[] = entries.flatMap((e) => (e.children ? e.children : [{ href: e.href!, label: e.label }]));
+  const { data: navRow } = await createAdminClient().from("admins").select("nav_order").eq("user_id", me.userId).maybeSingle();
 
   return (
-    <DashboardShell wide title={me.isSuper ? "Սուպեր ադմինի վահանակ" : "Ադմինի վահանակ"} items={items}>
+    <DashboardShell wide title={me.isSuper ? "Սուպեր ադմինի վահանակ" : "Ադմինի վահանակ"} items={items} nav={<AdminNav entries={entries} saved={(navRow as { nav_order: string[] | null } | null)?.nav_order ?? null} />}>
       {children}
     </DashboardShell>
   );

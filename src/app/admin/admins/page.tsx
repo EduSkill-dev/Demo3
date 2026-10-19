@@ -11,7 +11,7 @@ export default async function AdminAdminsPage() {
 
   const { data } = await createAdminClient()
     .from("admins")
-    .select("user_id, perms, must_change_password, created_at, profiles(email)")
+    .select("user_id, perms, must_change_password, created_at, blocked, locked, profiles(email)")
     .eq("is_super", false)
     .order("created_at", { ascending: true });
 
@@ -20,6 +20,8 @@ export default async function AdminAdminsPage() {
     perms: string[];
     must_change_password: boolean;
     created_at: string;
+    blocked: boolean;
+    locked: boolean;
     profiles: { email: string } | null;
   }[]).map((a) => ({
     userId: a.user_id,
@@ -27,6 +29,8 @@ export default async function AdminAdminsPage() {
     perms: ADMIN_PERMS.filter((k) => a.perms.includes(k)),
     mustChangePassword: a.must_change_password,
     createdAt: a.created_at,
+    blocked: a.blocked,
+    locked: a.locked,
   }));
 
   return <AdminsManager rows={rows} />;

@@ -22,12 +22,14 @@ export async function getAdmin(): Promise<AdminSession | null> {
 
   const admin = createAdminClient();
   const [{ data: row }, { data: profile }] = await Promise.all([
-    admin.from("admins").select("is_super, perms, must_change_password").eq("user_id", user.id).maybeSingle(),
+    admin.from("admins").select("is_super, perms, must_change_password, blocked, locked").eq("user_id", user.id).maybeSingle(),
     admin.from("profiles").select("role, status").eq("id", user.id).maybeSingle(),
   ]);
-  const a = row as { is_super: boolean; perms: string[]; must_change_password: boolean } | null;
+  const a = row as { is_super: boolean; perms: string[]; must_change_password: boolean; blocked: boolean; locked: boolean } | null;
   const p = profile as { role: string; status: string } | null;
   if (!a || p?.role !== "admin" || p.status !== "active") return null;
+  // Blocked by the super admin, or locked after wrong passwords: no admin area.
+  if (a.blocked || (!a.is_super && a.locked)) return null;
 
   return {
     userId: user.id,

@@ -546,7 +546,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
 
     const { data: taken } = await ctx.db.from("profiles").select("id").eq("email", email).limit(1);
     const { data: aliasTaken } = await ctx.db.from("admins").select("user_id").eq("alt_email", email).limit(1);
-    if ((taken ?? []).length || (aliasTaken ?? []).length) return fail("Այս հասցեն արդեն զբաղված է։");
+    if ((taken ?? []).length || (aliasTaken ?? []).length) return fail("Այս էլ. հասցեով արդեն գրանցվել են հարթակում։");
 
     const password = oneTimePassword();
     const { data: created, error } = await ctx.db.auth.admin.createUser({ email, password, email_confirm: true });
@@ -607,7 +607,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const password = oneTimePassword();
     const { error } = await ctx.db.auth.admin.updateUserById(target.userId, { password });
     if (error) return fail(error.message, 500);
-    await ctx.db.from("admins").update({ must_change_password: true }).eq("user_id", target.userId);
+    await ctx.db.from("admins").update({ must_change_password: true, locked: false, login_failures: 0 }).eq("user_id", target.userId);
     await ctx.db.rpc("end_user_sessions", { p_user: target.userId });
     await logActivity({
       actor: ctx.me.userId,
@@ -618,6 +618,26 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       ip: ctx.ip,
     });
     return NextResponse.json({ ok: true, password });
+  },
+
+  // Any admin: their own order of the menu sections ([] = the default).
+  async "nav.save"(ctx, body) {
+    const order = Array.isArray(body.order) ? body.order.filter((k): k is string => typeof k === "string" && /^[a-z]{2,20}$/.test(k)).slice(0, 30) : [];
+    await ctx.db.from("admins").update({ nav_order: order.length ? order : null }).eq("user_id", ctx.me.userId);
+    return NextResponse.json({ ok: true });
+  },
+
+  // Shut an admin out (or let them back in) without deleting them.
+  async "admin.block"(ctx, body) {
+    if (!ctx.me.isSuper) return fail(FORBIDDEN, 403);
+    const target = await targetAdmin(ctx, str(body.userId));
+    if (!target) return fail("Ադմինը չի գտնվել։", 404);
+    const blocked = body.blocked === true;
+    const { error } = await ctx.db.from("admins").update({ blocked }).eq("user_id", target.userId);
+    if (error) return fail(error.message, 500);
+    if (blocked) await ctx.db.rpc("end_user_sessions", { p_user: target.userId });
+    await logActivity({ actor: ctx.me.userId, action: blocked ? "admin.admin_blocked" : "admin.admin_unblocked", targetType: "admin", targetId: target.userId, targetLabel: target.email, ip: ctx.ip });
+    return NextResponse.json({ ok: true });
   },
 
   async "admin.delete"(ctx, body) {

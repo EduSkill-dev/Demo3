@@ -11,6 +11,8 @@ export type AdminRow = {
   perms: AdminPerm[];
   mustChangePassword: boolean;
   createdAt: string;
+  blocked: boolean; // shut out by the super admin
+  locked: boolean; // 5 wrong passwords in a row; a new one-time password opens it
 };
 
 function PermBoxes({ value, onChange, idPrefix }: { value: AdminPerm[]; onChange: (v: AdminPerm[]) => void; idPrefix: string }) {
@@ -73,6 +75,8 @@ function AdminItem({ row, onPassword }: { row: AdminRow; onPassword: (email: str
           {row.mustChangePassword && (
             <p className="mt-1 text-xs font-semibold text-terracotta-700 dark:text-terracotta-300">Դեռ չի փոխել մեկանգամյա գաղտնաբառը</p>
           )}
+          {row.blocked && <p className="mt-1 text-xs font-semibold text-red-600">Արգելափակված է Գլխավոր ադմինի կողմից</p>}
+          {row.locked && <p className="mt-1 text-xs font-semibold text-red-600">Կողպված է 5 սխալ գաղտնաբառից հետո․ բացելու համար տվեք նոր մեկանգամյա գաղտնաբառ</p>}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button
@@ -82,6 +86,17 @@ function AdminItem({ row, onPassword }: { row: AdminRow; onPassword: (email: str
             onClick={() => confirm(`Տա՞լ նոր մեկանգամյա գաղտնաբառ ${row.email} ադմինին։ Հինը կդադարի գործել։`) && run({ action: "admin.resetPassword" })}
           >
             Նոր մեկանգամյա գաղտնաբառ
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            className={adminGhost}
+            onClick={() =>
+              confirm(row.blocked ? `Բացե՞լ ${row.email} ադմինի արգելափակումը։` : `Արգելափակե՞լ ${row.email} ադմինին։ Նա այլևս չի կարողանա մուտք գործել, մինչև չբացեք։`) &&
+              run({ action: "admin.block", blocked: !row.blocked })
+            }
+          >
+            {row.blocked ? "Բացել արգելափակումը" : "Արգելափակել"}
           </button>
           <button
             type="button"

@@ -64,7 +64,8 @@ export function NewsletterForm({ viewer }: { viewer: FooterViewer | null }) {
 
   const message: Record<NewsState, string> = {
     subscribed: `✓ ${t("footer.subscribedDirect")}`,
-    already: `✓ ${t("footer.alreadySubscribed")}`,
+    // Signed in: "you are subscribed"; an address typed by a visitor: "this address is".
+    already: `✓ ${viewer ? t("footer.alreadySubscribed") : t("footer.emailAlreadySubscribed")}`,
     sent: `✉️ ${t("footer.subscribed")}`,
     pending: `✉️ ${t("footer.pendingConfirm")}`,
     account: t("footer.accountExists"),

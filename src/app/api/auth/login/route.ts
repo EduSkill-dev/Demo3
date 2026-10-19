@@ -8,8 +8,12 @@ import { clientIp, logActivity } from "@/lib/admin";
 // Sign-in goes through the server so that
 //   * every successful sign-in is logged with its IP address,
 //   * the super admin can use either of the two addresses tied to the
-//     account (same password), and
-//   * a blocked account is turned away even before its ban is noticed.
+//     account (same password),
+//   * a blocked account is turned away even before its ban is noticed, and
+//   * admins are guarded: an admin the super admin blocked cannot sign in;
+//     5 wrong passwords in a row lock a regular admin until the super admin
+//     gives a new one-time password, and lock one of the super admin's two
+//     addresses for 30 minutes (the other keeps working).
 // The session cookie is set by the server client.
 async function handlePOST(req: Request) {
   const limited = await tooMany(req, "login", 30, 10);
@@ -24,6 +28,25 @@ async function handlePOST(req: Request) {
 
   const supabase = await createClient();
   const admin = createAdminClient();
+  const fail = (code: string, status = 403) => NextResponse.json({ error: { code, message: "", status } }, { status });
+
+  // Is this address an admin's (the main one, or the super admin's second)?
+  const { data: byMain } = await admin.from("profiles").select("id").eq("email", email).eq("role", "admin").maybeSingle();
+  const { data: byAlt } = byMain ? { data: null } : await admin.from("admins").select("user_id").eq("alt_email", email).maybeSingle();
+  const adminId = (byMain as { id: string } | null)?.id ?? (byAlt as { user_id: string } | null)?.user_id ?? null;
+  const which: "main" | "alt" = byMain ? "main" : "alt";
+  type Guard = { is_super: boolean; blocked: boolean; locked: boolean; login_failures: number; locked_until: string | null; alt_login_failures: number; alt_locked_until: string | null };
+  const { data: guardRow } = adminId
+    ? await admin.from("admins").select("is_super, blocked, locked, login_failures, locked_until, alt_login_failures, alt_locked_until").eq("user_id", adminId).maybeSingle()
+    : { data: null };
+  const guard = guardRow as Guard | null;
+  if (guard) {
+    if (guard.blocked) return fail("admin_blocked");
+    if (!guard.is_super && guard.locked) return fail("admin_locked");
+    const until = which === "alt" ? guard.alt_locked_until : guard.locked_until;
+    if (guard.is_super && until && new Date(until) > new Date()) return fail("admin_locked_temp");
+  }
+
   let result = await supabase.auth.signInWithPassword({ email, password });
   let via: "primary" | "alt" = "primary";
 
@@ -38,6 +61,26 @@ async function handlePOST(req: Request) {
         result = await supabase.auth.signInWithPassword({ email: primary, password });
         via = "alt";
       }
+    }
+  }
+
+  if (guard && adminId) {
+    // Count wrong passwords for this address; a right one starts the count again.
+    const field = which === "alt" ? "alt_login_failures" : "login_failures";
+    if (result.error || !result.data.user) {
+      const failures = (which === "alt" ? guard.alt_login_failures : guard.login_failures) + 1;
+      const patch: Record<string, unknown> = { [field]: failures >= 5 ? 0 : failures };
+      if (failures >= 5) {
+        if (guard.is_super) patch[which === "alt" ? "alt_locked_until" : "locked_until"] = new Date(Date.now() + 30 * 60_000).toISOString();
+        else patch.locked = true;
+      }
+      await admin.from("admins").update(patch).eq("user_id", adminId);
+      if (failures >= 5) {
+        await logActivity({ actor: adminId, action: "security.admin_locked", ip: clientIp(req), meta: { address: which, minutes: guard.is_super ? 30 : null } });
+        return fail(guard.is_super ? "admin_locked_temp" : "admin_locked");
+      }
+    } else {
+      await admin.from("admins").update({ [field]: 0 }).eq("user_id", adminId);
     }
   }
 

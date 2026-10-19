@@ -12,11 +12,13 @@ export default function DashboardShell({
   title,
   items,
   wide = false,
+  nav,
   children,
 }: {
   title: string;
   items: ShellItem[];
   wide?: boolean; // room for wide tables (the admin area)
+  nav?: React.ReactNode; // a menu of its own (the admin area) instead of the plain list
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -30,6 +32,7 @@ export default function DashboardShell({
     <main className={`mx-auto px-4 py-8 sm:px-6 sm:py-10 ${wide ? "max-w-[96rem]" : "max-w-6xl"}`}>
       <h1 className="font-serif text-2xl font-semibold text-heading">{title}</h1>
       <div className={`mt-6 md:grid ${wide ? "md:grid-cols-[12rem_1fr] md:gap-6" : "md:grid-cols-[13rem_1fr] md:gap-8"}`}>
+        {nav ?? (
         <nav
           aria-label={title}
           className="-mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 pb-2 md:mx-0 md:flex-col md:self-start md:overflow-visible md:rounded-xl md:border md:bg-surface md:p-2"
@@ -53,6 +56,7 @@ export default function DashboardShell({
             );
           })}
         </nav>
+        )}
         <section className="mt-6 min-w-0 md:mt-0">{children}</section>
       </div>
     </main>

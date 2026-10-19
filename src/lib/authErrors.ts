@@ -15,6 +15,12 @@ export function authErrorMessage(t: TFunction, error: Pick<AuthError, "message">
       return t("auth.clubNameTaken");
     case "user_banned":
       return t("auth.blocked");
+    case "admin_blocked":
+      return t("auth.adminBlocked");
+    case "admin_locked":
+      return t("auth.adminLocked");
+    case "admin_locked_temp":
+      return t("auth.adminLockedTemp");
     case "email_not_confirmed":
       return t("auth.notConfirmed");
     case "user_already_exists":
