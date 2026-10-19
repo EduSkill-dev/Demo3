@@ -4,11 +4,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientIp, logActivity } from "@/lib/admin";
+import { sessionFor, setVia } from "@/lib/adminSecurity";
 
 // Sign-in goes through the server so that
 //   * every successful sign-in is logged with its IP address,
 //   * the super admin can use either of the two addresses tied to the
-//     account (same password),
+//     account, each with its own password (the second one's is kept as a
+//     hash in admins.alt_password_hash; the session is then made on the
+//     server). Until the second address has a password of its own, it takes
+//     the main one, which becomes its own from then on,
 //   * a blocked account is turned away even before its ban is noticed, and
 //   * admins are guarded: an admin the super admin blocked cannot sign in;
 //     5 wrong passwords in a row lock a regular admin until the super admin
@@ -47,21 +51,26 @@ async function handlePOST(req: Request) {
     if (guard.is_super && until && new Date(until) > new Date()) return fail("admin_locked_temp");
   }
 
-  let result = await supabase.auth.signInWithPassword({ email, password });
-  let via: "primary" | "alt" = "primary";
-
-  // Not an account address: it may be the super admin's second one.
-  if (result.error?.code === "invalid_credentials") {
-    const { data: alias } = await admin.from("admins").select("user_id").eq("alt_email", email).maybeSingle();
-    const aliasId = (alias as { user_id: string } | null)?.user_id;
-    if (aliasId) {
-      const { data: owner } = await admin.from("profiles").select("email").eq("id", aliasId).maybeSingle();
-      const primary = (owner as { email: string } | null)?.email;
-      if (primary) {
-        result = await supabase.auth.signInWithPassword({ email: primary, password });
-        via = "alt";
-      }
+  type Result = { error: { code?: string; message?: string; status?: number } | null; data: { user: { id: string } | null } };
+  let result: Result;
+  if (adminId && which === "alt") {
+    // The super admin's second address: its own password.
+    const { data: owner } = await admin.from("profiles").select("email").eq("id", adminId).maybeSingle();
+    const primary = (owner as { email: string } | null)?.email ?? "";
+    const { data: hashRow } = await admin.from("admins").select("alt_password_hash").eq("user_id", adminId).maybeSingle();
+    let ok = false;
+    if ((hashRow as { alt_password_hash: string | null } | null)?.alt_password_hash) {
+      const { data } = await admin.rpc("admin_check_alt_password", { p_user: adminId, p_password: password });
+      ok = data === true && (await sessionFor(admin, primary));
+    } else if (primary) {
+      // First sign-in since the two were split: the shared password, kept.
+      const first = await supabase.auth.signInWithPassword({ email: primary, password });
+      ok = !first.error && !!first.data.user;
+      if (ok) await admin.rpc("admin_set_alt_password", { p_user: adminId, p_password: password });
     }
+    result = ok ? { error: null, data: { user: { id: adminId } } } : { error: { code: "invalid_credentials" }, data: { user: null } };
+  } else {
+    result = await supabase.auth.signInWithPassword({ email, password });
   }
 
   if (guard && adminId) {
@@ -93,6 +102,7 @@ async function handlePOST(req: Request) {
   }
 
   const user = result.data.user;
+  if (adminId) await setVia(adminId, which);
   const { data: profile } = await admin.from("profiles").select("role, status").eq("id", user.id).maybeSingle();
   const p = profile as { role: string; status: string } | null;
   if (p?.status === "blocked") {
@@ -104,7 +114,7 @@ async function handlePOST(req: Request) {
     actor: user.id,
     action: "auth.login",
     ip: clientIp(req),
-    meta: via === "alt" ? { via: "second address" } : {},
+    meta: which === "alt" && adminId ? { via: "second address" } : {},
   });
 
   const target = p?.role === "admin" ? "/admin" : p?.role === "club" ? "/dashboard" : "/account";

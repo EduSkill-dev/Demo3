@@ -5,6 +5,7 @@ import PasswordForm from "@/components/admin/PasswordForm";
 import { can, getAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AdminNav, { type NavEntry } from "@/components/admin/AdminNav";
+import KeyGate from "@/components/admin/KeyGate";
 
 export const metadata: Metadata = { title: "Ադմինի վահանակ", robots: { index: false } };
 
@@ -13,6 +14,18 @@ export const metadata: Metadata = { title: "Ադմինի վահանակ", robots
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const me = await getAdmin();
   if (!me) redirect("/login?next=/admin");
+
+  // A new device of a key holder opens nothing before the key.
+  if (me.needsKey) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <h1 className="font-serif text-2xl font-semibold text-heading">Հաստատեք սարքը</h1>
+        <div className="mt-6">
+          <KeyGate />
+        </div>
+      </main>
+    );
+  }
 
   // A one-time password opens nothing but the form that replaces it.
   if (me.mustChangePassword) {

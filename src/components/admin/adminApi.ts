@@ -1,11 +1,13 @@
 // Shared by the admin screens (no "use client": server pages use the class
 // names too).
 
-// One call to /api/admin; the answer is either the result or an error text.
+// One call to /api/admin (or /api/admin/security); the answer is either the
+// result or an error text.
 export async function adminAction<T = Record<string, unknown>>(
-  body: { action: string } & Record<string, unknown>
+  body: { action: string } & Record<string, unknown>,
+  path = "/api/admin"
 ): Promise<{ data: T; error: null } | { data: null; error: string }> {
-  const res = await fetch("/api/admin", {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

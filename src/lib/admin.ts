@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ADMIN_PERMS, type AdminPerm } from "@/lib/adminLabels";
 import { accountBlockedEmail, sendEmail } from "@/lib/email";
+import { deviceTrusted, hasKeys } from "@/lib/adminSecurity";
 
 export type AdminSession = {
   userId: string;
@@ -11,6 +12,9 @@ export type AdminSession = {
   isSuper: boolean;
   perms: AdminPerm[]; // what a regular admin was allowed; a super admin may do everything
   mustChangePassword: boolean;
+  // The account has a security key and this device has not passed it yet:
+  // nothing opens but the key check (and the recovery-code sign-in).
+  needsKey: boolean;
 };
 
 // The signed-in admin, or null. Every admin page and /api/admin starts here.
@@ -37,6 +41,7 @@ export async function getAdmin(): Promise<AdminSession | null> {
     isSuper: a.is_super,
     perms: ADMIN_PERMS.filter((k) => a.perms.includes(k)),
     mustChangePassword: a.must_change_password,
+    needsKey: (await hasKeys(admin, user.id)) && !(await deviceTrusted(admin, user.id)),
   };
 }
 

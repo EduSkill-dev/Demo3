@@ -188,6 +188,8 @@ const en: DeepPartial<Dictionary> = {
     showPassword: "Show the password",
     hidePassword: "Hide the password",
     blocked: "Your account has been blocked.",
+    adminUseRecovery: "This address’s password is not reset by email: sign in with a recovery code, then change the password in the admin area.",
+    adminRecoveryLink: "Sign in with a recovery code",
     blockedNoAction: "Your account is blocked, and for now you cannot do anything with it.",
     notConfirmed: "Your email is not confirmed yet. Please check your inbox.",
     resend: "Resend the confirmation email",

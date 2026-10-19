@@ -14,6 +14,7 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
+  const [recovery, setRecovery] = useState(false);
   const router = useRouter();
 
   // A blocked account reads the notice, then lands on the home page.
@@ -32,11 +33,15 @@ export default function ForgotPasswordPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email.trim() }),
     })
-      .then((r) => r.json() as Promise<{ blocked?: boolean }>)
-      .catch(() => ({ blocked: false }));
+      .then((r) => r.json() as Promise<{ blocked?: boolean; recovery?: boolean }>)
+      .catch(() => ({ blocked: false, recovery: false }));
     if (check.blocked) {
       setBusy(false);
       return setBlocked(true);
+    }
+    if (check.recovery) {
+      setBusy(false);
+      return setRecovery(true);
     }
     const { error: err } = await createClient().auth.resetPasswordForEmail(email.trim(), {
       redirectTo: confirmUrl("recovery"),
@@ -51,6 +56,11 @@ export default function ForgotPasswordPage() {
     <AuthCard title={t("auth.forgotTitle")}>
       {blocked ? (
         <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{t("auth.blockedNoAction")}</p>
+      ) : recovery ? (
+        <p className="rounded-lg border border-line bg-sand/50 p-4 text-sm text-ink">
+          {t("auth.adminUseRecovery")}{" "}
+          <a href="/auth/admin-recovery" className="font-semibold text-terracotta-600 hover:underline">{t("auth.adminRecoveryLink")}</a>
+        </p>
       ) : sent ? (
         <p className="rounded-lg bg-green-50 p-4 text-sm text-green-800">{t("auth.linkSent")}</p>
       ) : (

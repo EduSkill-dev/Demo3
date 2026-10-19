@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resent, setResent] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   // Sent back from a sign-in with Google that did not go through.
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function LoginPage() {
       setBusy(false);
       const err = data?.error;
       setUnconfirmed(err?.code === "email_not_confirmed");
+      setLocked(err?.code === "admin_locked_temp");
       return setError(err ? authErrorMessage(t, err) : t("errors.network"));
     }
     // Back to where they came from, else to their own dashboard. Admins
@@ -91,6 +93,11 @@ export default function LoginPage() {
           <PasswordInput id="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {locked && (
+          <Link href="/auth/admin-recovery" className="block text-sm font-semibold text-terracotta-500 hover:text-terracotta-700">
+            {t("auth.adminRecoveryLink")}
+          </Link>
+        )}
         {unconfirmed && (
           <button type="button" onClick={resend} disabled={resent} className="text-sm font-semibold text-terracotta-500 hover:text-terracotta-700 disabled:opacity-60">
             {resent ? t("auth.resent") : t("auth.resend")}

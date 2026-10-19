@@ -476,6 +476,31 @@ export function rollcallReminderEmail(input: { to: string; clubName: string; tit
   return { to: input.to, subject: `Culmen — նշեք «${input.title}» արշավի ներկա/բացական`, html, text: `${input.unmarked} մասնակցի ներկայությունը դեռ նշված չէ։ ${url}` };
 }
 
+// To the super admin's other address: confirm that this address's password
+// may be changed (the key was already used). Valid 10 minutes.
+export function adminConfirmChangeEmail(input: { to: string; url: string }) {
+  const html = layout(
+    "Հաստատեք գաղտնաբառի փոփոխությունը",
+    `<p>Culmen-ի ադմինի վահանակից խնդրել են փոխել այս հասցեի (${esc(input.to)}) գաղտնաբառը։ Անվտանգության բանալին արդեն հաստատվել է։</p>
+     <p>Եթե դա Դուք եք, հաստատեք 10 րոպեի ընթացքում։ Եթե ոչ՝ մի սեղմեք, և անմիջապես փոխեք Ձեր գաղտնաբառերը։</p>
+     ${button(input.url, "Հաստատել")}`
+  );
+  return { to: input.to, subject: "Culmen — հաստատեք ադմինի գաղտնաբառի փոփոխությունը", html, text: `Հաստատեք 10 րոպեի ընթացքում՝ ${input.url}` };
+}
+
+// To both of the super admin's addresses: something changed in the sign-in
+// protection (a key added or removed, a recovery code used, a password
+// changed by the other address's rule).
+export function adminSecurityAlertEmail(input: { to: string; what: string; ip: string | null }) {
+  const html = layout(
+    "Ադմինի մուտքի պաշտպանություն",
+    `<p>${esc(input.what)}</p>
+     <p style="color:#5b6b66;font-size:13px">IP՝ ${esc(input.ip ?? "անհայտ")} · ${new Date().toISOString().replace("T", " ").slice(0, 16)} UTC</p>
+     <p>Եթե դա Դուք չեք եղել, մտեք մեկանգամյա կոդով, փոխեք երկու գաղտնաբառերը և ստեղծեք նոր կոդեր։</p>`
+  );
+  return { to: input.to, subject: "Culmen — ադմինի մուտքի պաշտպանություն", html, text: input.what };
+}
+
 // A platform post by email (admin area → News). An important one says so.
 export function platformNewsEmail(input: { to: string; body: string; important: boolean; settingsUrl: string }) {
   const title = input.important ? "Կարևոր տեղեկություն Culmen-ից" : "Նորություն Culmen-ից";

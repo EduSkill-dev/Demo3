@@ -20,6 +20,7 @@ import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@
 import { DICTIONARIES } from "@/i18n/translate";
 import { isLocale } from "@/i18n/config";
 import { MIN_PASSWORD } from "@/lib/authErrors";
+import { allowCredentialChange, viaOf } from "@/lib/adminSecurity";
 
 // Everything an admin can change goes through this one route:
 //   { action: "<name>", ... }  →  { ok: true, ... } | { error }
@@ -661,6 +662,16 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   async "password.change"(ctx, body) {
     const password = typeof body.password === "string" ? body.password : "";
     if (password.length < MIN_PASSWORD) return fail(`Գաղտնաբառը պետք է լինի առնվազն ${MIN_PASSWORD} նշան։`);
+    // The super admin changes here only the password of the address this
+    // session signed in with; the other one needs the key and that address's
+    // own confirmation (/api/admin/security).
+    if (ctx.me.isSuper && (await viaOf(ctx.me.userId)) === "alt") {
+      const { error } = await ctx.db.rpc("admin_set_alt_password", { p_user: ctx.me.userId, p_password: password });
+      if (error) return fail(error.message, 500);
+      await logActivity({ actor: ctx.me.userId, action: "admin.password_changed", ip: ctx.ip, meta: { address: "alt" } });
+      return NextResponse.json({ ok: true });
+    }
+    await allowCredentialChange(ctx.db, ctx.me.userId);
     const { error } = await (await createClient()).auth.updateUser({ password });
     if (error) {
       return fail(error.code === "same_password" ? "Նոր գաղտնաբառը պետք է տարբերվի մեկանգամյայից։" : error.message);
@@ -681,6 +692,8 @@ async function handlePOST(req: Request) {
   if (!handler) return fail("Անհայտ գործողություն։");
   // Until the one-time password is replaced, nothing else is allowed.
   if (me.mustChangePassword && action !== "password.change") return fail("Նախ փոխեք մեկանգամյա գաղտնաբառը։", 403);
+  // A new device of a key holder does nothing before the key.
+  if (me.needsKey) return fail("Այս սարքից մուտքը նախ հաստատեք անվտանգության բանալիով։", 403);
 
   return handler({ me, ip: clientIp(req), db: createAdminClient() }, body);
 }

@@ -118,6 +118,45 @@ async function loginCookie(address, password) {
   return { status: res.status, body, cookie };
 }
 
+// A software security key (WebAuthn, "none" attestation, P-256) — enough to
+// stand in for the YubiKey against the server's checks.
+const nodeCrypto = require('crypto');
+function cbor(v) {
+  const head = (major, n) => n < 24 ? Buffer.from([major << 5 | n]) : n < 256 ? Buffer.from([major << 5 | 24, n]) : Buffer.from([major << 5 | 25, n >> 8, n & 255]);
+  if (typeof v === 'number') return v >= 0 ? head(0, v) : head(1, -1 - v);
+  if (typeof v === 'string') { const b = Buffer.from(v); return Buffer.concat([head(3, b.length), b]); }
+  if (Buffer.isBuffer(v)) return Buffer.concat([head(2, v.length), v]);
+  const entries = v instanceof Map ? [...v] : Object.entries(v);
+  return Buffer.concat([head(5, entries.length), ...entries.flatMap(([k, x]) => [cbor(k), cbor(x)])]);
+}
+function softKey(origin) {
+  const { privateKey, publicKey } = nodeCrypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const jwk = publicKey.export({ format: 'jwk' });
+  const credId = nodeCrypto.randomBytes(32);
+  const rpHash = nodeCrypto.createHash('sha256').update(new URL(origin).hostname).digest();
+  let counter = 0;
+  const b64 = (b) => Buffer.from(b).toString('base64url');
+  const client = (type, challenge) => Buffer.from(JSON.stringify({ type, challenge, origin, crossOrigin: false }));
+  const count = () => { const b = Buffer.alloc(4); b.writeUInt32BE(++counter); return b; };
+  return {
+    register(options) {
+      const cose = cbor(new Map([[1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x, 'base64url')], [-3, Buffer.from(jwk.y, 'base64url')]]));
+      const len = Buffer.from([0, credId.length]);
+      const authData = Buffer.concat([rpHash, Buffer.from([0x41]), count(), Buffer.alloc(16), len, credId, cose]);
+      const attestationObject = cbor({ fmt: 'none', attStmt: {}, authData });
+      return { id: b64(credId), rawId: b64(credId), type: 'public-key', clientExtensionResults: {},
+        response: { clientDataJSON: b64(client('webauthn.create', options.challenge)), attestationObject: b64(attestationObject), transports: ['usb'] } };
+    },
+    sign(options) {
+      const authData = Buffer.concat([rpHash, Buffer.from([0x01]), count()]);
+      const cd = client('webauthn.get', options.challenge);
+      const signature = nodeCrypto.sign('sha256', Buffer.concat([authData, nodeCrypto.createHash('sha256').update(cd).digest()]), privateKey);
+      return { id: b64(credId), rawId: b64(credId), type: 'public-key', clientExtensionResults: {},
+        response: { clientDataJSON: b64(cd), authenticatorData: b64(authData), signature: b64(signature) } };
+    },
+  };
+}
+
 // Wait until the dev server responds or give up.
 async function waitForServer(ms) {
   const start = Date.now();
@@ -709,7 +748,7 @@ async function main() {
       check('admin: signs in with the second address, and the sign-in is logged',
         superLogin.status === 200 && superLogin.body.target === '/admin' && loginLog.length === 1 && loginLog[0].actor_role === 'super',
         `status=${superLogin.status} body=${JSON.stringify(superLogin.body)} log=${JSON.stringify(loginLog)}`);
-      const superCookie = superLogin.cookie;
+      let superCookie = superLogin.cookie;
       const act = (body, cookie) => api('/api/admin', body, cookie);
 
       const outsider = await act({ action: 'account.setStatus', userId: ids.ind2, status: 'frozen' }, indCookie);
@@ -1371,6 +1410,105 @@ async function main() {
       if (!goneAdmin) ids.adm = null;
       await admin.from('activity_log').delete().like('actor_label', `%-${stamp}@example.com>%`);
       await admin.from('activity_log').delete().like('target_label', `%-${stamp}@example.com%`);
+
+      // The super admin's hardened sign-in: two passwords, the security key,
+      // the other address's password, recovery codes.
+      {
+        const origin = `http://localhost:${DEV_PORT}`;
+        const jar = (cookie, res) => {
+          const map = new Map(cookie.split('; ').filter(Boolean).map((c) => [c.split('=')[0], c]));
+          for (const c of res.headers.getSetCookie()) map.set(c.split('=')[0], c.split(';')[0]);
+          return [...map.values()].join('; ');
+        };
+        const sec = async (body, cookie) => {
+          const res = await fetch(`${origin}/api/admin/security`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie }, body: JSON.stringify(body) });
+          return { status: res.status, body: await res.json().catch(() => ({})), cookie: jar(cookie, res) };
+        };
+        const ALT2 = 'E2e-alt-pass-2', MAIN3 = 'E2e-main-pass-3';
+
+        const altChange = await act({ action: 'password.change', password: ALT2 }, superCookie);
+        const altOld = await loginCookie(email('superalt'), PASSWORD);
+        const altNew = await loginCookie(email('superalt'), ALT2);
+        const mainOld = await loginCookie(email('super'), PASSWORD);
+        const mainWithAlt = await loginCookie(email('super'), ALT2);
+        check('admin keys: the two addresses have separate passwords — changing one (while signed in with it) leaves the other',
+          altChange.status === 200 && altOld.status === 400 && altNew.status === 200 && mainOld.status === 200 && mainWithAlt.status === 400,
+          `change=${altChange.status} ${JSON.stringify(altChange.body)} altOld=${altOld.status} altNew=${altNew.status} mainOld=${mainOld.status} mainWithAlt=${mainWithAlt.status}`);
+        superCookie = altNew.cookie;
+
+        const key = softKey(origin);
+        const regOpts = await sec({ action: 'register.options' }, superCookie);
+        const reg = await sec({ action: 'register.verify', response: key.register(regOpts.body.options || {}), label: 'E2E key' }, superCookie);
+        superCookie = reg.cookie;
+        const codes = reg.body.codes || [];
+        const keyRows = (await admin.from('admin_keys').select('id').eq('user_id', ids.super)).data || [];
+        const stillIn = await act({ action: 'nav.save', order: [] }, superCookie);
+        check('admin keys: registering a key gives ten one-time codes and keeps this device trusted',
+          regOpts.status === 200 && reg.status === 200 && codes.length === 10 && keyRows.length === 1 && stillIn.status === 200,
+          `opts=${regOpts.status} reg=${reg.status} ${JSON.stringify(reg.body).slice(0, 200)} codes=${codes.length} keys=${keyRows.length} after=${stillIn.status}`);
+
+        let fresh = (await loginCookie(email('super'), PASSWORD)).cookie;
+        const gatedApi = await act({ action: 'nav.save', order: [] }, fresh);
+        const gatedSec = await sec({ action: 'codes.new' }, fresh);
+        const gatedPage = await page('/admin', fresh);
+        const vOpts = await sec({ action: 'verify.options' }, fresh);
+        const badTouch = await sec({ action: 'verify.verify', response: softKey(origin).sign(vOpts.body.options || {}) }, fresh);
+        const vOpts2 = await sec({ action: 'verify.options' }, fresh);
+        const touch = await sec({ action: 'verify.verify', response: key.sign(vOpts2.body.options || {}) }, fresh);
+        fresh = touch.cookie;
+        const opened = await act({ action: 'nav.save', order: [] }, fresh);
+        check('admin keys: a new device opens nothing before the key (another key does not count), then it is trusted',
+          gatedApi.status === 403 && gatedSec.status === 403 && gatedPage.includes('Հաստատեք սարքը') && badTouch.status === 400 && touch.status === 200 && opened.status === 200,
+          `api=${gatedApi.status} sec=${gatedSec.status} gate=${gatedPage.includes('Հաստատեք սարքը')} bad=${badTouch.status} touch=${touch.status} ${JSON.stringify(touch.body)} after=${opened.status}`);
+
+        const direct = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+        await direct.auth.signInWithPassword({ email: email('super'), password: PASSWORD });
+        const bypass = await direct.auth.updateUser({ password: 'Bypass-pass-123' });
+        const stillOld = await loginCookie(email('super'), PASSWORD);
+        const forgot = await api('/api/auth/forgot', { email: email('superalt') });
+        check('admin keys: a session cannot change the password from the browser, and "forgot password" sends to the recovery codes',
+          !!bypass.error && stillOld.status === 200 && forgot.body?.recovery === true,
+          `bypass=${bypass.error ? 'refused' : 'ALLOWED'} old=${stillOld.status} forgot=${JSON.stringify(forgot.body)}`);
+        await direct.auth.signOut({ scope: 'local' }).catch(() => null);
+
+        // Signed in with the second address: the first one's password needs the key and the first address's email.
+        const start = await sec({ action: 'other.start' }, superCookie);
+        const early = await sec({ action: 'other.finish', op: start.body.op, password: MAIN3 }, superCookie);
+        const keyed = await sec({ action: 'other.key', op: start.body.op, response: key.sign(start.body.options || {}) }, superCookie);
+        const opRow = (await admin.from('admin_secure_ops').select('target, key_ok, email_token').eq('id', start.body.op).maybeSingle()).data;
+        const wrongLink = await api('/api/admin/security', { action: 'confirm', t: `${start.body.op}.nope` });
+        const rightLink = await api('/api/admin/security', { action: 'confirm', t: `${start.body.op}.${opRow?.email_token}` });
+        const finish = await sec({ action: 'other.finish', op: start.body.op, password: MAIN3 }, superCookie);
+        const mainNew = await loginCookie(email('super'), MAIN3);
+        const altSame = await loginCookie(email('superalt'), ALT2);
+        const late = await sec({ action: 'other.start' }, superCookie);
+        await sec({ action: 'other.key', op: late.body.op, response: key.sign(late.body.options || {}) }, superCookie);
+        const lateRow = (await admin.from('admin_secure_ops').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', late.body.op).select('email_token').maybeSingle()).data;
+        const lateLink = await api('/api/admin/security', { action: 'confirm', t: `${late.body.op}.${lateRow?.email_token}` });
+        check('admin keys: the other address\'s password changes only after the key AND that address\'s email link, within 10 minutes',
+          start.status === 200 && opRow?.target === 'main' && early.status === 400 && keyed.status === 200 && opRow?.key_ok === true
+            && wrongLink.status === 400 && rightLink.status === 200 && finish.status === 200 && mainNew.status === 200 && altSame.status === 200 && lateLink.status === 400,
+          `start=${start.status} target=${opRow?.target} early=${early.status} key=${keyed.status} wrong=${wrongLink.status} right=${rightLink.status} finish=${finish.status} ${JSON.stringify(finish.body)} main=${mainNew.status} alt=${altSame.status} late=${lateLink.status}`);
+
+        // The first address locked: a recovery code still lets in, once each, with either address.
+        await admin.from('admins').update({ locked_until: new Date(Date.now() + 30 * 60000).toISOString() }).eq('user_id', ids.super);
+        const lockedMain = await loginCookie(email('super'), MAIN3);
+        const wrongCode = await api('/api/auth/recovery', { email: email('super'), code: 'AAAA-BBBB-CCCC' });
+        const recRes = await fetch(`${origin}/api/auth/recovery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email('super'), code: (codes[0] || '').toLowerCase() }) });
+        const recBody = await recRes.json().catch(() => ({}));
+        const recCookie = jar('', recRes);
+        const reused = await api('/api/auth/recovery', { email: email('superalt'), code: codes[0] });
+        const oldSession = await act({ action: 'nav.save', order: [] }, superCookie);
+        const recOpen = await act({ action: 'nav.save', order: [] }, recCookie);
+        const unlocked = (await admin.from('admins').select('locked_until').eq('user_id', ids.super).single()).data;
+        const byAltRes = await fetch(`${origin}/api/auth/recovery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email('superalt'), code: codes[1] }) });
+        const byAlt = { status: byAltRes.status };
+        check('admin keys: a recovery code signs in even with the address locked (any address, once each), ends the other sessions, trusts the device',
+          lockedMain.status === 403 && wrongCode.status === 400 && recRes.status === 200 && recBody.target === '/admin/password' && reused.status === 400
+            && oldSession.status === 401 && recOpen.status === 200 && unlocked?.locked_until === null && byAlt.status === 200,
+          `locked=${lockedMain.status} wrong=${wrongCode.status} rec=${recRes.status} ${JSON.stringify(recBody)} reused=${reused.status} old=${oldSession.status} new=${recOpen.status} lock=${JSON.stringify(unlocked)} alt=${byAlt.status}`);
+        superCookie = jar('', byAltRes); // the second recovery ended the first one's session
+      }
 
       // ---------- Phase 7: daily job ----------
       const cronUrl = `http://localhost:${DEV_PORT}/api/cron/daily`;
