@@ -3,7 +3,7 @@
 import { useState } from "react";
 import AuthCard, { authButton, authInput, authLabel } from "@/components/auth/AuthCard";
 
-// The super admin's way in with a recovery code (admin area: Armenian only).
+// An admin's way in with a recovery code (admin area: Armenian only).
 // Not linked from the public login form — it shows up after a 30-minute
 // lock and on "forgot password" for such an address.
 export default function AdminRecoveryPage() {
@@ -33,7 +33,7 @@ export default function AdminRecoveryPage() {
     <AuthCard title="Մուտք մեկանգամյա կոդով">
       <form onSubmit={submit} className="space-y-4">
         <p className="text-sm text-muted">
-          Գլխավոր ադմինի համար․ Ձեր երկու հասցեներից որևէ մեկը և պահված 10 կոդերից մեկը։ Կոդը գործում է մեկ անգամ, մյուս բոլոր սարքերից հաշիվը դուրս կգա։
+          Ադմինների համար․ Ձեր հասցեն (Գլխավոր ադմինը՝ երկուսից որևէ մեկը) և պահված 10 կոդերից մեկը։ Կոդը գործում է մեկ անգամ, մյուս բոլոր սարքերից հաշիվը դուրս կգա։
         </p>
         <div>
           <label htmlFor="email" className={authLabel}>Էլ. հասցե</label>

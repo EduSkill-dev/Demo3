@@ -56,15 +56,29 @@ export async function deviceTrusted(db: Db, userId: string): Promise<boolean> {
   }
   return true;
 }
-export async function trustDevice(db: Db, userId: string, label: string) {
+export async function trustDevice(db: Db, userId: string, label: string, byRecovery = false) {
   const secret = randomToken(32);
-  const { data } = await db.from("admin_devices").insert({ user_id: userId, token_hash: await sha256(secret), label: label.slice(0, 120) }).select("id").single();
+  const { data } = await db
+    .from("admin_devices")
+    .insert({ user_id: userId, token_hash: await sha256(secret), label: label.slice(0, 120), by_recovery: byRecovery })
+    .select("id")
+    .single();
   if (data) cookies().set("adm_dev", `${(data as { id: string }).id}.${secret}`, { ...cookieOpts, maxAge: YEAR });
 }
 export function deviceIdOf(): string | null {
   const id = (cookies().get("adm_dev")?.value ?? "").split(".")[0];
   return /^[0-9a-f-]{36}$/.test(id) ? id : null;
 }
+// This device came in with a recovery code less than 30 minutes ago: it may
+// remove keys without touching one (both keys lost).
+export async function recoveredJustNow(db: Db, userId: string): Promise<boolean> {
+  const id = deviceIdOf();
+  if (!id) return false;
+  const { data } = await db.from("admin_devices").select("created_at").eq("id", id).eq("user_id", userId).eq("by_recovery", true).eq("revoked", false).maybeSingle();
+  const row = data as { created_at: string } | null;
+  return !!row && Date.now() - new Date(row.created_at).getTime() < 30 * 60_000;
+}
+export const MAX_KEYS = 2;
 export async function hasKeys(db: Db, userId: string): Promise<boolean> {
   const { count } = await db.from("admin_keys").select("id", { count: "exact", head: true }).eq("user_id", userId);
   return (count ?? 0) > 0;

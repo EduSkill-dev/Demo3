@@ -19,19 +19,18 @@ const when = (iso: string | null) =>
     : null;
 
 // "Admin data": who this admin is (both addresses for the super admin), the
-// sign-in protection, and the password of the address this session signed
-// in with. The other address's password has its own, stricter way.
+// sign-in protection (keys, codes, devices — every admin), and the password
+// of the address this session signed in with. The super admin's other
+// address has its own, stricter way.
 export default async function AdminDataPage() {
   const me = await getAdmin();
   if (!me) redirect("/login?next=/admin/password");
   const db = createAdminClient();
   const [{ data }, { data: keyRows }, { data: deviceRows }, { count: codesLeft }, via] = await Promise.all([
     db.from("admins").select("alt_email, phone").eq("user_id", me.userId).maybeSingle(),
-    me.isSuper ? db.from("admin_keys").select("id, label, created_at, last_used_at").eq("user_id", me.userId).order("created_at") : Promise.resolve({ data: [] }),
-    me.isSuper
-      ? db.from("admin_devices").select("id, label, created_at, last_seen_at").eq("user_id", me.userId).eq("revoked", false).order("last_seen_at", { ascending: false })
-      : Promise.resolve({ data: [] }),
-    me.isSuper ? db.from("admin_recovery_codes").select("id", { count: "exact", head: true }).eq("user_id", me.userId).is("used_at", null) : Promise.resolve({ count: 0 }),
+    db.from("admin_keys").select("id, label, created_at, last_used_at").eq("user_id", me.userId).order("created_at"),
+    db.from("admin_devices").select("id, label, created_at, last_seen_at").eq("user_id", me.userId).eq("revoked", false).order("last_seen_at", { ascending: false }),
+    db.from("admin_recovery_codes").select("id", { count: "exact", head: true }).eq("user_id", me.userId).is("used_at", null),
     me.isSuper ? viaOf(me.userId) : Promise.resolve("main" as const),
   ]);
   const a = data as { alt_email: string | null; phone: string | null } | null;
@@ -54,18 +53,14 @@ export default async function AdminDataPage() {
         ? "5 սխալ գաղտնաբառ անընդմեջ՝ տվյալ հասցեով մուտքը փակվում է 30 րոպեով (մյուս հասցեն և մեկանգամյա կոդերը աշխատում են)"
         : "5 սխալ գաղտնաբառ անընդմեջ՝ հաշիվը կողպվում է, բացում է Գլխավոր ադմինը",
     ],
-    ...(me.isSuper
-      ? ([
-          [
-            "Նոր սարքից մուտքի հաստատում",
-            keys.length ? (
-              <span key="2fa" className="text-spruce-700 dark:text-spruce-300">✓ Միացված է · {keys.length} բանալի</span>
-            ) : (
-              <span key="2fa" className="text-muted">Միացված չէ․ գրանցեք բանալին ներքևում</span>
-            ),
-          ],
-        ] as [string, React.ReactNode][])
-      : []),
+    [
+      "Նոր սարքից մուտքի հաստատում",
+      keys.length ? (
+        <span key="2fa" className="text-spruce-700 dark:text-spruce-300">✓ Միացված է · {keys.length} բանալի</span>
+      ) : (
+        <span key="2fa" className="text-muted">Միացված չէ․ գրանցեք բանալին ներքևում</span>
+      ),
+    ],
   ];
 
   return (
@@ -88,7 +83,7 @@ export default async function AdminDataPage() {
           <PasswordForm forced={false} />
         </div>
       </section>
-      {me.isSuper && <AdminSecurityPanel keys={keys} devices={devices} codesLeft={codesLeft ?? 0} other={other} />}
+      <AdminSecurityPanel keys={keys} devices={devices} codesLeft={codesLeft ?? 0} other={other} />
     </div>
   );
 }

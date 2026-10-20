@@ -128,7 +128,7 @@ export default function TourCard({
               </Link>
               {tour.club.rating && (
                 <span className="flex shrink-0 items-center gap-1 text-xs text-muted" title={t("tour.ratingTitle", { count: tour.club.rating.count })}>
-                  <span className="text-apricot-500">★</span>
+                  <span className="-mt-px text-[15px] leading-none text-apricot-500">★</span>
                   <span className="font-semibold text-ink">{tour.club.rating.average.toFixed(1)}/5</span>
                   <span className="inline-flex items-center">
                     (

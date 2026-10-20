@@ -10,6 +10,7 @@ import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import CountBadge from "@/components/ui/CountBadge";
 import CulmenLogo from "@/components/CulmenLogo";
+import IdleLogout from "@/components/layout/IdleLogout";
 
 export type HeaderUser = { role: "individual" | "club" | "admin"; name: string; unread: number };
 
@@ -135,6 +136,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+      {user && <IdleLogout />}
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="shrink-0" aria-label="Culmen">
           <span className="dark:hidden"><CulmenLogo variant="light" size={40} wordmarkSize={30} gap={8} /></span>

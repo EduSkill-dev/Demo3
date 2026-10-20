@@ -2,6 +2,9 @@ import { COMPLETE_PATH, isExternalAccount, missingProfileFields, type ProfileFie
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const IDLE_COOKIE = "idle_seen";
+const IDLE_MS = 30 * 60_000;
+
 // Refreshes the Supabase session cookie on every request (server components
 // cannot write cookies themselves) and keeps each dashboard to its own role:
 // /account is for individuals, /dashboard is for clubs, /admin is for admins.
@@ -65,6 +68,35 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
+
+  // 30 minutes without activity end the session, for everyone (Gor,
+  // 2026-10-20): idle_seen holds the time of the last request (refreshed at
+  // most once a minute; an open page pings while it is being used, see
+  // IdleLogout). A tab closed and opened again later is signed out here.
+  if (user) {
+    const seen = Number(request.cookies.get(IDLE_COOKIE)?.value ?? 0);
+    const now = Date.now();
+    // A sign-in after that time is a new session, not an idle one.
+    const signedInAfter = !!user.last_sign_in_at && new Date(user.last_sign_in_at).getTime() > seen;
+    if (seen && !signedInAfter && now - seen > IDLE_MS) {
+      await supabase.auth.signOut({ scope: "local" });
+      const out = path.startsWith("/api/")
+        ? response
+        : (() => {
+            const url = request.nextUrl.clone();
+            url.pathname = "/login";
+            url.search = `?idle=1&next=${encodeURIComponent(path)}`;
+            const res = NextResponse.redirect(url);
+            response.cookies.getAll().forEach((c) => res.cookies.set(c));
+            return res;
+          })();
+      out.cookies.delete(IDLE_COOKIE);
+      return out;
+    }
+    if (!seen || now - seen > 60_000) {
+      response.cookies.set(IDLE_COOKIE, String(now), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 });
+    }
+  }
   const wantsAccount = path === "/account" || path.startsWith("/account/");
   const wantsDashboard = path === "/dashboard" || path.startsWith("/dashboard/");
   const wantsAdmin = path === "/admin" || path.startsWith("/admin/");

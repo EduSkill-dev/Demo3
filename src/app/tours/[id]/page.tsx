@@ -106,9 +106,8 @@ export default async function TourDetailPage({ params }: { params: { id: string 
 
           {/* The rating form shows only to someone who may rate; an empty box is hidden, and so is the whole part when there is nothing in it. */}
           <section className={showReviews ? "" : "[&:has(>div:empty)]:hidden"}>
-            <h2 className="font-serif text-xl font-semibold text-heading">
-              {t("clubPage.comments")} <span className="font-sans text-sm font-normal text-muted">({t("tour.commentsOnlyAfter")})</span>
-            </h2>
+            <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
+            <p className="mt-1 text-xs text-muted">{t("rating.onlyAfter")}</p>
             <div className="mt-4 rounded-xl border border-line bg-surface p-5 empty:hidden">
               <RatingBox target="tour" tourId={tour.id} noun={tour.title} />
             </div>

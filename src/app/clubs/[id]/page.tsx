@@ -193,6 +193,7 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
 
           <section id="comments">
             <h2 className="font-serif text-xl font-semibold text-heading">{t("clubPage.comments")}</h2>
+            {!isOwner && <p className="mt-1 text-xs text-muted">{t("rating.onlyAfterClub")}</p>}
             {isOwner && !publicRatings && (
               <p className="mt-3 rounded-lg border border-terracotta-500/40 bg-terracotta-500/10 p-3 text-sm text-ink">
                 {t("clubPage.hiddenForPackage")}{" "}

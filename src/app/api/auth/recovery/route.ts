@@ -6,9 +6,11 @@ import { clientIp, logActivity } from "@/lib/admin";
 import { deviceLabel, normalizeCode, sessionFor, setVia, trustDevice } from "@/lib/adminSecurity";
 import { adminSecurityAlertEmail, sendEmail } from "@/lib/email";
 
-// The super admin's way in when everything else fails: either address plus
-// one of the ten recovery codes. It works even when both passwords were
-// changed, the address is locked for 30 minutes, or the key is lost:
+// An admin's way in when everything else fails: the address (for the super
+// admin either of the two) plus one of the ten recovery codes. It works even
+// when the passwords were changed, the address is locked for 30 minutes, or
+// the keys are lost (a regular admin locked after wrong passwords still
+// waits for the super admin's new one-time password):
 //   * every other session of the account ends (whoever got in is out),
 //   * this device becomes trusted (no key asked),
 //   * the 30-minute locks are lifted and both addresses are told by email.
@@ -40,22 +42,23 @@ async function handlePOST(req: Request) {
 
   const [{ data: owner }, { data: row }] = await Promise.all([
     db.from("profiles").select("email").eq("id", userId).maybeSingle(),
-    db.from("admins").select("alt_email, blocked").eq("user_id", userId).maybeSingle(),
+    db.from("admins").select("alt_email, blocked, is_super, locked").eq("user_id", userId).maybeSingle(),
   ]);
   const main = (owner as { email: string } | null)?.email ?? "";
-  const a = row as { alt_email: string | null; blocked: boolean } | null;
+  const a = row as { alt_email: string | null; blocked: boolean; is_super: boolean; locked: boolean } | null;
   if (a?.blocked) return NextResponse.json({ error: "Հաշիվն արգելափակված է։" }, { status: 403 });
+  if (a && !a.is_super && a.locked) return NextResponse.json({ error: "Հաշիվը կողպված է․ դիմեք Գլխավոր ադմինին նոր մեկանգամյա գաղտնաբառի համար։" }, { status: 403 });
 
   await db.rpc("end_user_sessions", { p_user: userId });
   await db.from("admin_devices").update({ revoked: true }).eq("user_id", userId);
   if (!(await sessionFor(db, main))) return NextResponse.json({ error: "Մուտքը չստացվեց։ Փորձեք նորից։" }, { status: 500 });
   await setVia(userId, byMain ? "main" : "alt");
-  await trustDevice(db, userId, deviceLabel(req));
+  await trustDevice(db, userId, deviceLabel(req), true);
   await db.from("admins").update({ login_failures: 0, locked_until: null, alt_login_failures: 0, alt_locked_until: null }).eq("user_id", userId);
 
   const { count } = await db.from("admin_recovery_codes").select("id", { count: "exact", head: true }).eq("user_id", userId).is("used_at", null);
   await logActivity({ actor: userId, action: "security.recovery_login", ip: clientIp(req), meta: { left: count ?? 0 } });
-  const what = `Մուտք մեկանգամյա կոդով (${email})։ Մնացել է ${count ?? 0} կոդ։ Մյուս բոլոր սարքերից հաշիվը դուրս է եկել, և դրանք կրկին պետք է հաստատվեն բանալիով։`;
+  const what = `Մուտք մեկանգամյա կոդով (${email})։ Մնացել է ${count ?? 0} կոդ։ Մյուս բոլոր սարքերից հաշիվը դուրս է եկել, և դրանք կրկին պետք է հաստատվեն բանալիով։ Կորած բանալին կարող եք ջնջել 30 րոպեի ընթացքում՝ առանց բանալու։`;
   for (const to of [main, a?.alt_email]) if (to) await sendEmail(adminSecurityAlertEmail({ to, what, ip: clientIp(req) }));
 
   return NextResponse.json({ ok: true, target: "/admin/password", left: count ?? 0 });

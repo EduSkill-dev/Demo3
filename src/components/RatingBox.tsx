@@ -122,12 +122,8 @@ export default function RatingBox({
 
   if (eligibility === "loading")
     return <p className="text-sm text-muted">{t("common.loading")}</p>;
-  if (eligibility === "anon" || eligibility === "club") return null;
-
-  if (eligibility === "no")
-    return (
-      <p className="text-sm text-muted">{target === "tour" ? t("rating.onlyAfter") : t("rating.onlyAfterClub")}</p>
-    );
+  // Who may rate is said once, in small print under the section's heading.
+  if (eligibility === "anon" || eligibility === "club" || eligibility === "no") return null;
 
   return (
     <form onSubmit={submit} className="space-y-3">

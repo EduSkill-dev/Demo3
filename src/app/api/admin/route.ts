@@ -606,6 +606,14 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const target = await targetAdmin(ctx, str(body.userId));
     if (!target) return fail("Ադմինը չի գտնվել։", 404);
     const password = oneTimePassword();
+    // A full reset: the admin's keys, trusted devices and codes go too, so
+    // one who lost everything can start again with the new password.
+    await Promise.all([
+      ctx.db.from("admin_keys").delete().eq("user_id", target.userId),
+      ctx.db.from("admin_devices").delete().eq("user_id", target.userId),
+      ctx.db.from("admin_recovery_codes").delete().eq("user_id", target.userId),
+    ]);
+    await allowCredentialChange(ctx.db, target.userId);
     const { error } = await ctx.db.auth.admin.updateUserById(target.userId, { password });
     if (error) return fail(error.message, 500);
     await ctx.db.from("admins").update({ must_change_password: true, locked: false, login_failures: 0 }).eq("user_id", target.userId);

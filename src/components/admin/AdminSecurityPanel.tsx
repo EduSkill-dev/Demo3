@@ -21,15 +21,41 @@ export type SecurityProps = {
 const box = "rounded-xl border border-line bg-surface p-4 sm:p-5";
 const h3 = "font-serif text-lg font-semibold text-heading";
 
-// The super admin's protection: security keys, recovery codes, trusted
-// devices, and the other address's password (key + that address's email,
-// within 10 minutes; SMS later).
+const MAX_KEYS = 2;
+
+// An admin's protection: security keys (at most two), recovery codes,
+// trusted devices, and — for the super admin — the other address's password
+// (key + that address's email, within 10 minutes; SMS later). Keys show as
+// connected; removing one is behind "Manage" and needs a touch of a key.
 export default function AdminSecurityPanel({ keys, devices, codesLeft, other }: SecurityProps) {
   const router = useRouter();
   const [codes, setCodes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [label, setLabel] = useState("YubiKey");
+  const [label, setLabel] = useState(keys.length ? "YubiKey 2" : "YubiKey");
+  const [managing, setManaging] = useState(false);
+
+  async function removeKey(k: Row) {
+    if (!window.confirm(`Ջնջե՞լ «${k.label ?? "Բանալի"}» բանալին։`)) return;
+    setBusy(true);
+    setError(null);
+    const start = await call<{ options: Parameters<typeof startAuthentication>[0]["optionsJSON"] | null }>({ action: "remove.options" });
+    if (start.error !== null) return setBusy(false), setError(start.error);
+    let response = null;
+    if (start.data.options) {
+      try {
+        response = await startAuthentication({ optionsJSON: start.data.options });
+      } catch {
+        setBusy(false);
+        return setError("Բանալին չհաստատվեց։ Ջնջելու համար հպեք Ձեր բանալիներից մեկին։");
+      }
+    }
+    const res = await call({ action: "key.remove", id: k.id, response });
+    setBusy(false);
+    if (res.error !== null) return setError(res.error);
+    setManaging(false);
+    router.refresh();
+  }
 
   async function addKey() {
     setBusy(true);
@@ -47,6 +73,7 @@ export default function AdminSecurityPanel({ keys, devices, codesLeft, other }: 
     setBusy(false);
     if (done.error !== null) return setError(done.error);
     if (done.data.codes) setCodes(done.data.codes);
+    setLabel("YubiKey 2");
     router.refresh();
   }
 
@@ -68,8 +95,20 @@ export default function AdminSecurityPanel({ keys, devices, codesLeft, other }: 
       {codes && <CodesShown codes={codes} onClose={() => setCodes(null)} />}
 
       <section className={box}>
-        <h3 className={h3}>Անվտանգության բանալիներ</h3>
-        <p className="mt-1 text-sm text-muted">Նոր սարքից մուտք գործելիս վահանակը բացվում է միայն բանալիով հաստատելուց հետո։</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className={h3}>Անվտանգության բանալիներ</h3>
+          {keys.length > 0 && (
+            <span className="flex items-center gap-3">
+              <span className="rounded-full bg-spruce-500/10 px-2.5 py-0.5 text-xs font-semibold text-spruce-700 dark:text-spruce-300">
+                ✓ Միացված է {keys.length} / {MAX_KEYS}
+              </span>
+              <button type="button" onClick={() => setManaging((v) => !v)} className="text-xs font-semibold text-muted hover:text-ink">
+                {managing ? "Պատրաստ է" : "Կառավարել"}
+              </button>
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-muted">Նոր սարքից մուտք գործելիս վահանակը բացվում է միայն բանալիով հաստատելուց հետո։ Կարելի է գրանցել մինչև {MAX_KEYS} բանալի (երկրորդը՝ պահեստային)։</p>
         {keys.length > 0 ? (
           <ul className="mt-3 divide-y divide-line rounded-lg border border-line">
             {keys.map((k) => (
@@ -78,10 +117,12 @@ export default function AdminSecurityPanel({ keys, devices, codesLeft, other }: 
                   <span className="font-medium text-ink">🔑 {k.label ?? "Բանալի"}</span>
                   <span className="block text-xs text-muted">Ավելացվել է {k.created}{k.used ? ` · վերջին անգամ՝ ${k.used}` : ""}</span>
                 </span>
-                {keys.length > 1 && (
-                  <button type="button" disabled={busy} onClick={() => act({ action: "key.remove", id: k.id }, `Ջնջե՞լ «${k.label ?? "Բանալի"}» բանալին։`)} className={adminDanger}>
+                {managing ? (
+                  <button type="button" disabled={busy} onClick={() => removeKey(k)} className={adminDanger}>
                     Ջնջել
                   </button>
+                ) : (
+                  <span className="text-xs font-semibold text-spruce-700 dark:text-spruce-300">✓ Միացված</span>
                 )}
               </li>
             ))}
@@ -89,15 +130,20 @@ export default function AdminSecurityPanel({ keys, devices, codesLeft, other }: 
         ) : (
           <p className="mt-3 rounded-lg bg-sand/50 p-3 text-sm text-ink">Բանալի դեռ գրանցված չէ։ Գրանցելուց հետո կստանաք 10 մեկանգամյա կոդ։ Պահեք դրանք թղթի վրա, ոչ էլ. փոստում։</p>
         )}
+        {managing && (
+          <p className="mt-2 text-xs text-muted">Ջնջելու համար կպահանջվի հպում Ձեր բանալիներից մեկին (եթե երկուսն էլ կորել են՝ մտեք մեկանգամյա կոդով և ջնջեք 30 րոպեի ընթացքում)։</p>
+        )}
+        {keys.length < MAX_KEYS && (
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <label className="min-w-[10rem] flex-1 text-sm">
             <span className="mb-1 block text-muted">Անուն (որ տարբերեք)</span>
             <input value={label} maxLength={60} onChange={(e) => setLabel(e.target.value)} className={adminInput} />
           </label>
           <button type="button" disabled={busy} onClick={addKey} className={adminButton}>
-            {busy ? "…" : keys.length ? "Ավելացնել ևս մեկ բանալի" : "Գրանցել բանալին"}
+            {busy ? "…" : keys.length ? "Ավելացնել երկրորդ բանալին" : "Գրանցել բանալին"}
           </button>
         </div>
+        )}
         {keys.length === 1 && <p className="mt-2 text-xs text-muted">Խորհուրդ՝ գրանցեք նաև պահեստային երկրորդ բանալի։</p>}
       </section>
 

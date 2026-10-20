@@ -1447,6 +1447,22 @@ async function main() {
           regOpts.status === 200 && reg.status === 200 && codes.length === 10 && keyRows.length === 1 && stillIn.status === 200,
           `opts=${regOpts.status} reg=${reg.status} ${JSON.stringify(reg.body).slice(0, 200)} codes=${codes.length} keys=${keyRows.length} after=${stillIn.status}`);
 
+        {
+          const key2 = softKey(origin);
+          const o2 = await sec({ action: 'register.options' }, superCookie);
+          const r2 = await sec({ action: 'register.verify', response: key2.register(o2.body.options || {}), label: 'E2E key 2' }, superCookie);
+          const o3 = await sec({ action: 'register.options' }, superCookie);
+          const rows = (await admin.from('admin_keys').select('id, label').eq('user_id', ids.super)).data || [];
+          const second = rows.find((r) => r.label === 'E2E key 2');
+          const noTouch = await sec({ action: 'key.remove', id: second?.id }, superCookie);
+          const ro = await sec({ action: 'remove.options' }, superCookie);
+          const removed = await sec({ action: 'key.remove', id: second?.id, response: key2.sign(ro.body.options || {}) }, superCookie);
+          const left = (await admin.from('admin_keys').select('id').eq('user_id', ids.super)).data || [];
+          check('admin keys: at most two keys; removing one needs a touch of a key',
+            r2.status === 200 && r2.body.codes === null && o3.status === 400 && noTouch.status === 400 && removed.status === 200 && left.length === 1,
+            `second=${r2.status} codes=${JSON.stringify(r2.body.codes)} third=${o3.status} noTouch=${noTouch.status} removed=${removed.status} left=${left.length}`);
+        }
+
         let fresh = (await loginCookie(email('super'), PASSWORD)).cookie;
         const gatedApi = await act({ action: 'nav.save', order: [] }, fresh);
         const gatedSec = await sec({ action: 'codes.new' }, fresh);

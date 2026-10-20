@@ -15,7 +15,7 @@ export default function FilterPanel({ active, found, show, hide, children }: { a
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           className={`flex h-10 items-center gap-2 rounded-full border-2 px-4 text-sm font-semibold transition ${
-            active ? "border-terracotta-500 bg-terracotta-500/10 text-ink" : "border-line bg-surface text-ink"
+            active ? "border-terracotta-500 bg-terracotta-500/10 text-ink" : "border-spruce-500/50 bg-surface text-ink dark:border-spruce-300/45"
           }`}
         >
           <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">

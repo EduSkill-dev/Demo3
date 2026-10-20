@@ -24,12 +24,15 @@ export default function LoginPage() {
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resent, setResent] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [idle, setIdle] = useState(false);
 
   // Sent back from a sign-in with Google that did not go through.
   useEffect(() => {
     const reason = new URLSearchParams(window.location.search).get("error");
     if (reason === "oauth") setError(t("errors.oauthFailed"));
     if (reason === "blocked") setError(t("auth.blocked"));
+    // Signed out after 30 minutes without activity.
+    if (new URLSearchParams(window.location.search).get("idle") === "1") setIdle(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -76,6 +79,7 @@ export default function LoginPage() {
 
   return (
     <AuthCard title={t("auth.loginTitle")}>
+      {idle && <p className="mb-4 rounded-lg border border-line bg-sand/50 p-3 text-sm text-ink">{t("auth.idleOut")}</p>}
       <GoogleButton />
       <AuthDivider />
       <form onSubmit={handleSubmit} className="space-y-4">

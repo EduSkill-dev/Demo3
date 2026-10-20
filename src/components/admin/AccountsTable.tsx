@@ -36,6 +36,10 @@ const BADGE: Record<AccountStatus, string> = {
 
 const th = "whitespace-nowrap px-2 py-2.5 font-semibold first:pl-3 last:pr-3";
 const td = "whitespace-nowrap px-2 py-2 first:pl-3 last:pr-3";
+// The plan, joined and status columns sit close to the name with some air
+// between them; the functions column takes the spare width, its tags
+// starting from the left on every line.
+const mid = "px-4";
 
 // The individuals list and the clubs list are the same table. Nothing wraps:
 // the name sits over the contact details, everything else is one line, and a
@@ -76,10 +80,10 @@ export default function AccountsTable({
           <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
             <tr>
               <th className={th}><SortButton label={nameHeader} col="name" sort={sort} onSort={setSort} /></th>
-              {extraHeader && <th className={`${th} text-center`}><SortButton label={extraHeader} col="extra" sort={sort} onSort={setSort} /></th>}
-              <th className={`${th} text-center`}><SortButton label="Գրանցվել է" col="joined" sort={sort} onSort={setSort} /></th>
-              <th className={`${th} text-center`}>Կարգավիճակ</th>
-              <th className={`${th} text-center`}>Ֆունկցիաներ</th>
+              {extraHeader && <th className={`${th} ${mid} text-center`}><SortButton label={extraHeader} col="extra" sort={sort} onSort={setSort} /></th>}
+              <th className={`${th} ${mid} text-center`}><SortButton label="Գրանցվել է" col="joined" sort={sort} onSort={setSort} /></th>
+              <th className={`${th} ${mid} text-center`}>Կարգավիճակ</th>
+              <th className={`${th} ${mid} w-full text-left`}>Ֆունկցիաներ</th>
               <th className={`${th} text-right`}>Գործողություններ</th>
             </tr>
           </thead>
@@ -101,7 +105,7 @@ export default function AccountsTable({
                   </div>
                 </td>
                 {extraHeader && (
-                  <td className={`${td} text-center`}>
+                  <td className={`${td} ${mid} text-center`}>
                     <span className="flex items-center justify-center gap-1.5 font-medium text-ink">
                       {r.extra?.[0] ?? "—"}
                       {plans && (
@@ -111,12 +115,12 @@ export default function AccountsTable({
                     {r.extra?.[1] && <span className="block text-xs text-muted">{r.extra[1]}</span>}
                   </td>
                 )}
-                <td className={`${td} text-center text-muted`}>{r.joined}</td>
-                <td className={`${td} text-center`}>
+                <td className={`${td} ${mid} text-center text-muted`}>{r.joined}</td>
+                <td className={`${td} ${mid} text-center`}>
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE[r.status]}`}>{STATUS_LABELS[r.status]}</span>
                 </td>
-                <td className={`${td} text-center`}>
-                  <div className="flex max-w-[17rem] flex-wrap items-start justify-center gap-1.5">
+                <td className={`${td} ${mid}`}>
+                  <div className="flex max-w-[17rem] flex-wrap items-start justify-start gap-1.5">
                     <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
                     {shareNetworks && r.shareBlocked && (
                       <ClubShareEditor userId={r.userId} label={r.name || r.email} blocked={r.shareBlocked} platform={shareNetworks} />

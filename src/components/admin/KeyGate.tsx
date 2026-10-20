@@ -6,7 +6,7 @@ import { adminAction, adminButton } from "./adminApi";
 
 const SECURITY = "/api/admin/security";
 
-// A new device of the super admin: the admin area opens after a touch of the
+// A new device of an admin with a key: the admin area opens after a touch of the
 // security key; the device is trusted from then on. Lost key → recovery code.
 export default function KeyGate() {
   const [busy, setBusy] = useState(false);

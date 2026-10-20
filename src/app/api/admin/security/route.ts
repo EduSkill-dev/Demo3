@@ -16,8 +16,10 @@ import { tooMany } from "@/lib/rateLimit";
 import { MIN_PASSWORD } from "@/lib/authErrors";
 import { adminConfirmChangeEmail, adminSecurityAlertEmail, sendEmail } from "@/lib/email";
 import {
+  MAX_KEYS,
   allowCredentialChange,
   deviceTrusted,
+  recoveredJustNow,
   deviceLabel,
   newRecoveryCodes,
   relyingParty,
@@ -25,12 +27,14 @@ import {
   viaOf,
 } from "@/lib/adminSecurity";
 
-// The super admin's sign-in protection (see 0074_admin_keys.sql):
-//   register.*   add a security key (YubiKey); the first one also makes the
-//                ten recovery codes, shown once
+// An admin's sign-in protection (see 0074_admin_keys.sql, 0076):
+//   register.*   add a security key (YubiKey), at most two; the first one
+//                also makes the ten recovery codes, shown once
 //   verify.*     a new device passes the key and becomes trusted
-//   key.remove, device.revoke, codes.new
-//   other.*      change the OTHER address's password: the key, then a link
+//   remove.*     remove a key: a touch of one of the keys, or — both lost —
+//                within 30 minutes of a recovery-code sign-in on this device
+//   device.revoke, codes.new
+//   other.*      (super admin) change the OTHER address's password: the key, then a link
 //                sent to that address, then the new password — all inside
 //                10 minutes (SMS joins when there is a provider)
 //   confirm      the link from that email (opened on any device)
@@ -51,12 +55,13 @@ async function keysOf(db: Db, userId: string): Promise<Key[]> {
   return (data as Key[] | null) ?? [];
 }
 
-async function saveChallenge(db: Db, userId: string, purpose: "register" | "verify" | "other", challenge: string) {
+type Purpose = "register" | "verify" | "other" | "remove";
+async function saveChallenge(db: Db, userId: string, purpose: Purpose, challenge: string) {
   await db.from("admin_challenges").delete().eq("user_id", userId).eq("purpose", purpose);
   await db.from("admin_challenges").insert({ user_id: userId, purpose, challenge });
 }
 // A challenge is used once.
-async function takeChallenge(db: Db, userId: string, purpose: "register" | "verify" | "other"): Promise<string | null> {
+async function takeChallenge(db: Db, userId: string, purpose: Purpose): Promise<string | null> {
   const { data } = await db
     .from("admin_challenges")
     .select("id, challenge, expires_at")
@@ -71,7 +76,7 @@ async function takeChallenge(db: Db, userId: string, purpose: "register" | "veri
   return new Date(row.expires_at) > new Date() ? row.challenge : null;
 }
 
-async function authOptions(ctx: Ctx, purpose: "verify" | "other") {
+async function authOptions(ctx: Ctx, purpose: Exclude<Purpose, "register">) {
   const keys = await keysOf(ctx.db, ctx.me.userId);
   const { rpID } = relyingParty(ctx.req);
   const options = await generateAuthenticationOptions({
@@ -84,7 +89,7 @@ async function authOptions(ctx: Ctx, purpose: "verify" | "other") {
 }
 
 // True when the answer is a valid touch of one of this admin's keys.
-async function keyTouched(ctx: Ctx, purpose: "verify" | "other", response: unknown): Promise<boolean> {
+async function keyTouched(ctx: Ctx, purpose: Exclude<Purpose, "register">, response: unknown): Promise<boolean> {
   const r = response as AuthenticationResponseJSON | null;
   if (!r || typeof r.id !== "string") return false;
   const expectedChallenge = await takeChallenge(ctx.db, ctx.me.userId, purpose);
@@ -147,12 +152,13 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   /* ------------------------------------------------------------ keys */
   async "register.options"(ctx) {
     const keys = await keysOf(ctx.db, ctx.me.userId);
+    if (keys.length >= MAX_KEYS) return fail(`Կարելի է գրանցել առավելագույնը ${MAX_KEYS} բանալի։`);
     const { rpID, rpName } = relyingParty(ctx.req);
     const options = await generateRegistrationOptions({
       rpName,
       rpID,
       userName: ctx.me.email,
-      userDisplayName: "Culmen — գլխավոր ադմին",
+      userDisplayName: ctx.me.isSuper ? "Culmen — գլխավոր ադմին" : "Culmen — ադմին",
       userID: new TextEncoder().encode(ctx.me.userId),
       attestationType: "none",
       excludeCredentials: keys.map((k) => ({ id: k.credential_id, transports: (k.transports ?? undefined) as AuthenticatorTransportFuture[] | undefined })),
@@ -179,7 +185,9 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     } catch {
       return fail("Բանալին չգրանցվեց։ Փորձեք նորից։");
     }
-    const first = (await keysOf(ctx.db, ctx.me.userId)).length === 0;
+    const existing = await keysOf(ctx.db, ctx.me.userId);
+    if (existing.length >= MAX_KEYS) return fail(`Կարելի է գրանցել առավելագույնը ${MAX_KEYS} բանալի։`);
+    const first = existing.length === 0;
     const label = str(body.label).trim().slice(0, 60) || "YubiKey";
     const { error } = await ctx.db.from("admin_keys").insert({
       user_id: ctx.me.userId,
@@ -198,11 +206,17 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     await alert(ctx, `Ադմինի հաշվին ավելացվեց անվտանգության բանալի՝ «${label}»։`);
     return NextResponse.json({ ok: true, codes });
   },
+  async "remove.options"(ctx) {
+    if (await recoveredJustNow(ctx.db, ctx.me.userId)) return NextResponse.json({ options: null });
+    return NextResponse.json({ options: await authOptions(ctx, "remove") });
+  },
   async "key.remove"(ctx, body) {
     const keys = await keysOf(ctx.db, ctx.me.userId);
-    if (keys.length < 2) return fail("Վերջին բանալին հնարավոր չէ ջնջել․ նախ ավելացրեք ևս մեկը։");
     const id = str(body.id);
     if (!keys.some((k) => k.id === id)) return fail("Բանալին չի գտնվել։", 404);
+    if (!(await recoveredJustNow(ctx.db, ctx.me.userId)) && !(await keyTouched(ctx, "remove", body.response))) {
+      return fail("Ջնջելու համար հպեք Ձեր բանալիներից մեկին։");
+    }
     await ctx.db.from("admin_keys").delete().eq("id", id).eq("user_id", ctx.me.userId);
     await logActivity({ actor: ctx.me.userId, action: "security.key_removed", ip: ctx.ip });
     await alert(ctx, "Ադմինի հաշվից ջնջվեց անվտանգության բանալի։");
@@ -311,7 +325,8 @@ async function handlePOST(req: Request) {
 
   const me = await getAdmin();
   if (!me) return fail("Մուտք գործեք որպես ադմին։", 401);
-  if (!me.isSuper) return fail("Միայն գլխավոր ադմինի համար։", 403);
+  if (action.startsWith("other.") && !me.isSuper) return fail("Միայն գլխավոր ադմինի համար։", 403);
+  if (me.mustChangePassword) return fail("Նախ փոխեք մեկանգամյա գաղտնաբառը։", 403);
   const handler = Object.prototype.hasOwnProperty.call(ACTIONS, action) ? ACTIONS[action] : null;
   if (!handler) return fail("Անհայտ գործողություն։");
   if (me.needsKey && !BEFORE_KEY.has(action)) return fail(NO_KEY, 403);
