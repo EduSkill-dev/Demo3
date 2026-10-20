@@ -15,6 +15,10 @@ export type Place = {
   difficulty: string | null;
   elevation: number | null; // metres above sea level
   relativeHeight: number | null; // above the surroundings; null for gorges
+  distanceKm: number | null; // by road from Yerevan
+  driveMinutes: number | null;
+  mapUrl: string | null; // Yandex Maps
+  signal: "yes" | "partial" | "no" | null; // mobile signal
   photo: string | null; // the admins' photo, else the newest photo of a hike there
   description: string | null;
   likes: number;
@@ -60,6 +64,10 @@ export async function getPlaces(): Promise<Place[]> {
         difficulty: s.difficulty,
         elevation: s.elevation,
         relativeHeight: s.terrain === "gorges" ? null : s.relative_height,
+        distanceKm: s.distance_km,
+        driveMinutes: s.drive_minutes,
+        mapUrl: s.map_url,
+        signal: s.mobile_signal,
         photo: s.photo_url || st?.tour_photo || null,
         description: textIn(s, locale),
         likes: st?.likes ?? 0,

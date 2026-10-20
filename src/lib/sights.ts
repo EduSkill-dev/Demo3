@@ -12,6 +12,10 @@ export type Sight = {
   photo_url: string | null; description_hy: string | null; description_ru: string | null; description_en: string | null;
   elevation: number | null; // metres above sea level (negative below it)
   relative_height: number | null; // metres above the surroundings (not shown for gorges)
+  distance_km: number | null; // by road from Yerevan
+  drive_minutes: number | null; // about how long that drive takes
+  map_url: string | null; // a Yandex Maps link
+  mobile_signal: "yes" | "partial" | "no" | null;
 };
 
 const loadSights = unstable_cache(
@@ -19,7 +23,7 @@ const loadSights = unstable_cache(
     try {
       const { data } = await createAdminClient()
         .from("sights")
-        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active, photo_url, description_hy, description_ru, description_en, elevation, relative_height")
+        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active, photo_url, description_hy, description_ru, description_en, elevation, relative_height, distance_km, drive_minutes, map_url, mobile_signal")
         .order("name_hy");
       return (data ?? []) as Sight[];
     } catch {

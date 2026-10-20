@@ -15,17 +15,21 @@ type Draft = {
   photo_url: string; description_hy: string; description_ru: string; description_en: string;
   elevation: string; // whole metres, "" = not set
   relative_height: string; // above the surroundings, "" = not set
+  distance_km: string; drive_minutes: string; map_url: string; mobile_signal: string; // "" = not set
 };
 const blank: Draft = {
   id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true,
   photo_url: "", description_hy: "", description_ru: "", description_en: "", elevation: "", relative_height: "",
+  distance_km: "", drive_minutes: "", map_url: "", mobile_signal: "",
 };
+const numText = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
 const toDraft = (s: Sight, patch: Partial<Draft> = {}): Draft => ({
   id: s.id, name_hy: s.name_hy, name_ru: s.name_ru, name_en: s.name_en, region: s.region,
   terrain: s.terrain ?? TERRAINS[0], difficulty: s.difficulty ?? "medium", active: s.active,
   photo_url: s.photo_url ?? "", description_hy: s.description_hy ?? "", description_ru: s.description_ru ?? "", description_en: s.description_en ?? "",
   elevation: s.elevation === null || s.elevation === undefined ? "" : String(s.elevation),
   relative_height: s.relative_height === null || s.relative_height === undefined ? "" : String(s.relative_height),
+  distance_km: numText(s.distance_km), drive_minutes: numText(s.drive_minutes), map_url: s.map_url ?? "", mobile_signal: s.mobile_signal ?? "",
   ...patch,
 });
 
@@ -156,6 +160,32 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
               onChange={(e) => set({ relative_height: e.target.value.replace(/\D/g, "") })}
               className={adminInput}
             />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label htmlFor="sight-km" className="mb-1 block text-sm font-medium text-ink">Երևանից (կմ)</label>
+            <input id="sight-km" type="number" inputMode="numeric" min={0} max={1000} placeholder="օր.՝ 95" value={draft.distance_km} onChange={(e) => set({ distance_km: e.target.value.replace(/\D/g, "") })} className={adminInput} />
+          </div>
+          <div>
+            <label htmlFor="sight-drive" className="mb-1 block text-sm font-medium text-ink">
+              Ճանապարհը (րոպե)
+              <InfoTip text="Մոտավորապես քանի րոպե է մեքենայով Երևանից։ Կայքում կգրվի ժամերով, օր.՝ 100 → «~1 ժ 40 ր»։" />
+            </label>
+            <input id="sight-drive" type="number" inputMode="numeric" min={0} max={1440} placeholder="օր.՝ 100" value={draft.drive_minutes} onChange={(e) => set({ drive_minutes: e.target.value.replace(/\D/g, "") })} className={adminInput} />
+          </div>
+          <div>
+            <label htmlFor="sight-map" className="mb-1 block text-sm font-medium text-ink">Yandex քարտեզի հղում</label>
+            <input id="sight-map" type="url" placeholder="https://yandex.com/maps/..." value={draft.map_url} onChange={(e) => set({ map_url: e.target.value })} className={adminInput} />
+          </div>
+          <div>
+            <label htmlFor="sight-signal" className="mb-1 block text-sm font-medium text-ink">Բջջային կապ</label>
+            <select id="sight-signal" value={draft.mobile_signal} onChange={(e) => set({ mobile_signal: e.target.value })} className={adminInput}>
+              <option value="">Նշված չէ</option>
+              <option value="yes">Կա</option>
+              <option value="partial">Մասամբ կա</option>
+              <option value="no">Չկա</option>
+            </select>
           </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)]">

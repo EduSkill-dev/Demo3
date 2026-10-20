@@ -246,6 +246,18 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       relative_height: /^\d{1,4}$/.test(str(body.relative_height)) ? Number(str(body.relative_height)) : null,
     };
     if (row.relative_height !== null && row.relative_height > 5000) return fail("Հարաբերական բարձրությունը պետք է լինի 0-ից 5000 մետր։");
+    const trip = {
+      distance_km: /^\d{1,4}$/.test(str(body.distance_km)) ? Number(str(body.distance_km)) : null,
+      drive_minutes: /^\d{1,4}$/.test(str(body.drive_minutes)) ? Number(str(body.drive_minutes)) : null,
+      map_url: str(body.map_url).trim().slice(0, 500) || null,
+      mobile_signal: ["yes", "partial", "no"].includes(str(body.mobile_signal)) ? str(body.mobile_signal) : null,
+    };
+    if (trip.distance_km !== null && trip.distance_km > 1000) return fail("Հեռավորությունը պետք է լինի 0-ից 1000 կմ։");
+    if (trip.drive_minutes !== null && trip.drive_minutes > 1440) return fail("Ճանապարհի ժամանակը պետք է լինի մինչև 1440 րոպե (24 ժամ)։");
+    if (trip.map_url && !/^https:\/\/([a-z0-9-]+\.)*yandex\.(ru|com|am|by|kz)\/maps/i.test(trip.map_url)) {
+      return fail("Քարտեզի հղումը պետք է լինի Yandex Maps-ից (https://yandex.../maps/...)։");
+    }
+    Object.assign(row, trip);
     if (row.elevation !== null && (row.elevation < -500 || row.elevation > 9000)) return fail("Բարձրությունը պետք է լինի -500-ից 9000 մետր։");
     if (!row.name_hy || !row.name_ru || !row.name_en) return fail("Լրացրեք անվանումը երեք լեզվով։");
     if (!(REGIONS as readonly string[]).includes(row.region)) return fail("Ընտրեք մարզը։");
