@@ -11,6 +11,7 @@ import BackLink from "@/components/BackLink";
 import { SOCIAL_NAMES, SOCIAL_NETS, socialOk } from "@/lib/socialLinks";
 import SocialIcon, { SOCIAL_COLOR } from "@/components/club/SocialIcon";
 import RatingBox from "@/components/RatingBox";
+import CertificateButton from "@/components/club/CertificateButton";
 import TourGrid from "@/components/tour/TourGrid";
 import { orderFocus } from "@/lib/catalog";
 import TeamCard from "@/components/club/TeamCard";
@@ -53,12 +54,15 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default async function ClubDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { back?: string } }) {
+export default async function ClubDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { back?: string; cert?: string } }) {
   const club = await getClub(params.id);
   if (!club) notFound();
   const socials = SOCIAL_NETS.map((net) => ({ net, url: club[`${net}_url` as const] ?? "" })).filter((x) => x.url && socialOk(x.net, x.url));
   if (club.slug && params.id !== club.slug) {
-    redirect(`/clubs/${club.slug}${searchParams.back ? `?back=${encodeURIComponent(searchParams.back)}` : ""}`);
+    const keep = new URLSearchParams();
+    if (searchParams.back) keep.set("back", searchParams.back);
+    if (searchParams.cert) keep.set("cert", "1");
+    redirect(`/clubs/${club.slug}${keep.toString() ? `?${keep}` : ""}`);
   }
 
   const [t, fmt] = await Promise.all([getT(), getFormatDate()]);
@@ -115,6 +119,10 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
                   <span className="font-semibold text-terracotta-500">
                     ★ {Number(rating?.average ?? 0).toFixed(1)}/5 <span className="font-normal text-muted">· {t("clubsPage.reviews", { count: rating?.count ?? 0 })}</span>
                   </span>
+                )}
+                {/* An approved certificate: the blue seal, opening the document. */}
+                {club.certificate_status === "approved" && club.certificate_url && (
+                  <CertificateButton url={club.certificate_url} clubName={club.name} initiallyOpen={searchParams.cert === "1"} />
                 )}
                 {/* The club's own public contacts (not the sign-up number). */}
                 {club.contact_phone && (

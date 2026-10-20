@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Club } from "@/types/database";
 import type { TFunction } from "@/i18n/translate";
 import { orderFocus } from "@/lib/catalog";
+import CertifiedBadge from "@/components/club/CertifiedBadge";
 
 export default function ClubCard({
   club,
@@ -28,9 +29,12 @@ export default function ClubCard({
         </Link>
       </div>
       <div className="flex flex-1 flex-col p-5">
-        <Link href={`/clubs/${club.id}`} className="font-serif text-xl font-semibold text-heading hover:text-terracotta-700">
-          {club.name}
-        </Link>
+        <span className="flex items-center gap-1.5">
+          <Link href={`/clubs/${club.id}`} className="font-serif text-xl font-semibold text-heading hover:text-terracotta-700">
+            {club.name}
+          </Link>
+          {club.certificate_status === "approved" && <CertifiedBadge clubHref={`/clubs/${club.id}`} />}
+        </span>
         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           {rating && (
             <span>

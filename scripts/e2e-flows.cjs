@@ -1259,6 +1259,26 @@ async function main() {
           && JSON.stringify(shareRow) === JSON.stringify(['facebook', 'viber']) && reopen.status === 200,
         `bad=${closeBad.status} ind=${closeInd.status} set=${closeTwo.status} row=${JSON.stringify(shareRow)} reopen=${reopen.status}`);
 
+      // The club's certificate: the club uploads, only an admin approves.
+      {
+        await signIn('club');
+        const pic = 'https://example.com/e2e-certificate.jpg';
+        const up = await anon.from('clubs').update({ certificate_url: pic }).eq('id', clubA).select('certificate_status').single();
+        const selfApprove = await anon.from('clubs').update({ certificate_status: 'approved' }).eq('id', clubA).select('certificate_status').single();
+        const approve = await act({ action: 'club.certificate', userId: ids.club, decision: 'approve' }, superCookie);
+        const shown = (await anon.from('clubs').select('certificate_status').eq('id', clubA).single()).data?.certificate_status;
+        const told = (await admin.from('notifications').select('id').eq('user_id', ids.club).like('message', '%հավաստագիրը հաստատվել է%')).data || [];
+        const reup = await anon.from('clubs').update({ certificate_url: pic + '?2' }).eq('id', clubA).select('certificate_status').single();
+        const noReason = await act({ action: 'club.certificate', userId: ids.club, decision: 'reject' }, superCookie);
+        const byClub = await act({ action: 'club.certificate', userId: ids.club, decision: 'approve' }, clubCookie);
+        check('certificate: a club upload waits for a check, the club cannot approve itself, an admin approves (the club is told), a new picture starts again',
+          up.data?.certificate_status === 'pending' && selfApprove.data?.certificate_status === 'pending' && approve.status === 200 && shown === 'approved'
+            && told.length === 1 && reup.data?.certificate_status === 'pending' && noReason.status === 400 && byClub.status >= 401,
+          `up=${up.data?.certificate_status} self=${selfApprove.data?.certificate_status} approve=${approve.status} shown=${shown} told=${told.length} reup=${reup.data?.certificate_status} noReason=${noReason.status} byClub=${byClub.status}`);
+        await anon.from('clubs').update({ certificate_url: null }).eq('id', clubA);
+        await admin.from('notifications').delete().eq('user_id', ids.club).like('message', '%հավաստագիր%');
+      }
+
       // Plans: only the super admin edits them or hands them out.
       const proRow = dbPackages.find((x) => x.id === 'pro');
       const samePlan = { action: 'plan.save', id: 'pro', priceAmd: proRow.price_amd, isAvailable: proRow.is_available, config: proRow.config };

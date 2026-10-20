@@ -6,6 +6,40 @@ import { getSpotlight } from "@/lib/spotlight";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatNumber } from "@/i18n/dates";
 import SignUpFirstButton from "@/components/home/SignUpFirstButton";
+import HomeCalendar, { type HomeMonth } from "@/components/home/HomeCalendar";
+import { DIFFICULTIES } from "@/lib/catalog";
+import { DIFFICULTY_COLORS, addMonths, coversDay, dateWords, dayAndMonth, monthGrid, monthOf, monthTitle, todayInYerevan } from "@/lib/calendar";
+import type { PublicTour } from "@/lib/publicTours";
+import type { TFunction } from "@/i18n/translate";
+
+// The hero's calendar: this month up to the last month with a hike (at least
+// three months, at most six), each day with its hikes' difficulty dots.
+function homeMonths(all: PublicTour[], t: TFunction): HomeMonth[] {
+  const words = dateWords(t);
+  const today = todayInYerevan();
+  const first = monthOf(today);
+  const lastHike = all.reduce((m, x) => (x.date > m ? x.date : m), today);
+  const span = (+lastHike.slice(0, 4) - +first.slice(0, 4)) * 12 + (+lastHike.slice(5, 7) - +first.slice(5, 7)) + 1;
+  return Array.from({ length: Math.min(6, Math.max(3, span)) }, (_, i) => {
+    const month = addMonths(first, i);
+    const grid = monthGrid(month);
+    return {
+      key: month,
+      title: monthTitle(month, words),
+      cells: grid.days.map((d) => {
+        const items = all.filter((x) => coversDay(x, d));
+        return {
+          d,
+          inMonth: d >= grid.first && d <= grid.last,
+          count: items.length,
+          dots: items.slice(0, 4).map((x) => DIFFICULTY_COLORS[x.difficulty].bar),
+          title: items.map((x) => x.title).join("\n") || undefined,
+          label: items.length ? t("calendar.cellLabel", { date: dayAndMonth(d, words), count: items.length }) : dayAndMonth(d, words),
+        };
+      }),
+    };
+  });
+}
 
 // The platform's numbers: hikes to come and held, people signed up, clubs.
 async function getHomeStats() {
@@ -46,6 +80,10 @@ export default async function HomePage() {
   const secondary =
     "inline-flex items-center rounded-lg border-2 border-spruce-900 px-5 py-2 text-sm font-semibold text-spruce-900 transition hover:bg-spruce-900 hover:text-card dark:border-ink dark:text-ink dark:hover:bg-ink dark:hover:text-spruce-900";
   const individual = viewer?.role === "individual";
+  // "Order a hike": a person writes a request; a visitor's page says to sign
+  // up first; clubs and admins see the requests.
+  const orderHref = individual ? "/account/requests/new" : viewer ? "/requests" : "/requests/new";
+  const heroButton = "flex w-full items-center justify-center whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold transition";
   const ways = [
     {
       key: "Hikes", icon: ICONS.hikes, tint: "#DCEBE6", ink: "#14443B",
@@ -82,49 +120,43 @@ export default async function HomePage() {
 
   return (
     <main>
+      {/* The hero: the title and the most active hiker and club on the left;
+          on the right the real calendar, how many hikes are coming and the
+          three ways in (phones: title, calendar, then the two). */}
       <section className="bg-spruce-500 text-card">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pb-24 lg:pt-20">
+        <div className="mx-auto grid max-w-6xl gap-x-10 gap-y-8 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,36rem)] lg:pb-24 lg:pt-12">
           <div>
-            <h1 className="text-[44px] font-bold leading-[1.1] sm:text-[52px]">{t("home.heroTitle")}</h1>
-            <p className="mt-5 max-w-xl text-xl font-semibold leading-snug text-apricot-300">{t("home.heroText")}</p>
-
-            <p className="mt-4 max-w-xl text-lg text-card/85">{t("home.heroSub")}</p>
+            <h1 className="text-[40px] font-bold leading-[1.1] sm:text-[48px]">{t("home.heroTitle")}</h1>
+            <p className="mt-4 max-w-xl text-xl font-semibold leading-snug text-apricot-300">{t("home.heroText")}</p>
           </div>
 
-          {/* Who was most active: the hiker of the quarter, and under it the
-              club of the month (see src/lib/spotlight.ts). */}
-          <div className="space-y-4">
-            <article className="flex items-center gap-5 rounded-2xl bg-card p-4 text-spruce-900 shadow-xl">
-              {spotlight.hiker?.photo ? (
-                <img src={spotlight.hiker.photo} alt={spotlight.hiker.name} className="h-36 w-36 shrink-0 rounded-xl object-cover sm:h-52 sm:w-52" />
-              ) : (
-                <span className="flex h-36 w-36 shrink-0 items-center justify-center rounded-xl bg-spruce-100 text-spruce-700 sm:h-52 sm:w-52" aria-hidden="true">
-                  <svg viewBox="0 0 32 32" className="h-16 w-16 sm:h-24 sm:w-24" fill="currentColor">
-                    <path d="M13 7 3 26h12Z" opacity=".55" />
-                    <path d="M20 12 11 26h18Z" />
-                  </svg>
-                </span>
-              )}
-              <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-snug text-terracotta-500">
-                  🏅 {t("home.hikerLabel")}
-                </p>
-                {spotlight.hiker ? (
-                  <>
-                    <p className="mt-2 text-2xl font-bold leading-tight sm:text-[26px]">{spotlight.hiker.name}</p>
-                    <p className="mt-2 text-sm text-[#5B6B66]">{t("home.hikerStat", { count: spotlight.hiker.hikes })}</p>
-                  </>
-                ) : (
-                  <p className="mt-2 text-base font-semibold leading-snug text-[#5B6B66]">{t("home.hikerEmpty")}</p>
-                )}
-              </div>
-            </article>
+          <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-4 text-ink shadow-xl sm:flex-row sm:p-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+            <div className="sm:w-[290px] sm:shrink-0">
+              <HomeCalendar
+                months={homeMonths(all, t)}
+                today={todayInYerevan()}
+                weekdays={dateWords(t).weekdaysShort}
+                legend={DIFFICULTIES.map((d) => ({ label: t(`difficulty.${d}`), color: DIFFICULTY_COLORS[d].bar }))}
+                prev={t("calendar.prevMonth")}
+                next={t("calendar.nextMonth")}
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
+              <p className="whitespace-nowrap text-lg font-bold text-terracotta-500 dark:text-terracotta-300">{t("home.heroUpcoming", { count: num(all.length) })}</p>
+              <Link href="/tours" className={`${heroButton} bg-spruce-500 text-white hover:bg-spruce-900`}>{t("home.heroAll")}</Link>
+              <Link href="/places" className={`${heroButton} border-2 border-spruce-500 text-spruce-700 hover:bg-spruce-500 hover:text-white dark:border-spruce-300 dark:text-spruce-300`}>{t("home.heroPlaces")}</Link>
+              <Link href={orderHref} className={`${heroButton} border-2 border-terracotta-500 text-terracotta-700 hover:bg-terracotta-500 hover:text-white dark:text-terracotta-300`}>{t("home.heroOrder")}</Link>
+            </div>
+          </div>
 
-            <article className="flex items-center gap-5 rounded-2xl bg-card p-4 text-spruce-900 shadow-xl">
-              {spotlight.club?.photo ? (
-                <img src={spotlight.club.photo} alt={spotlight.club.name} className="h-24 w-24 shrink-0 rounded-full object-contain sm:h-28 sm:w-28" />
+          {/* Who was most active: the hiker of the quarter and the club of
+              the month (see src/lib/spotlight.ts). */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 lg:self-end">
+            <article className="flex items-center gap-4 rounded-2xl bg-card p-3 text-spruce-900 shadow-xl">
+              {spotlight.hiker?.photo ? (
+                <img src={spotlight.hiker.photo} alt={spotlight.hiker.name} className="h-24 w-24 shrink-0 rounded-xl object-cover" />
               ) : (
-                <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-spruce-100 text-spruce-700 sm:h-28 sm:w-28" aria-hidden="true">
+                <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-spruce-100 text-spruce-700" aria-hidden="true">
                   <svg viewBox="0 0 32 32" className="h-12 w-12" fill="currentColor">
                     <path d="M13 7 3 26h12Z" opacity=".55" />
                     <path d="M20 12 11 26h18Z" />
@@ -132,20 +164,40 @@ export default async function HomePage() {
                 </span>
               )}
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-snug text-terracotta-500">
-                  🏆 {t("home.clubLabel")}
-                </p>
-                {spotlight.club ? (
+                <p className="text-[12px] font-bold leading-snug text-terracotta-500">🏅 {t("home.hikerLabel")}</p>
+                {spotlight.hiker ? (
                   <>
-                    <p className="mt-1.5 text-xl font-bold leading-tight">
-                      <Link href={spotlight.club.href} className="hover:underline">{spotlight.club.name}</Link>
-                    </p>
-                    <p className="mt-1 text-sm text-[#5B6B66]">
-                      {t("home.clubStat", { hikes: spotlight.club.hikes, people: spotlight.club.people })}
-                    </p>
+                    <p className="mt-1 text-xl font-bold leading-tight">{spotlight.hiker.name}</p>
+                    <p className="mt-1 text-[13px] text-[#5B6B66]">{t("home.hikerStat", { count: spotlight.hiker.hikes })}</p>
                   </>
                 ) : (
-                  <p className="mt-1.5 text-base font-semibold leading-snug text-[#5B6B66]">{t("home.clubEmpty")}</p>
+                  <p className="mt-1 text-sm font-semibold leading-snug text-[#5B6B66]">{t("home.hikerEmpty")}</p>
+                )}
+              </div>
+            </article>
+
+            <article className="flex items-center gap-4 rounded-2xl bg-card p-3 text-spruce-900 shadow-xl">
+              {spotlight.club?.photo ? (
+                <img src={spotlight.club.photo} alt={spotlight.club.name} className="h-24 w-24 shrink-0 rounded-full object-contain" />
+              ) : (
+                <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-spruce-100 text-spruce-700" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" className="h-12 w-12" fill="currentColor">
+                    <path d="M13 7 3 26h12Z" opacity=".55" />
+                    <path d="M20 12 11 26h18Z" />
+                  </svg>
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="text-[12px] font-bold leading-snug text-terracotta-500">🏆 {t("home.clubLabel")}</p>
+                {spotlight.club ? (
+                  <>
+                    <p className="mt-1 text-xl font-bold leading-tight">
+                      <Link href={spotlight.club.href} className="hover:underline">{spotlight.club.name}</Link>
+                    </p>
+                    <p className="mt-1 text-[13px] text-[#5B6B66]">{t("home.clubStat", { hikes: spotlight.club.hikes, people: spotlight.club.people })}</p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-sm font-semibold leading-snug text-[#5B6B66]">{t("home.clubEmpty")}</p>
                 )}
               </div>
             </article>

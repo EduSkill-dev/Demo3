@@ -50,9 +50,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
   const today = todayInYerevan();
 
   if (searchParams.view === "list") redirect("/tours");
-  // Opening the calendar shows today, written into the filter too; an old
-  // ?day= link becomes that day's From–To.
-  if (!Object.values(searchParams).some(Boolean)) redirect(`/calendar?from=${today}&to=${today}`);
+  // Opening the calendar shows every hike still to come, as the list does
+  // (Gor, 2026-10-20); an old ?day= link becomes that day's From–To.
   if (isDay(searchParams.day)) {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(searchParams)) if (v && k !== "day") q.set(k, v);

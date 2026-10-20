@@ -38,6 +38,10 @@ export interface Club {
   contact_phone?: string | null;
   contact_email?: string | null;
   contact_address?: string | null;
+  // The club's certificate (0081): only the server sets the status.
+  certificate_url?: string | null;
+  certificate_status?: "pending" | "approved" | "rejected" | null;
+  certificate_note?: string | null;
   tariff: Tariff | null; // the package bought; see activePackage()
   package_ends_at: string | null;
   photo_url: string | null;

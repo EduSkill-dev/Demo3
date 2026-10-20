@@ -22,6 +22,9 @@ type Row = {
   plan_overrides: unknown;
   share_blocked: string[] | null;
   report_items: string[] | null;
+  certificate_url: string | null;
+  certificate_status: "pending" | "approved" | "rejected" | null;
+  certificate_note: string | null;
   profiles: { id: string; email: string; status: AccountStatus; created_at: string; chat_blocked: boolean } | null;
 };
 
@@ -33,7 +36,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
   const plans = await getPlans();
   const { data } = await createAdminClient()
     .from("clubs")
-    .select("name, phone, tariff, package_ends_at, plan_overrides, share_blocked, report_items, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at, chat_blocked)")
+    .select("name, phone, tariff, package_ends_at, plan_overrides, share_blocked, report_items, certificate_url, certificate_status, certificate_note, posting_blocked, applications_blocked, profiles!clubs_owner_id_fkey(id, email, status, created_at, chat_blocked)")
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -60,6 +63,7 @@ export default async function AdminClubsPage({ searchParams }: { searchParams: {
         reportItems: cleanReportItems(c.report_items),
         shareBlocked: SHARE_NETWORK_IDS.filter((id) => (c.share_blocked ?? []).includes(id)),
         overrides: pkg ? cleanOverrides(c.plan_overrides) : {},
+        certificate: c.certificate_url && c.certificate_status ? { url: c.certificate_url, status: c.certificate_status, note: c.certificate_note } : null,
       };
     })
     .filter((r) => !q || `${r.name} ${r.email} ${r.phone ?? ""}`.toLowerCase().includes(q));

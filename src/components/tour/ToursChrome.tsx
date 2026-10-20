@@ -3,7 +3,7 @@ import { DIFFICULTIES, REGIONS, TERRAINS } from "@/lib/catalog";
 import { getT } from "@/i18n/server";
 import type { TFunction } from "@/i18n/translate";
 import { getViewer } from "@/lib/viewer";
-import { isDay, todayInYerevan } from "@/lib/calendar";
+import { isDay } from "@/lib/calendar";
 import AutoSubmitForm from "@/components/calendar/AutoSubmitForm";
 import DateField from "@/components/ui/DateField";
 import FilterPanel from "@/components/tour/FilterPanel";
@@ -56,13 +56,11 @@ export async function ToursHeader() {
 }
 
 // List | calendar, sized to one row of the filter box. Switching keeps the
-// filters; the calendar opens on today when no dates are set, so the filter
-// and the month show the same thing.
+// filters (no dates set: both show every hike still to come).
 function ViewSwitch({ view, filters, t }: { view: "list" | "calendar"; filters: TourFilters; t: TFunction }) {
   const segment = (on: boolean) =>
     `flex h-8 items-center rounded-full px-4 text-sm font-semibold ${on ? "bg-spruce-500 text-[#FFFDF8]" : "text-ink hover:text-terracotta-700"}`;
   const q = filterQuery(filters);
-  const calendarQ = q.from || q.to ? q : { ...q, from: todayInYerevan(), to: todayInYerevan() };
   return (
     <div className="flex shrink-0 rounded-full bg-sand p-0.5">
       {view === "list" ? (
@@ -73,7 +71,7 @@ function ViewSwitch({ view, filters, t }: { view: "list" | "calendar"; filters: 
       {view === "calendar" ? (
         <span className={segment(true)} aria-current="page">{t("calendar.switchCalendar")}</span>
       ) : (
-        <Link href={toQuery("/calendar", calendarQ)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
+        <Link href={toQuery("/calendar", q)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
       )}
     </div>
   );

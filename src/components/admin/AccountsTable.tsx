@@ -6,6 +6,7 @@ import AccountActions, { LimitSwitches } from "./AccountActions";
 import SearchBox from "./SearchBox";
 import ClubPlanEditor from "./ClubPlanEditor";
 import ClubShareEditor from "./ClubShareEditor";
+import CertificateReview, { type CertificateInfo } from "./CertificateReview";
 import ClubReportEditor from "./ClubReportEditor";
 import type { ReportItem } from "@/lib/report/items";
 import type { ShareNetwork } from "@/lib/share";
@@ -26,6 +27,7 @@ export type AccountRow = {
   shareBlocked?: ShareNetwork[]; // clubs: social networks closed for this club
   reportItems?: ReportItem[] | null; // clubs: the report lines set for this club (null = the plan's)
   limits: { key: AccountLimit; blocked: boolean }[]; // functions an admin can force off
+  certificate?: CertificateInfo | null; // clubs: the uploaded certificate and its check
 };
 
 const BADGE: Record<AccountStatus, string> = {
@@ -122,6 +124,7 @@ export default function AccountsTable({
                 <td className={`${td} ${mid}`}>
                   <div className="flex max-w-[17rem] flex-wrap items-start justify-start gap-1.5">
                     <LimitSwitches userId={r.userId} label={r.name || r.email} limits={r.limits} />
+                    {r.certificate && <CertificateReview userId={r.userId} label={r.name || r.email} cert={r.certificate} />}
                     {shareNetworks && r.shareBlocked && (
                       <ClubShareEditor userId={r.userId} label={r.name || r.email} blocked={r.shareBlocked} platform={shareNetworks} />
                     )}

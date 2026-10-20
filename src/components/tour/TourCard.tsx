@@ -6,6 +6,7 @@ import { useFormatDate, useT } from "@/i18n/client";
 import type { PublicTour } from "@/lib/publicTours";
 import LikeButton from "@/components/LikeButton";
 import CardPhotos from "@/components/tour/CardPhotos";
+import CertifiedBadge from "@/components/club/CertifiedBadge";
 
 // Difficulty chips: easy = Spruce, hard = Terracotta, the rest neutral.
 const DIFFICULTY_CHIP: Record<string, string> = {
@@ -123,9 +124,12 @@ export default function TourCard({
           {/* The club, its rating (when its plan shows it) and the price. */}
           <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
             <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-              <Link href={clubHref} className="truncate text-[15px] font-semibold text-heading hover:text-terracotta-700">
-                {tour.club.name}
-              </Link>
+              <span className="flex min-w-0 items-center gap-1">
+                <Link href={clubHref} className="truncate text-[15px] font-semibold text-heading hover:text-terracotta-700">
+                  {tour.club.name}
+                </Link>
+                {tour.club.certified && <CertifiedBadge clubHref={`/clubs/${tour.club.id}`} />}
+              </span>
               {tour.club.rating && (
                 <span className="flex shrink-0 items-center gap-1 text-xs text-muted" title={t("tour.ratingTitle", { count: tour.club.rating.count })}>
                   <span className="-mt-px text-[15px] leading-none text-apricot-500">★</span>

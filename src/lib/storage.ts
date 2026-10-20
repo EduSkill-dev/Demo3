@@ -11,7 +11,7 @@ export const MAX_SOURCE_BYTES = 30 * 1024 * 1024; // a phone photo, before it is
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // the bucket's own limit, after
 
 // Storage policies only let people write under <folder>/<their user id>/…
-export type UploadFolder = "clubs" | "guides" | "tours" | "avatars" | "places";
+export type UploadFolder = "clubs" | "guides" | "tours" | "avatars" | "places" | "certificates";
 
 // The longest side each kind of picture is stored at. Larger pictures are
 // scaled down, smaller ones are left as they are (never enlarged).
@@ -19,7 +19,8 @@ export type UploadFolder = "clubs" | "guides" | "tours" | "avatars" | "places";
 //   places  a place's page and card (admins), the same
 //   clubs   a logo or cover, shown small
 //   guides, avatars   round portraits
-const MAX_SIDE: Record<UploadFolder, number> = { tours: 1600, places: 1600, clubs: 800, guides: 600, avatars: 400 };
+//   certificates   a club's document, shown whole: large enough to read
+const MAX_SIDE: Record<UploadFolder, number> = { tours: 1600, places: 1600, clubs: 800, guides: 600, avatars: 400, certificates: 2400 };
 const QUALITY = 0.82;
 
 // crypto.randomUUID() exists only on https:// and localhost; opened over a

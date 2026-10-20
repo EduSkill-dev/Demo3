@@ -304,6 +304,48 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
 
   // The social networks closed for one club: its buttons stay visible there
   // but do not work. (What the platform shows at all is share.save.)
+  // A club's certificate: approve it (the blue badge appears), reject it
+  // with a reason, or take an approval back. The club is told in its bell.
+  async "club.certificate"(ctx, body) {
+    const t = await targetAccount(ctx, str(body.userId));
+    if (t.error) return t.error;
+    if (t.account.role !== "club") return fail("Այս կարգավորումը միայն ակումբների համար է։");
+    const decision = str(body.decision);
+    if (!["approve", "reject", "revoke"].includes(decision)) return fail("Անհայտ որոշում։");
+    const note = str(body.note).trim().slice(0, 500);
+    if (decision !== "approve" && !note) return fail("Գրեք պատճառը. ակումբը այն կտեսնի։");
+    const { data: club } = await ctx.db.from("clubs").select("id, certificate_url").eq("owner_id", t.account.id).maybeSingle();
+    const c = club as { id: string; certificate_url: string | null } | null;
+    if (!c?.certificate_url) return fail("Ակումբը հավաստագիր չի բեռնել։");
+    const status = decision === "approve" ? "approved" : "rejected";
+    const { error } = await ctx.db
+      .from("clubs")
+      .update({ certificate_status: status, certificate_note: decision === "approve" ? null : note, certificate_reviewed_at: new Date().toISOString() })
+      .eq("id", c.id);
+    if (error) return fail(error.message, 500);
+    await ctx.db.from("notifications").insert({
+      user_id: t.account.id,
+      club_id: null,
+      tour_id: null,
+      kind: "platform",
+      sender_type: "platform",
+      message:
+        decision === "approve"
+          ? "Ձեր հավաստագիրը հաստատվել է․ ակումբի անվան կողքին այժմ երևում է «Հավաստագրված» նշանը։"
+          : `Ձեր հավաստագիրը ${decision === "revoke" ? "այլևս չի ցուցադրվում" : "չի հաստատվել"}․ ${note} Կարող եք բեռնել նորը «Ակումբի տվյալներ» բաժնում։`,
+    });
+    await logActivity({
+      actor: ctx.me.userId,
+      action: `admin.certificate_${decision}`,
+      targetType: "account",
+      targetId: t.account.id,
+      targetLabel: t.label,
+      meta: note ? { note } : {},
+      ip: ctx.ip,
+    });
+    return NextResponse.json({ ok: true, status });
+  },
+
   async "club.setShare"(ctx, body) {
     const t = await targetAccount(ctx, str(body.userId));
     if (t.error) return t.error;

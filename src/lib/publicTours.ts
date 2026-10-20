@@ -13,6 +13,7 @@ export type PublicClubInfo = {
   // Present when the club's package shows ratings to the public — 0/5 (0)
   // until the first review.
   rating: { average: number; count: number } | null;
+  certified: boolean; // an admin approved its certificate (the blue seal)
 };
 
 export type PublicTour = Tour & {
@@ -36,7 +37,7 @@ export async function getPublicTours(
   const today = new Date().toISOString().slice(0, 10);
   let query = supabase
     .from("tours")
-    .select("*, clubs(id, name, photo_url, tariff, package_ends_at, plan_overrides, applications_blocked)")
+    .select("*, clubs(id, name, photo_url, tariff, package_ends_at, plan_overrides, applications_blocked, certificate_status)")
     .eq("status", "active")
     .eq("admin_hidden", false)
     .order("date", { ascending: true });
@@ -49,7 +50,7 @@ export async function getPublicTours(
   const { data } = await query;
 
   type Row = Tour & {
-    clubs: { id: string; name: string; photo_url: string | null; tariff: string | null; package_ends_at: string | null; plan_overrides: unknown; applications_blocked: boolean } | null;
+    clubs: { id: string; name: string; photo_url: string | null; tariff: string | null; package_ends_at: string | null; plan_overrides: unknown; applications_blocked: boolean; certificate_status: string | null } | null;
   };
   const rows = ((data ?? []) as Row[]).filter((t) => t.clubs && activePackage(t.clubs));
   if (rows.length === 0) return [];
@@ -76,6 +77,7 @@ export async function getPublicTours(
         name: clubs!.name,
         photo: clubs!.photo_url,
         rating: clubConfig(plans, clubs).public_show_rating ? { average: Number(r?.average ?? 0), count: r?.count ?? 0 } : null,
+        certified: clubs!.certificate_status === "approved",
       },
       likes: likes.tours.get(tour.id) ?? 0,
       sights: (tour.sight_ids ?? []).flatMap((id) => (sightNames.has(id) ? [{ id, name: sightNames.get(id)! }] : [])),

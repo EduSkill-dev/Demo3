@@ -4,6 +4,7 @@ import { getMyClub } from "@/lib/myClub";
 import type { ClubGuide } from "@/types/database";
 import ClubProfileForm from "@/components/club/ClubProfileForm";
 import GuidesEditor from "@/components/club/GuidesEditor";
+import ClubCertificate from "@/components/club/ClubCertificate";
 import RollcallPeople from "@/components/club/RollcallPeople";
 
 export default async function ClubDataPage() {
@@ -19,6 +20,7 @@ export default async function ClubDataPage() {
   return (
     <div className="space-y-10">
       <ClubProfileForm club={mine.club} />
+      <ClubCertificate club={mine.club} />
       <GuidesEditor clubId={mine.club.id} initial={(guides ?? []) as ClubGuide[]} />
       <RollcallPeople clubId={mine.club.id} />
     </div>

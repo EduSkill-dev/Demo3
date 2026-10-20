@@ -93,7 +93,10 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <ToursHeader />
+      {/* Stays in view while the hikes scroll, as on the calendar. */}
+      <div className="mt-4 lg:sticky lg:top-[72px] lg:z-20 lg:-mx-2 lg:bg-stone lg:px-2 lg:pb-1 lg:pt-3 [&>form]:mt-0">
       <ToursFilters action="/tours" view="list" filters={f} clubs={clubs} count={shown.length} minDate={today} hidden={{ month: dated ? "" : state.month }} />
+      </div>
 
       {/* The month's days that have hikes. */}
       <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">

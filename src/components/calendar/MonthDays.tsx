@@ -83,6 +83,7 @@ export default function MonthDays({
             scroll={false}
             rel="nofollow"
             draggable={false}
+            prefetch={false} // a month of day links must not mean a month of requests
             title={c.title}
             aria-label={c.label}
             aria-current={end ? "date" : undefined}

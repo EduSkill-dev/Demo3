@@ -6,6 +6,7 @@ export const EVENT_KINDS: Record<string, { label: string; icon: string }> = {
   "individual.new": { label: "Նոր գրանցում", icon: "🥾" },
   "admin.new": { label: "Նոր ադմին", icon: "🛡️" },
   "club.new": { label: "Նոր ակումբ", icon: "🏕️" },
+  "club.certificate": { label: "Հավաստագիր՝ ստուգման", icon: "🛡️" },
   "payment.subscription": { label: "Փաթեթի վճարում", icon: "💳" },
   "newsletter.new": { label: "Նոր բաժանորդ", icon: "📰" },
   "suggestion.new": { label: "Առաջարկ", icon: "💡" },
