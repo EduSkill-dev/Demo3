@@ -1128,7 +1128,7 @@ const ru: DeepPartial<Dictionary> = {
     signalYes: "есть",
     signalPartial: "частично",
     signalNo: "нет",
-    openMap: "Открыть в Яндекс Картах",
+    openMap: "Открыть на карте",
     upcomingTitle: "Предстоящие походы сюда",
     noUpcomingLong: "Сюда пока нет предстоящих походов. Сохраните поиск — придёт уведомление, когда появится.",
     saveSearch: "Уведомить меня",

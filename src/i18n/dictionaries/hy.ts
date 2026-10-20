@@ -1133,7 +1133,7 @@ const hy = {
     signalYes: "կա",
     signalPartial: "մասամբ կա",
     signalNo: "չկա",
-    openMap: "Բացել Yandex քարտեզում",
+    openMap: "Բացել քարտեզում",
     upcomingTitle: "Առաջիկա արշավներ այստեղ",
     noUpcomingLong: "Այստեղ առաջիկա արշավ դեռ չկա։ Կարող եք պահել որոնում և ծանուցում ստանալ, երբ հայտնվի։",
     saveSearch: "Ծանուցել ինձ",

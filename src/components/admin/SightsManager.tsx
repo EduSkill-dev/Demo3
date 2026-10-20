@@ -15,12 +15,12 @@ type Draft = {
   photo_url: string; description_hy: string; description_ru: string; description_en: string;
   elevation: string; // whole metres, "" = not set
   relative_height: string; // above the surroundings, "" = not set
-  distance_km: string; drive_minutes: string; map_url: string; mobile_signal: string; // "" = not set
+  distance_km: string; drive_minutes: string; coords: string; mobile_signal: string; // "" = not set; coords "40.5123, 44.4567"
 };
 const blank: Draft = {
   id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true,
   photo_url: "", description_hy: "", description_ru: "", description_en: "", elevation: "", relative_height: "",
-  distance_km: "", drive_minutes: "", map_url: "", mobile_signal: "",
+  distance_km: "", drive_minutes: "", coords: "", mobile_signal: "",
 };
 const numText = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
 const toDraft = (s: Sight, patch: Partial<Draft> = {}): Draft => ({
@@ -29,7 +29,7 @@ const toDraft = (s: Sight, patch: Partial<Draft> = {}): Draft => ({
   photo_url: s.photo_url ?? "", description_hy: s.description_hy ?? "", description_ru: s.description_ru ?? "", description_en: s.description_en ?? "",
   elevation: s.elevation === null || s.elevation === undefined ? "" : String(s.elevation),
   relative_height: s.relative_height === null || s.relative_height === undefined ? "" : String(s.relative_height),
-  distance_km: numText(s.distance_km), drive_minutes: numText(s.drive_minutes), map_url: s.map_url ?? "", mobile_signal: s.mobile_signal ?? "",
+  distance_km: numText(s.distance_km), drive_minutes: numText(s.drive_minutes), coords: s.lat !== null && s.lng !== null ? `${s.lat}, ${s.lng}` : "", mobile_signal: s.mobile_signal ?? "",
   ...patch,
 });
 
@@ -175,8 +175,11 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
             <input id="sight-drive" type="number" inputMode="numeric" min={0} max={1440} placeholder="օր.՝ 100" value={draft.drive_minutes} onChange={(e) => set({ drive_minutes: e.target.value.replace(/\D/g, "") })} className={adminInput} />
           </div>
           <div>
-            <label htmlFor="sight-map" className="mb-1 block text-sm font-medium text-ink">Yandex քարտեզի հղում</label>
-            <input id="sight-map" type="url" placeholder="https://yandex.com/maps/..." value={draft.map_url} onChange={(e) => set({ map_url: e.target.value })} className={adminInput} />
+            <label htmlFor="sight-map" className="mb-1 block text-sm font-medium text-ink">
+              Կոորդինատներ
+              <InfoTip text="Լայնություն, երկայնություն՝ ստորակետով, օր.՝ 40.5123, 44.4567։ Google Maps-ում աջ սեղմեք կետի վրա և պատճենեք թվերը (Yandex-ում՝ սեղմեք կետին)։ Կայքում սեղմելիս կբացվի սարքի քարտեզը։" />
+            </label>
+            <input id="sight-map" inputMode="decimal" placeholder="օր.՝ 40.5123, 44.4567" value={draft.coords} onChange={(e) => set({ coords: e.target.value })} className={adminInput} />
           </div>
           <div>
             <label htmlFor="sight-signal" className="mb-1 block text-sm font-medium text-ink">Բջջային կապ</label>

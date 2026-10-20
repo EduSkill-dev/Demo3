@@ -1,6 +1,7 @@
 import type { Place } from "@/lib/places";
 import type { TFunction as T } from "@/i18n/translate";
 import { metres } from "@/components/places/PlaceCard";
+import MapLink from "@/components/places/MapLink";
 
 const icon = "h-4 w-4 shrink-0 text-spruce-500 dark:text-spruce-300";
 const svg = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true } as const;
@@ -13,14 +14,15 @@ function drive(t: T, minutes: number): string {
 }
 
 // The practical facts on a place's page, each shown only when an admin
-// filled it: relative height, the road from Yerevan, mobile signal, the map.
+// filled it: relative height, the road from Yerevan, mobile signal, the map
+// (coordinates, opened in the device's maps app).
 export default function PlaceFacts({ place, t }: { place: Place; t: T }) {
   const signal = { yes: t("placesPage.signalYes"), partial: t("placesPage.signalPartial"), no: t("placesPage.signalNo") };
   const road = [
     place.distanceKm !== null ? t("placesPage.fromYerevan", { km: place.distanceKm }) : null,
     place.driveMinutes !== null ? drive(t, place.driveMinutes) : null,
   ].filter(Boolean);
-  if (place.relativeHeight === null && road.length === 0 && !place.signal && !place.mapUrl) return null;
+  if (place.relativeHeight === null && road.length === 0 && !place.signal && !place.coords) return null;
 
   return (
     <ul className="mt-3 space-y-1.5 text-sm text-ink">
@@ -42,12 +44,10 @@ export default function PlaceFacts({ place, t }: { place: Place; t: T }) {
           {t("placesPage.signal", { v: signal[place.signal] })}
         </li>
       )}
-      {place.mapUrl && (
+      {place.coords && (
         <li className="flex items-center gap-2">
           <svg {...svg} className={icon}><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2" /></svg>
-          <a href={place.mapUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-terracotta-600 hover:underline dark:text-terracotta-300">
-            {t("placesPage.openMap")} ↗
-          </a>
+          <MapLink lat={place.coords.lat} lng={place.coords.lng} name={place.name} label={t("placesPage.openMap")} />
         </li>
       )}
     </ul>

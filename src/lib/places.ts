@@ -17,7 +17,7 @@ export type Place = {
   relativeHeight: number | null; // above the surroundings; null for gorges
   distanceKm: number | null; // by road from Yerevan
   driveMinutes: number | null;
-  mapUrl: string | null; // Yandex Maps
+  coords: { lat: number; lng: number } | null;
   signal: "yes" | "partial" | "no" | null; // mobile signal
   photo: string | null; // the admins' photo, else the newest photo of a hike there
   description: string | null;
@@ -66,7 +66,7 @@ export async function getPlaces(): Promise<Place[]> {
         relativeHeight: s.terrain === "gorges" ? null : s.relative_height,
         distanceKm: s.distance_km,
         driveMinutes: s.drive_minutes,
-        mapUrl: s.map_url,
+        coords: s.lat !== null && s.lng !== null ? { lat: s.lat, lng: s.lng } : null,
         signal: s.mobile_signal,
         photo: s.photo_url || st?.tour_photo || null,
         description: textIn(s, locale),

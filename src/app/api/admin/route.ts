@@ -249,15 +249,18 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const trip = {
       distance_km: /^\d{1,4}$/.test(str(body.distance_km)) ? Number(str(body.distance_km)) : null,
       drive_minutes: /^\d{1,4}$/.test(str(body.drive_minutes)) ? Number(str(body.drive_minutes)) : null,
-      map_url: str(body.map_url).trim().slice(0, 500) || null,
       mobile_signal: ["yes", "partial", "no"].includes(str(body.mobile_signal)) ? str(body.mobile_signal) : null,
     };
     if (trip.distance_km !== null && trip.distance_km > 1000) return fail("Հեռավորությունը պետք է լինի 0-ից 1000 կմ։");
     if (trip.drive_minutes !== null && trip.drive_minutes > 1440) return fail("Ճանապարհի ժամանակը պետք է լինի մինչև 1440 րոպե (24 ժամ)։");
-    if (trip.map_url && !/^https:\/\/([a-z0-9-]+\.)*yandex\.(ru|com|am|by|kz)\/maps/i.test(trip.map_url)) {
-      return fail("Քարտեզի հղումը պետք է լինի Yandex Maps-ից (https://yandex.../maps/...)։");
-    }
-    Object.assign(row, trip);
+    // "40.5123, 44.4567" (as Google and Yandex Maps copy it): latitude first.
+    const coordText = str(body.coords).trim();
+    const coords = coordText.match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+    if (coordText && !coords) return fail("Կոորդինատները գրեք այսպես՝ 40.5123, 44.4567 (լայնություն, երկայնություն)։");
+    const lat = coords ? Number(coords[1]) : null;
+    const lng = coords ? Number(coords[2]) : null;
+    if (lat !== null && lng !== null && (Math.abs(lat) > 90 || Math.abs(lng) > 180)) return fail("Կոորդինատները սխալ են։");
+    Object.assign(row, trip, { lat, lng });
     if (row.elevation !== null && (row.elevation < -500 || row.elevation > 9000)) return fail("Բարձրությունը պետք է լինի -500-ից 9000 մետր։");
     if (!row.name_hy || !row.name_ru || !row.name_en) return fail("Լրացրեք անվանումը երեք լեզվով։");
     if (!(REGIONS as readonly string[]).includes(row.region)) return fail("Ընտրեք մարզը։");

@@ -1128,7 +1128,7 @@ const en: DeepPartial<Dictionary> = {
     signalYes: "yes",
     signalPartial: "partial",
     signalNo: "none",
-    openMap: "Open in Yandex Maps",
+    openMap: "Open in maps",
     upcomingTitle: "Upcoming hikes here",
     noUpcomingLong: "No upcoming hikes here yet. Save a search to be told when one appears.",
     saveSearch: "Notify me",
