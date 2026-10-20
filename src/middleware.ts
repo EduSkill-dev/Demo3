@@ -3,7 +3,10 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const IDLE_COOKIE = "idle_seen";
-const IDLE_MS = 30 * 60_000;
+// Without activity a session ends after 15 minutes for admins and after
+// 2 hours for individuals and clubs (Gor, 2026-10-20).
+const IDLE_ADMIN_MS = 15 * 60_000;
+const IDLE_MS = 2 * 60 * 60_000;
 
 // Refreshes the Supabase session cookie on every request (server components
 // cannot write cookies themselves) and keeps each dashboard to its own role:
@@ -69,16 +72,26 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // 30 minutes without activity end the session, for everyone (Gor,
-  // 2026-10-20): idle_seen holds the time of the last request (refreshed at
-  // most once a minute; an open page pings while it is being used, see
-  // IdleLogout). A tab closed and opened again later is signed out here.
+  // A session without activity ends (IDLE_ADMIN_MS / IDLE_MS): idle_seen
+  // holds the time of the last request (refreshed at most once a minute; an
+  // open page pings while it is being used, see IdleLogout). A tab closed and
+  // opened again later is signed out here. The role is looked up only after
+  // a gap longer than the admins' limit.
   if (user) {
     const seen = Number(request.cookies.get(IDLE_COOKIE)?.value ?? 0);
     const now = Date.now();
     // A sign-in after that time is a new session, not an idle one.
     const signedInAfter = !!user.last_sign_in_at && new Date(user.last_sign_in_at).getTime() > seen;
-    if (seen && !signedInAfter && now - seen > IDLE_MS) {
+    const gap = now - seen;
+    let idle = false;
+    if (seen && !signedInAfter && gap > IDLE_ADMIN_MS) {
+      if (gap > IDLE_MS) idle = true;
+      else {
+        const { data: who } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+        idle = (who as { role?: string } | null)?.role === "admin";
+      }
+    }
+    if (idle) {
       await supabase.auth.signOut({ scope: "local" });
       const out = path.startsWith("/api/")
         ? response

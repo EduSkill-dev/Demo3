@@ -35,6 +35,9 @@ export default function PlaceCard({ place, t }: { place: Place; t: T }) {
           {place.terrain ? ` · ${t(`terrain.${place.terrain}`)}` : ""}
           {place.elevation !== null ? ` · ${t("placesPage.meters", { n: metres(place.elevation) })}` : ""}
         </p>
+        {place.relativeHeight !== null && (
+          <p className="text-[13px] text-muted">{t("placesPage.relativeHeight", { n: metres(place.relativeHeight) })}</p>
+        )}
         <div className="mt-2.5 flex items-center gap-2">
           {place.difficulty && (
             <span className={`${chip} ${DIFFICULTY_CHIP[place.difficulty] ?? NEUTRAL_CHIP}`}>{t(`difficulty.${place.difficulty}`)}</span>

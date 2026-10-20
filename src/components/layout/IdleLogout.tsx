@@ -3,15 +3,14 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const IDLE_MS = 30 * 60_000;
 const PING_MS = 5 * 60_000;
 const KEY = "culmen.lastActive";
 
-// 30 minutes without touching the site (in any of its tabs) sign the person
-// out and open the login page; the server enforces the same rule for tabs
+// `minutes` without touching the site (in any of its tabs) sign the person
+// out and open the login page (15 for admins, 120 for everyone else); the server enforces the same rule for tabs
 // closed in the meantime (middleware, idle_seen). While the page is used,
 // a ping every 5 minutes keeps the server's clock in step.
-export default function IdleLogout() {
+export default function IdleLogout({ minutes }: { minutes: number }) {
   useEffect(() => {
     let last = Date.now();
     let lastPing = Date.now();
@@ -43,7 +42,7 @@ export default function IdleLogout() {
     const events = ["pointerdown", "keydown", "scroll", "touchstart", "mousemove"] as const;
     events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
     const timer = setInterval(async () => {
-      if (Date.now() - read() < IDLE_MS) return;
+      if (Date.now() - read() < minutes * 60_000) return;
       clearInterval(timer);
       await createClient().auth.signOut({ scope: "local" }).catch(() => undefined);
       window.location.href = `/login?idle=1&next=${encodeURIComponent(window.location.pathname)}`;
@@ -52,6 +51,6 @@ export default function IdleLogout() {
       clearInterval(timer);
       events.forEach((e) => window.removeEventListener(e, mark));
     };
-  }, []);
+  }, [minutes]);
   return null;
 }

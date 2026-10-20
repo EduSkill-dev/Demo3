@@ -136,7 +136,7 @@ export default function HeaderBar({ user }: { user: HeaderUser | null }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
-      {user && <IdleLogout />}
+      {user && <IdleLogout minutes={user.role === "admin" ? 15 : 120} />}
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="shrink-0" aria-label="Culmen">
           <span className="dark:hidden"><CulmenLogo variant="light" size={40} wordmarkSize={30} gap={8} /></span>

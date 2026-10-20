@@ -14,16 +14,18 @@ type Draft = {
   id: string | null; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string; difficulty: string; active: boolean;
   photo_url: string; description_hy: string; description_ru: string; description_en: string;
   elevation: string; // whole metres, "" = not set
+  relative_height: string; // above the surroundings, "" = not set
 };
 const blank: Draft = {
   id: null, name_hy: "", name_ru: "", name_en: "", region: REGIONS[0], terrain: TERRAINS[0], difficulty: "medium", active: true,
-  photo_url: "", description_hy: "", description_ru: "", description_en: "", elevation: "",
+  photo_url: "", description_hy: "", description_ru: "", description_en: "", elevation: "", relative_height: "",
 };
 const toDraft = (s: Sight, patch: Partial<Draft> = {}): Draft => ({
   id: s.id, name_hy: s.name_hy, name_ru: s.name_ru, name_en: s.name_en, region: s.region,
   terrain: s.terrain ?? TERRAINS[0], difficulty: s.difficulty ?? "medium", active: s.active,
   photo_url: s.photo_url ?? "", description_hy: s.description_hy ?? "", description_ru: s.description_ru ?? "", description_en: s.description_en ?? "",
   elevation: s.elevation === null || s.elevation === undefined ? "" : String(s.elevation),
+  relative_height: s.relative_height === null || s.relative_height === undefined ? "" : String(s.relative_height),
   ...patch,
 });
 
@@ -134,6 +136,24 @@ export default function SightsManager({ sights }: { sights: Sight[] }) {
               placeholder="օր.՝ 2597"
               value={draft.elevation}
               onChange={(e) => set({ elevation: e.target.value.replace(/[^\d-]/g, "") })}
+              className={adminInput}
+            />
+          </div>
+          <div>
+            <label htmlFor="sight-relative" className="mb-1 block text-sm font-medium text-ink">
+              Հարաբերական բարձրություն (մ)
+              <InfoTip text="Որքան է վայրը բարձրանում շրջակայքից (օր.՝ ստորոտից մինչև գագաթ)։ Ձորերի համար կայքում չի ցուցադրվում։" />
+            </label>
+            <input
+              id="sight-relative"
+              type="number"
+              inputMode="numeric"
+              step={1}
+              min={0}
+              max={5000}
+              placeholder="օր.՝ 650"
+              value={draft.relative_height}
+              onChange={(e) => set({ relative_height: e.target.value.replace(/\D/g, "") })}
               className={adminInput}
             />
           </div>

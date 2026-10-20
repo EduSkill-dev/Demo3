@@ -8,7 +8,8 @@ const HEART = "M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 5 6.4 5c2 0 3.6 1.1 4.6 2.6l1 1.
 const THUMB = "M7 21H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3m0 10V11m0 10h9.3a2 2 0 0 0 2-1.6l1.2-6A2 2 0 0 0 17.5 10H14V5.5A2.5 2.5 0 0 0 11.5 3L7 11";
 
 // A public like with its count: a heart for a place, a thumbs-up for a hike.
-// Everyone sees the number. Someone who took part (see FavoritesProvider)
+// Everyone sees the number — for a place like the rating, "♡ (👥 12)", with
+// who may give one in the tooltip. Someone who took part (see FavoritesProvider)
 // gets a button; anyone else gets the same icon as plain text.
 export default function LikeButton({
   kind,
@@ -48,17 +49,29 @@ export default function LikeButton({
     </svg>
   );
   const text = size === "md" ? "text-sm" : "text-xs";
+  const people = (
+    <span className="inline-flex items-center font-medium">
+      (
+      <svg viewBox="0 0 24 24" className={`mr-0.5 ${size === "md" ? "h-4 w-4" : "h-3.5 w-3.5"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" />
+      </svg>
+      {shown})
+    </span>
+  );
+  const countShown = kind === "sight" ? people : shown;
+  const hint = kind === "sight" ? t("placesPage.likeHint") : null;
   const tone = kind === "sight" ? "text-terracotta-500" : "text-spruce-500 dark:text-spruce-300";
 
   if (!allowed) {
     return (
       <span
         data-like={kind}
-        title={t("like.onlyParticipants")}
-        className={`inline-flex items-center gap-1 font-semibold ${text} ${shown > 0 ? tone : "text-muted"}`}
+        title={hint ?? t("like.onlyParticipants")}
+        className={`inline-flex cursor-default items-center gap-1 font-semibold ${text} ${shown > 0 ? tone : "text-muted"}`}
       >
         {icon}
-        {shown}
+        {countShown}
       </span>
     );
   }
@@ -69,7 +82,7 @@ export default function LikeButton({
       data-like={kind}
       disabled={busy}
       aria-pressed={on}
-      title={label}
+      title={hint ? `${label} · ${hint}` : label}
       aria-label={`${label} (${shown})`}
       onClick={async () => {
         setBusy(true);
@@ -81,7 +94,7 @@ export default function LikeButton({
       }`}
     >
       {icon}
-      {shown}
+      {countShown}
     </button>
   );
 }

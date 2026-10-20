@@ -98,7 +98,7 @@ export async function ToursFilters({
   const f = filters;
   const field = (on: boolean) =>
     `h-9 w-full min-w-0 rounded-lg border-2 bg-surface px-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-terracotta-500/30 ${
-      on ? "border-terracotta-500 font-semibold" : "border-spruce-500/50 dark:border-spruce-300/45"
+      on ? "border-terracotta-500 font-semibold" : "border-spruce-500 dark:border-spruce-300/70"
     }`;
   const activeCount = [f.region, f.terrain, f.club, f.difficulty, f.from || f.to, f.overnight, f.free].filter(Boolean).length;
   const filtered = activeCount > 0;
@@ -113,7 +113,7 @@ export async function ToursFilters({
   );
 
   return (
-    <AutoSubmitForm action={action} className="mt-4 rounded-2xl border border-spruce-500/35 bg-surface p-3 dark:border-spruce-300/35">
+    <AutoSubmitForm action={action} className="mt-4 rounded-2xl border border-spruce-500 bg-surface p-3 dark:border-spruce-300/60">
       {Object.entries(hidden).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
       <FilterPanel active={activeCount} found={t("toursPage.results", { count })} show={t("toursPage.filters")} hide={t("toursPage.hideFilters")}>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_12rem]">

@@ -11,6 +11,7 @@ export type Sight = {
   id: string; name_hy: string; name_ru: string; name_en: string; region: string; terrain: string | null; difficulty: string | null; active: boolean;
   photo_url: string | null; description_hy: string | null; description_ru: string | null; description_en: string | null;
   elevation: number | null; // metres above sea level (negative below it)
+  relative_height: number | null; // metres above the surroundings (not shown for gorges)
 };
 
 const loadSights = unstable_cache(
@@ -18,7 +19,7 @@ const loadSights = unstable_cache(
     try {
       const { data } = await createAdminClient()
         .from("sights")
-        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active, photo_url, description_hy, description_ru, description_en, elevation")
+        .select("id, name_hy, name_ru, name_en, region, terrain, difficulty, active, photo_url, description_hy, description_ru, description_en, elevation, relative_height")
         .order("name_hy");
       return (data ?? []) as Sight[];
     } catch {

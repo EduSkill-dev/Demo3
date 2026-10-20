@@ -63,9 +63,11 @@ export default async function PlacePage({ params }: { params: { id: string } }) 
               </span>
             )}
             <LikeButton kind="sight" id={place.id} count={place.likes} size="md" />
-            <span className="text-sm text-muted">{t("placesPage.hikesTotal", { count: place.hikes })}</span>
+            <span className="text-sm text-muted">{tours.length > 0 ? t("placesPage.upcoming", { count: tours.length }) : t("placesPage.noUpcoming")}</span>
           </div>
-          <p className="mt-2 text-xs text-muted">{t("placesPage.likeHint")}</p>
+          {place.relativeHeight !== null && (
+            <p className="mt-2 text-sm text-muted">{t("placesPage.relativeHeight", { n: metres(place.relativeHeight) })}</p>
+          )}
           {place.description && <p className="mt-4 whitespace-pre-line leading-relaxed text-ink">{place.description}</p>}
           {notify && (
             <Link href={notify} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-spruce-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
