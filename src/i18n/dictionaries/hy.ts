@@ -825,6 +825,7 @@ const hy = {
     from: "Սկսած",
     to: "Մինչև",
     overnightOnly: "Միայն գիշերակացով",
+    clearShort: "Մաքրել",
     clear: "Մաքրել ֆիլտրերը",
     results: "Գտնվեց՝ {count}",
     empty: "Այս ֆիլտրերով արշավ չգտնվեց։",

@@ -153,10 +153,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Par
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <ToursHeader view="calendar" filters={f} />
+      <ToursHeader />
       {/* On wide screens the filters and the month stay in place; only the cards scroll. */}
       <div className="mt-4 lg:sticky lg:top-[72px] lg:z-20 lg:-mx-2 lg:bg-stone lg:px-2 lg:pb-1 lg:pt-3 [&>form]:mt-0">
-        <ToursFilters action="/calendar" filters={f} clubs={clubs} count={shown.length} hidden={{ all: chosen ? "" : "1" }} clearHref="/calendar?all=1" />
+        <ToursFilters action="/calendar" view="calendar" filters={f} clubs={clubs} count={shown.length} hidden={{ all: chosen ? "" : "1" }} clearHref="/calendar?all=1" />
       </div>
 
       <div className="mt-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">

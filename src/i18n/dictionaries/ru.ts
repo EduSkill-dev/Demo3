@@ -820,6 +820,7 @@ const ru: DeepPartial<Dictionary> = {
     from: "С",
     to: "По",
     overnightOnly: "Только с ночёвкой",
+    clearShort: "Сбросить",
     clear: "Сбросить фильтры",
     results: "Найдено: {count}",
     empty: "По этим фильтрам походов нет.",

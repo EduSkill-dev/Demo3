@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DIFFICULTIES, REGIONS, TERRAINS } from "@/lib/catalog";
 import { getT } from "@/i18n/server";
+import type { TFunction } from "@/i18n/translate";
 import { getViewer } from "@/lib/viewer";
 import { isDay, todayInYerevan } from "@/lib/calendar";
 import AutoSubmitForm from "@/components/calendar/AutoSubmitForm";
@@ -36,40 +37,44 @@ const toQuery = (path: string, params: Record<string, string>) => {
 
 // The title, the list | calendar switch and, for clubs, "new listing" — the
 // same on both views, so only the part under the filters changes.
-export async function ToursHeader({ view, filters }: { view: "list" | "calendar"; filters: TourFilters }) {
+export async function ToursHeader() {
   const t = await getT();
   const viewer = await getViewer();
-  const segment = (on: boolean) =>
-    `flex h-9 items-center rounded-full px-4 text-sm font-semibold ${on ? "bg-spruce-500 text-[#FFFDF8]" : "text-ink hover:text-terracotta-700"}`;
-  const q = filterQuery(filters);
-  // The calendar opens on today: From and To are set to it, so the filter
-  // and the month show the same thing.
-  const calendarQ = q.from || q.to ? q : { ...q, from: todayInYerevan(), to: todayInYerevan() };
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="font-serif text-3xl font-semibold text-heading">{t("toursPage.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">{t("calendar.subtitle")}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {viewer?.role === "club" && (
-          <Link href="/dashboard/listings/new" className="rounded-lg bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
-            {t("announcements.new")}
-          </Link>
-        )}
-        <div className="flex rounded-full bg-sand p-1">
-          {view === "list" ? (
-            <span className={segment(true)} aria-current="page">{t("calendar.switchList")}</span>
-          ) : (
-            <Link href={toQuery("/tours", q)} rel="nofollow" className={segment(false)}>{t("calendar.switchList")}</Link>
-          )}
-          {view === "calendar" ? (
-            <span className={segment(true)} aria-current="page">{t("calendar.switchCalendar")}</span>
-          ) : (
-            <Link href={toQuery("/calendar", calendarQ)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
-          )}
-        </div>
-      </div>
+      {viewer?.role === "club" && (
+        <Link href="/dashboard/listings/new" className="rounded-lg bg-spruce-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-spruce-900">
+          {t("announcements.new")}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// List | calendar, sized to one row of the filter box. Switching keeps the
+// filters; the calendar opens on today when no dates are set, so the filter
+// and the month show the same thing.
+function ViewSwitch({ view, filters, t }: { view: "list" | "calendar"; filters: TourFilters; t: TFunction }) {
+  const segment = (on: boolean) =>
+    `flex h-8 items-center rounded-full px-4 text-sm font-semibold ${on ? "bg-spruce-500 text-[#FFFDF8]" : "text-ink hover:text-terracotta-700"}`;
+  const q = filterQuery(filters);
+  const calendarQ = q.from || q.to ? q : { ...q, from: todayInYerevan(), to: todayInYerevan() };
+  return (
+    <div className="flex shrink-0 rounded-full bg-sand p-0.5">
+      {view === "list" ? (
+        <span className={segment(true)} aria-current="page">{t("calendar.switchList")}</span>
+      ) : (
+        <Link href={toQuery("/tours", q)} rel="nofollow" className={segment(false)}>{t("calendar.switchList")}</Link>
+      )}
+      {view === "calendar" ? (
+        <span className={segment(true)} aria-current="page">{t("calendar.switchCalendar")}</span>
+      ) : (
+        <Link href={toQuery("/calendar", calendarQ)} rel="nofollow" className={segment(false)}>{t("calendar.switchCalendar")}</Link>
+      )}
     </div>
   );
 }
@@ -79,6 +84,7 @@ export async function ToursHeader({ view, filters }: { view: "list" | "calendar"
 // and a clear button that stands out.
 export async function ToursFilters({
   action,
+  view,
   filters,
   clubs,
   count,
@@ -87,6 +93,7 @@ export async function ToursFilters({
   clearHref,
 }: {
   action: "/tours" | "/calendar";
+  view: "list" | "calendar";
   filters: TourFilters;
   clubs: { id: string; name: string }[];
   count: number;
@@ -98,7 +105,7 @@ export async function ToursFilters({
   const f = filters;
   const field = (on: boolean) =>
     `h-9 w-full min-w-0 rounded-lg border-2 bg-surface px-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-terracotta-500/30 ${
-      on ? "border-terracotta-500 font-semibold" : "border-spruce-500 dark:border-spruce-300/70"
+      on ? "border-terracotta-500 font-semibold" : "border-line dark:border-spruce-300/70"
     }`;
   const activeCount = [f.region, f.terrain, f.club, f.difficulty, f.from || f.to, f.overnight, f.free].filter(Boolean).length;
   const filtered = activeCount > 0;
@@ -111,11 +118,29 @@ export async function ToursFilters({
   const date = (name: "from" | "to", value: string, min: string | undefined, label: string) => (
     <DateField name={name} value={value} min={min} label={label} className={`${field(!!value)} max-sm:col-span-2`} />
   );
+  // On the right of the box: the view switch above, the count below — in
+  // orange like the calendar's day heading, with "clear" once a filter is set.
+  const switcher = <ViewSwitch view={view} filters={f} t={t} />;
+  const found = (
+    <span className="flex items-center gap-3 whitespace-nowrap">
+      <span className="text-lg font-bold text-terracotta-500">{t("toursPage.results", { count })}</span>
+      {filtered && (
+        <Link
+          href={clearHref ?? toQuery(action, hidden)}
+          title={t("toursPage.clear")}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta-700 hover:underline dark:text-terracotta-300"
+        >
+          <span aria-hidden="true">✕</span>
+          {t("toursPage.clearShort")}
+        </Link>
+      )}
+    </span>
+  );
 
   return (
-    <AutoSubmitForm action={action} className="mt-4 rounded-2xl border border-spruce-500 bg-surface p-3 dark:border-spruce-300/60">
+    <AutoSubmitForm action={action} className="mt-4 rounded-2xl border border-line bg-surface p-3 dark:border-spruce-300/60">
       {Object.entries(hidden).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
-      <FilterPanel active={activeCount} found={t("toursPage.results", { count })} show={t("toursPage.filters")} hide={t("toursPage.hideFilters")}>
+      <FilterPanel active={activeCount} found={found} switcher={switcher} show={t("toursPage.filters")} hide={t("toursPage.hideFilters")}>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_12rem]">
         <select name="region" defaultValue={f.region} aria-label={t("toursPage.region")} className={field(!!f.region)}>
           <option value="">{t("toursPage.region")}</option>
@@ -133,22 +158,12 @@ export async function ToursFilters({
           <option value="">{t("toursPage.difficulty")}</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d}>{t(`difficulty.${d}`)}</option>)}
         </select>
-        <span className={`flex min-h-[2.25rem] items-center justify-center max-md:hidden max-lg:order-last ${filtered ? "" : "lg:row-span-2"}`}>
-          <span className="rounded-full bg-apricot-100 px-3.5 py-1 text-[15px] font-bold text-apricot-700 dark:bg-apricot-500/20 dark:text-apricot-300">{t("toursPage.results", { count })}</span>
-        </span>
+        <div className="flex items-center justify-center max-lg:hidden">{switcher}</div>
         {date("from", f.from, minDate, t("toursPage.from"))}
         {date("to", f.to, f.from || minDate, t("toursPage.to"))}
         {check("overnight", f.overnight, t("calendar.night"))}
         {check("free", f.free, t("calendar.free"))}
-        {filtered ? (
-          <Link
-            href={clearHref ?? toQuery(action, hidden)}
-            className="flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-terracotta-500 bg-terracotta-500/10 px-3 text-sm font-bold text-terracotta-700 hover:bg-terracotta-500 hover:text-white max-lg:order-last dark:text-terracotta-300"
-          >
-            <span aria-hidden="true">✕</span>
-            {t("toursPage.clear")}
-          </Link>
-        ) : null}
+        <div className="flex items-center justify-center max-lg:hidden">{found}</div>
       </div>
       </FilterPanel>
       <button type="submit" className="sr-only">{t("calendar.apply")}</button>

@@ -820,6 +820,7 @@ const en: DeepPartial<Dictionary> = {
     from: "From",
     to: "To",
     overnightOnly: "Overnight only",
+    clearShort: "Clear",
     clear: "Clear filters",
     results: "Found: {count}",
     empty: "No hikes match these filters.",

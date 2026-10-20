@@ -92,8 +92,8 @@ export default async function ToursPage({ searchParams }: { searchParams: Params
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <ToursHeader view="list" filters={f} />
-      <ToursFilters action="/tours" filters={f} clubs={clubs} count={shown.length} minDate={today} hidden={{ month: dated ? "" : state.month }} />
+      <ToursHeader />
+      <ToursFilters action="/tours" view="list" filters={f} clubs={clubs} count={shown.length} minDate={today} hidden={{ month: dated ? "" : state.month }} />
 
       {/* The month's days that have hikes. */}
       <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
