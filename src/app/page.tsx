@@ -125,11 +125,11 @@ export default async function HomePage() {
           three ways in (phones: title, calendar, then the two). */}
       <section className="bg-spruce-500 text-card">
         <div className="mx-auto grid max-w-6xl gap-x-10 gap-y-8 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,36rem)] lg:pb-24 lg:pt-12">
-          <h1 className="text-[40px] font-bold leading-[1.1] sm:text-[48px]">{t("home.heroTitle")}</h1>
+          <h1 className="whitespace-pre-line text-[40px] font-bold leading-[1.1] sm:text-[48px]">{t("home.heroTitle")}</h1>
 
           {/* The line above the calendar; the calendar's bottom lines up with the club card's. */}
           <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-end">
-          <p className="mb-4 text-xl font-semibold leading-snug text-apricot-300">{t("home.heroText")}</p>
+          <p className="mb-4 text-xl font-semibold leading-snug text-apricot-300 lg:whitespace-pre-line">{t("home.heroText")}</p>
           <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-4 text-ink shadow-xl sm:flex-row sm:p-5">
             <div className="sm:w-[290px] sm:shrink-0">
               <HomeCalendar

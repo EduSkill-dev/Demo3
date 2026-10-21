@@ -648,7 +648,7 @@ const en: DeepPartial<Dictionary> = {
     clubStat: "{hikes} hikes · {people} participants in the last 30 days",
     hikerEmpty: "This quarter's most active hiker will appear here",
     clubEmpty: "The most active club of the last 30 days will appear here",
-    heroTitle: "The mountains are waiting",
+    heroTitle: "The mountains\nare waiting",
     heroText: "Pick a day, a place, a hike — or order a hike of your own.",
     heroUpcoming: "{count} upcoming hikes",
     heroAll: "All hikes",
