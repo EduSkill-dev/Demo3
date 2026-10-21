@@ -129,7 +129,7 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
       {state === "sent" ? (
         <p className="mt-4 rounded-lg bg-white/10 p-3 text-sm text-white">{viewer ? `✓ ${t("footer.sentDirect")}` : `✉️ ${t("footer.sent")}`}</p>
       ) : (
-        <form onSubmit={submit} className="relative mt-4 space-y-2">
+        <form onSubmit={submit} className="relative mt-4 flex flex-col gap-2" /* gap, not space-y: the hidden fields must not push the box down */>
           <Honeypot value={website} onChange={setWebsite} />
           <label className="sr-only" htmlFor="suggest-message">{t("footer.message")}</label>
           <textarea
@@ -150,7 +150,7 @@ export function SuggestionForm({ viewer }: { viewer: FooterViewer | null }) {
           <button
             type="submit"
             disabled={state === "busy"}
-            className="rounded-lg bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
+            className="self-start rounded-lg bg-apricot-500 px-4 py-2.5 text-sm font-bold text-spruce-900 hover:bg-apricot-300 disabled:opacity-60"
           >
             {t("footer.send")}
           </button>

@@ -125,12 +125,12 @@ export default async function HomePage() {
           three ways in (phones: title, calendar, then the two). */}
       <section className="bg-spruce-500 text-card">
         <div className="mx-auto grid max-w-6xl gap-x-10 gap-y-8 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,36rem)] lg:pb-24 lg:pt-12">
-          <div>
-            <h1 className="text-[40px] font-bold leading-[1.1] sm:text-[48px]">{t("home.heroTitle")}</h1>
-            <p className="mt-4 max-w-xl text-xl font-semibold leading-snug text-apricot-300">{t("home.heroText")}</p>
-          </div>
+          <h1 className="text-[40px] font-bold leading-[1.1] sm:text-[48px]">{t("home.heroTitle")}</h1>
 
-          <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-4 text-ink shadow-xl sm:flex-row sm:p-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+          {/* The line above the calendar; the calendar's bottom lines up with the club card's. */}
+          <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-end">
+          <p className="mb-4 text-xl font-semibold leading-snug text-apricot-300">{t("home.heroText")}</p>
+          <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-4 text-ink shadow-xl sm:flex-row sm:p-5">
             <div className="sm:w-[290px] sm:shrink-0">
               <HomeCalendar
                 months={homeMonths(all, t)}
@@ -147,6 +147,7 @@ export default async function HomePage() {
               <Link href="/places" className={`${heroButton} border-2 border-spruce-500 text-spruce-700 hover:bg-spruce-500 hover:text-white dark:border-spruce-300 dark:text-spruce-300`}>{t("home.heroPlaces")}</Link>
               <Link href={orderHref} className={`${heroButton} border-2 border-terracotta-500 text-terracotta-700 hover:bg-terracotta-500 hover:text-white dark:text-terracotta-300`}>{t("home.heroOrder")}</Link>
             </div>
+          </div>
           </div>
 
           {/* Who was most active: the hiker of the quarter and the club of
