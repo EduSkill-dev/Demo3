@@ -141,11 +141,14 @@ export default async function HomePage() {
                 next={t("calendar.nextMonth")}
               />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
-              <p className="whitespace-nowrap text-lg font-bold text-terracotta-500 dark:text-terracotta-300">{t("home.heroUpcoming", { count: num(all.length) })}</p>
-              <Link href="/tours" className={`${heroButton} bg-spruce-500 text-white hover:bg-spruce-900`}>{t("home.heroAll")}</Link>
-              <Link href="/places" className={`${heroButton} border-2 border-spruce-500 text-spruce-700 hover:bg-spruce-500 hover:text-white dark:border-spruce-300 dark:text-spruce-300`}>{t("home.heroPlaces")}</Link>
-              <Link href={orderHref} className={`${heroButton} border-2 border-terracotta-500 text-terracotta-700 hover:bg-terracotta-500 hover:text-white dark:text-terracotta-300`}>{t("home.heroOrder")}</Link>
+            {/* The count level with the first week, centred; the buttons end level with the last week (the legend's height below). */}
+            <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 sm:pb-7 sm:pt-14">
+              <p className="whitespace-nowrap text-center text-lg font-bold text-terracotta-500 dark:text-terracotta-300">{t("home.heroUpcoming", { count: num(all.length) })}</p>
+              <div className="flex flex-col gap-3">
+                <Link href="/tours" className={`${heroButton} border-2 border-spruce-500 text-spruce-700 hover:bg-spruce-500 hover:text-white dark:border-spruce-300 dark:text-spruce-300 dark:hover:border-spruce-500 dark:hover:bg-spruce-500 dark:hover:text-white`}>{t("home.heroAll")}</Link>
+                <Link href="/places" className={`${heroButton} border-2 border-spruce-500 text-spruce-700 hover:bg-spruce-500 hover:text-white dark:border-spruce-300 dark:text-spruce-300 dark:hover:border-spruce-500 dark:hover:bg-spruce-500 dark:hover:text-white`}>{t("home.heroPlaces")}</Link>
+                <Link href={orderHref} className={`${heroButton} border-2 border-terracotta-500 text-terracotta-700 hover:bg-terracotta-500 hover:text-white dark:text-terracotta-300 dark:hover:bg-terracotta-500 dark:hover:text-white`}>{t("home.heroOrder")}</Link>
+              </div>
             </div>
           </div>
           </div>
