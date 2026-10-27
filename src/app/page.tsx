@@ -48,7 +48,7 @@ async function getHomeStats() {
     const today = new Date().toISOString().slice(0, 10);
     const [{ data }, { count: past }] = await Promise.all([
       db.rpc("get_about_stats"),
-      db.from("tours").select("id", { count: "exact", head: true }).eq("status", "active").eq("admin_hidden", false).lt("date", today),
+      db.from("tours").select("id, clubs!inner(owner_blocked)", { count: "exact", head: true }).eq("status", "active").eq("admin_hidden", false).eq("clubs.owner_blocked", false).lt("date", today),
     ]);
     const c = (Array.isArray(data) ? data[0] : null) as { clubs_count?: number; users_count?: number } | null;
     return { past: past ?? null, users: c?.users_count ?? null, clubs: c?.clubs_count ?? null };

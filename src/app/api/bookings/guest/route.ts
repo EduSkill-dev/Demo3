@@ -29,7 +29,9 @@ type TourRow = {
   meeting_point: string | null;
   meeting_time: string | null;
   cancel_hours: number;
-  clubs: { name: string; profiles: { email: string } | null } | null;
+  status: string;
+  admin_hidden: boolean;
+  clubs: { name: string; owner_blocked: boolean; applications_blocked: boolean; profiles: { email: string } | null } | null;
 };
 
 async function handlePOST(req: Request) {
@@ -102,11 +104,14 @@ async function handlePOST(req: Request) {
 
   const { data: tourRow } = await db
     .from("tours")
-    .select("id, title, date, price, meeting_point, meeting_time, cancel_hours, clubs(name, profiles!clubs_owner_id_fkey(email))")
+    .select("id, title, date, price, meeting_point, meeting_time, cancel_hours, status, admin_hidden, clubs(name, owner_blocked, applications_blocked, profiles!clubs_owner_id_fkey(email))")
     .eq("id", tourId)
     .maybeSingle();
-  if (!tourRow) return fail("Արշավը չի գտնվել։", 404);
-  const tour = tourRow as unknown as TourRow;
+  const tour = tourRow as unknown as TourRow | null;
+  // Read past RLS, so the public rules are checked here: an active hike, not
+  // closed by an admin, of a club that is not blocked.
+  if (!tour || tour.status !== "active" || tour.admin_hidden || !tour.clubs || tour.clubs.owner_blocked) return fail("Արշավը չի գտնվել։", 404);
+  if (tour.clubs.applications_blocked) return fail("Այս ակումբի արշավներին գրանցումը ժամանակավորապես փակ է։", 403);
   const amount = Number(tour.price) || 0;
 
   // The guest: one per email, its details refreshed with every booking.

@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const db = createAdminClient();
     const today = new Date().toISOString().slice(0, 10);
     const [{ data: clubs }, { data: tours }, { data: sights }] = await Promise.all([
-      db.from("clubs").select("id, slug, tariff, package_ends_at"),
+      db.from("clubs").select("id, slug, tariff, package_ends_at").eq("owner_blocked", false), // blocked clubs and their hikes are hidden
       db.from("tours").select("id, club_id, created_at").eq("status", "active").eq("admin_hidden", false).gte("date", today),
       db.from("sights").select("id").eq("active", true),
     ]);

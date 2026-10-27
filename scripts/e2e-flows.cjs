@@ -792,6 +792,31 @@ async function main() {
         blocked.status === 200 && blockedLogin.status !== 200 && reopened.status === 200 && reopenedLogin.status === 200,
         `block=${blocked.status} login=${blockedLogin.status} ${JSON.stringify(blockedLogin.body)} reopen=${reopened.status} login=${reopenedLogin.status}`);
 
+      // A blocked club disappears from the platform (its data stays) and comes back when re-activated.
+      {
+        ids.club4 = await makeUser('club4', { role: 'club', club_name: 'E2E Club Blocked' });
+        const clubD = (await admin.from('clubs').select('id').eq('owner_id', ids.club4).single()).data.id;
+        await givePackage(clubD, 'start');
+        const tD = (await admin.from('tours').insert(tourRow(clubD, { title: 'E2E Blocked Club Tour', date: future(61) })).select('id').single()).data;
+        const seenBefore = (await visitor.from('tours').select('id').eq('id', tD.id)).data || [];
+        const block = await act({ action: 'account.setStatus', userId: ids.club4, status: 'blocked' }, superCookie);
+        const clubSeen = (await visitor.from('clubs').select('id').eq('id', clubD)).data || [];
+        const tourSeen = (await visitor.from('tours').select('id').eq('id', tD.id)).data || [];
+        const clubPage = await fetch(`http://localhost:${DEV_PORT}/clubs/${clubD}`);
+        const listed = await page('/clubs');
+        const book = await api('/api/payments/charge', { kind: 'booking', tour_id: tD.id }, indCookie);
+        const kept = (await admin.from('tours').select('id').eq('id', tD.id)).data || [];
+        const reopen = await act({ action: 'account.setStatus', userId: ids.club4, status: 'active' }, superCookie);
+        const clubBack = (await visitor.from('clubs').select('id').eq('id', clubD)).data || [];
+        const tourBack = (await visitor.from('tours').select('id').eq('id', tD.id)).data || [];
+        check('blocked club: it and its hikes vanish for everyone (page 404, not listed, no booking) but nothing is deleted; re-activated, all is back',
+          seenBefore.length === 1 && block.status === 200 && clubSeen.length === 0 && tourSeen.length === 0 && clubPage.status === 404
+            && !listed.includes('E2E Club Blocked') && book.status >= 400 && kept.length === 1 && reopen.status === 200 && clubBack.length === 1 && tourBack.length === 1,
+          `before=${seenBefore.length} block=${block.status} club=${clubSeen.length} tour=${tourSeen.length} page=${clubPage.status} listed=${listed.includes('E2E Club Blocked')} book=${book.status} kept=${kept.length} reopen=${reopen.status} back=${clubBack.length}/${tourBack.length}`);
+        await admin.auth.admin.deleteUser(ids.club4);
+        ids.club4 = null;
+      }
+
       const closeTour = await act({ action: 'tour.setHidden', tourId, hidden: true }, superCookie);
       const closedSeen = (await visitor.from('tours').select('id').eq('id', tourId)).data || [];
       await signIn('club');

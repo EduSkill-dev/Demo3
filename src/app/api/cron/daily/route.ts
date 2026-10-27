@@ -70,8 +70,9 @@ async function handleGET(req: Request) {
 
   const { data: fresh } = await admin
     .from("tours")
-    .select("id, title, date, regions, clubs(name, tariff, package_ends_at)")
+    .select("id, title, date, regions, clubs(name, tariff, package_ends_at, owner_blocked)")
     .eq("status", "active")
+    .eq("admin_hidden", false)
     .gte("date", now.toISOString().slice(0, 10))
     .gt("created_at", since)
     .order("date");
@@ -80,9 +81,9 @@ async function handleGET(req: Request) {
     title: string;
     date: string;
     regions: string[];
-    clubs: { name: string; tariff: string | null; package_ends_at: string | null } | null;
+    clubs: { name: string; tariff: string | null; package_ends_at: string | null; owner_blocked: boolean } | null;
   }[])
-    .filter((x) => activePackage(x.clubs, now.getTime()))
+    .filter((x) => activePackage(x.clubs, now.getTime()) && !x.clubs?.owner_blocked) // closed hikes and blocked clubs stay out
     .map((x) => ({ id: x.id, title: x.title, date: x.date, regions: x.regions, clubName: x.clubs!.name }));
 
   let digests = 0;

@@ -94,7 +94,7 @@ export const getSpotlight = cache(async (): Promise<Spotlight> => {
     if (perClub.size > 0) {
       const ids = [...perClub.keys()];
       const [{ data: clubRows }, { data: ratingRows }] = await Promise.all([
-        db.from("clubs").select("id, name, slug, photo_url, tariff, package_ends_at").in("id", ids),
+        db.from("clubs").select("id, name, slug, photo_url, tariff, package_ends_at").in("id", ids).eq("owner_blocked", false), // a blocked club is not shown
         db.from("ratings").select("club_id, score, comment, created_at").in("club_id", ids),
       ]);
       const ratings = (ratingRows ?? []) as { club_id: string; score: number; comment: string | null; created_at: string }[];
