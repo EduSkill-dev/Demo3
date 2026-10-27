@@ -431,6 +431,9 @@ const en: DeepPartial<Dictionary> = {
     refundNote: "The participant cancelled. If they paid, contact them and refund the payment.",
   },
   clubData: {
+    name: "Club name",
+    nameInvalid: "The name must be 2–100 characters.",
+    nameTaken: "A club with this name already exists — choose another.",
     contacts: "Club contacts",
     contactPhone: "Phone",
     contactEmail: "Email",

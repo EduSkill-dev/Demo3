@@ -15,12 +15,14 @@ import InfoTip from "@/components/ui/InfoTip";
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
 
-// Photo, about text, phone, social pages and focus — everything shown on the
-// public club page.
+// Photo, name, about text, phone, social pages and focus — everything shown
+// on the public club page. The name must stay unique among clubs (the
+// database refuses a name another club uses).
 export default function ClubProfileForm({ club }: { club: Club }) {
   const t = useT();
   const router = useRouter();
   const [photo, setPhoto] = useState(club.photo_url);
+  const [name, setName] = useState(club.name);
   const [about, setAbout] = useState(club.description ?? "");
   const [phone, setPhone] = useState(club.phone ?? "");
   const [contact, setContact] = useState({ phone: club.contact_phone ?? "", email: club.contact_email ?? "", address: club.contact_address ?? "" });
@@ -63,6 +65,8 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     e.preventDefault();
     setError(null);
     setMessage(null);
+    const clubName = name.trim().replace(/\s+/g, " ");
+    if (clubName.length < 2 || clubName.length > 100) return setError(t("clubData.nameInvalid"));
     const address = slug.trim().toLowerCase();
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(address) || address.length < 3 || address.length > 40) return setError(t("clubData.slugInvalid"));
     if (wrong.length) return setError(t("clubData.socialWrong", { network: SOCIAL_NAMES[wrong[0]] }));
@@ -73,6 +77,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     const { error: err } = await createClient()
       .from("clubs")
       .update({
+        name: clubName,
         description: about.trim() || null,
         phone: phone.trim() || null,
         contact_phone: contact.phone.trim() || null,
@@ -86,10 +91,12 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     setBusy(null);
     if (err) {
       const net = SOCIAL_NETS.find((n) => err.message.includes(`${n}_url`));
+      if (err.message.includes("Այս անունով ակումբ")) return setError(t("clubData.nameTaken"));
       return setError(net ? t("clubData.socialWrong", { network: SOCIAL_NAMES[net] }) : err.code === "23505" && err.message.includes("slug") ? t("clubData.slugTaken") : err.code === "23514" ? t("clubData.slugInvalid") : err.message);
     }
     setSocial(Object.fromEntries(SOCIAL_NETS.map((n) => [n, normalizeSocial(n, social[n])])) as Record<SocialNet, string>);
     setSlug(address);
+    setName(clubName);
     setMessage(t("clubData.saved"));
     router.refresh();
   }
@@ -137,6 +144,10 @@ export default function ClubProfileForm({ club }: { club: Club }) {
       </div>
 
       <form onSubmit={saveInfo} className="max-w-2xl space-y-5">
+        <div className="max-w-md">
+          <label htmlFor="club-name" className="mb-1 block text-sm font-medium text-ink">{t("clubData.name")}</label>
+          <input id="club-name" required minLength={2} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} className={input} />
+        </div>
         <div>
           <label htmlFor="about" className="mb-1 block text-sm font-medium text-ink">{t("clubData.about")}</label>
           <textarea id="about" rows={6} placeholder={t("clubData.aboutHint")} value={about} onChange={(e) => setAbout(e.target.value)} className={input} />
