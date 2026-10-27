@@ -432,7 +432,8 @@ const en: DeepPartial<Dictionary> = {
   },
   clubData: {
     name: "Club name",
-    nameInvalid: "The name must be 2–100 characters.",
+    nameInvalid: "The name: 2–50 characters — letters of one alphabet (Armenian, Russian or English), digits and “_”, one space between words.",
+    nameRules: "Up to 50 characters: letters of one alphabet, digits and “_”, one space between words.",
     nameTaken: "A club with this name already exists — choose another.",
     contacts: "Club contacts",
     contactPhone: "Phone",

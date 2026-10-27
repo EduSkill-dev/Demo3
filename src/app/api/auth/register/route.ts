@@ -1,5 +1,6 @@
 import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
+import { clubNameOk, tidyClubName } from "@/lib/clubName";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardPublic } from "@/lib/rateLimit";
@@ -23,7 +24,7 @@ async function handlePOST(req: Request) {
   const email = str(b.email, 254).toLowerCase();
   const password = typeof b.password === "string" ? b.password : "";
   const phone = str(b.phone, 20);
-  const clubName = str(b.clubName, 100);
+  const clubName = tidyClubName(str(b.clubName, 200));
   const firstName = str(b.firstName, 60);
   const lastName = str(b.lastName, 60);
   const birthDate = str(b.birthDate, 10);
@@ -32,7 +33,8 @@ async function handlePOST(req: Request) {
   if (!EMAIL_RE.test(email)) return fail("validation_failed", "Նշեք ճիշտ էլ. հասցե։");
   if (password.length < MIN_PASSWORD || password.length > 72) return fail("weak_password", "");
   if (!PHONE_RE.test(phone)) return fail("validation_failed", "Նշեք ճիշտ հեռախոսահամար։");
-  if ((role === "club" && clubName.length < 2) || !firstName || !lastName) return fail("validation_failed", "Լրացրեք բոլոր դաշտերը։");
+  if (!firstName || !lastName || (role === "club" && !clubName)) return fail("validation_failed", "Լրացրեք բոլոր դաշտերը։");
+  if (role === "club" && !clubNameOk(clubName)) return fail("validation_failed", "Ակումբի անունը՝ մինչև 50 նշան, մեկ լեզվի տառեր, թվեր, «_» և բառերի միջև մեկ բացատ։");
   if (role === "individual" && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return fail("validation_failed", "Նշեք ճիշտ ծննդյան ամսաթիվ։");
 
   const db = createAdminClient();

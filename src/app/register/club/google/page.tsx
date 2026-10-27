@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/i18n/client";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import AuthCard, { authButton, authInput, authLabel } from "@/components/auth/AuthCard";
+import { CLUB_NAME_MAX, clubNameOk, tidyClubName } from "@/lib/clubName";
 
 // The second step of registering a club with Google: the club's name, the
 // person registering it (taken from Google, can be corrected) and a phone.
@@ -37,12 +38,13 @@ export default function ClubWithGooglePage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
+    if (!clubNameOk(tidyClubName(clubName))) return setError(t("clubData.nameInvalid"));
+    setBusy(true);
     const res = await fetch("/api/auth/become-club", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clubName: clubName.trim(), firstName: firstName.trim(), lastName: lastName.trim(), phone: phone.trim() }),
+      body: JSON.stringify({ clubName: tidyClubName(clubName), firstName: firstName.trim(), lastName: lastName.trim(), phone: phone.trim() }),
     }).catch(() => null);
     const data = res ? ((await res.json().catch(() => ({}))) as { error?: string }) : null;
     if (!res?.ok) {
@@ -60,7 +62,8 @@ export default function ClubWithGooglePage() {
       <form onSubmit={save} className="space-y-4">
         <div>
           <label htmlFor="name" className={authLabel}>{t("auth.clubName")}</label>
-          <input id="name" required minLength={2} maxLength={100} autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
+          <input id="name" required minLength={2} maxLength={CLUB_NAME_MAX} autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
+          <p className="mt-1 text-xs text-muted">{t("clubData.nameRules")}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

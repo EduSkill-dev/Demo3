@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clubNameOk, tidyClubName } from "@/lib/clubName";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withErrorReport } from "@/lib/errors";
@@ -21,11 +22,12 @@ async function handlePOST(req: Request) {
   if (!isExternalAccount(user)) return fail("Այս եղանակը միայն Google-ով մուտք գործածների համար է։", 403);
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const clubName = str(b.clubName, 100);
+  const clubName = tidyClubName(str(b.clubName, 200));
   const firstName = str(b.firstName, 60);
   const lastName = str(b.lastName, 60);
   const phone = str(b.phone, 20);
-  if (clubName.length < 2 || !firstName || !lastName) return fail("Լրացրեք բոլոր դաշտերը։");
+  if (!clubName || !firstName || !lastName) return fail("Լրացրեք բոլոր դաշտերը։");
+  if (!clubNameOk(clubName)) return fail("Ակումբի անունը՝ մինչև 50 նշան, մեկ լեզվի տառեր, թվեր, «_» և բառերի միջև մեկ բացատ։");
   if (!PHONE_RE.test(phone)) return fail("Նշեք ճիշտ հեռախոսահամար։");
 
   const db = createAdminClient();

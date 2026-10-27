@@ -21,6 +21,7 @@ import { DICTIONARIES } from "@/i18n/translate";
 import { isLocale } from "@/i18n/config";
 import { MIN_PASSWORD } from "@/lib/authErrors";
 import { allowCredentialChange, viaOf } from "@/lib/adminSecurity";
+import { todayInYerevan } from "@/lib/calendar";
 
 // Everything an admin can change goes through this one route:
 //   { action: "<name>", ... }  →  { ok: true, ... } | { error }
@@ -304,6 +305,70 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
 
   // The social networks closed for one club: its buttons stay visible there
   // but do not work. (What the platform shows at all is share.save.)
+  // The people booked on one hike (the "Listings" seats cell), with what the
+  // club sees about them — and whether they paid. Loaded only when an admin
+  // opens the list; every opening is logged (personal data).
+  async "tour.participants"(ctx, body) {
+    if (!can(ctx.me, "tours")) return fail(FORBIDDEN, 403);
+    const tourId = str(body.tourId);
+    const { data: tour } = await ctx.db.from("tours").select("id, title").eq("id", tourId).maybeSingle();
+    if (!tour) return fail("Արշավը չի գտնվել։", 404);
+    const [{ data: rows }, { data: pays }] = await Promise.all([
+      ctx.db
+        .from("bookings")
+        .select("id, user_id, guest_id, status, created_at, cancelled_at, attended, emergency_contact_name, emergency_contact_phone, profiles(first_name, last_name, email, phone, birth_date, gender), guests(first_name, last_name, email, phone, birth_date, gender)")
+        .eq("tour_id", tourId)
+        .order("created_at"),
+      ctx.db.from("payments").select("user_id, guest_id, amount, status").eq("tour_id", tourId).eq("kind", "booking").eq("status", "succeeded"),
+    ]);
+    type P = { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; birth_date: string | null; gender: string | null };
+    type B = { id: string; user_id: string | null; guest_id: string | null; status: string; created_at: string; cancelled_at: string | null; attended: boolean | null; emergency_contact_name: string | null; emergency_contact_phone: string | null; profiles: P | null; guests: P | null };
+    const paid = (pays ?? []) as { user_id: string | null; guest_id: string | null; amount: number }[];
+    const people = ((rows ?? []) as unknown as B[]).map((b) => {
+      const p = b.profiles ?? b.guests;
+      const pay = paid.find((x) => (b.user_id && x.user_id === b.user_id) || (b.guest_id && x.guest_id === b.guest_id));
+      return {
+        id: b.id,
+        userId: b.user_id,
+        guest: !b.user_id,
+        name: [p?.first_name, p?.last_name].filter(Boolean).join(" ") || "—",
+        email: p?.email ?? null,
+        phone: p?.phone ?? null,
+        birthDate: p?.birth_date ?? null,
+        gender: p?.gender ?? null,
+        status: b.status,
+        bookedAt: b.created_at,
+        cancelledAt: b.cancelled_at,
+        attended: b.attended,
+        emergency: b.emergency_contact_name ? `${b.emergency_contact_name}${b.emergency_contact_phone ? ` · ${b.emergency_contact_phone}` : ""}` : null,
+        paid: pay ? Number(pay.amount) : null,
+      };
+    });
+    await logActivity({ actor: ctx.me.userId, action: "admin.tour_participants_viewed", targetType: "tour", targetId: tourId, targetLabel: (tour as { title: string }).title, ip: ctx.ip });
+    return NextResponse.json({ ok: true, people });
+  },
+
+  // One person's hikes ("Individuals"): those taken part in (over, not
+  // marked absent) or those booked to come. Each opening is logged.
+  async "individual.hikes"(ctx, body) {
+    if (!can(ctx.me, "individuals")) return fail(FORBIDDEN, 403);
+    const userId = str(body.userId);
+    const which = body.which === "upcoming" ? "upcoming" : "past";
+    const today = todayInYerevan();
+    const { data } = await ctx.db
+      .from("bookings")
+      .select("attended, tours(id, title, date, end_date, clubs(id, name))")
+      .eq("user_id", userId)
+      .eq("status", "confirmed");
+    type R = { attended: boolean | null; tours: { id: string; title: string; date: string; end_date: string | null; clubs: { id: string; name: string } | null } | null };
+    const items = ((data ?? []) as unknown as R[])
+      .filter((b) => b.tours && (which === "upcoming" ? (b.tours.end_date ?? b.tours.date) >= today : (b.tours.end_date ?? b.tours.date) < today && b.attended !== false))
+      .map((b) => ({ tourId: b.tours!.id, title: b.tours!.title, date: b.tours!.date, clubId: b.tours!.clubs?.id ?? null, clubName: b.tours!.clubs?.name ?? null }))
+      .sort((a, b) => (which === "upcoming" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
+    await logActivity({ actor: ctx.me.userId, action: "admin.individual_hikes_viewed", targetType: "account", targetId: userId, meta: { which }, ip: ctx.ip });
+    return NextResponse.json({ ok: true, items });
+  },
+
   // A club's certificate: approve it (the blue badge appears), reject it
   // with a reason, or take an approval back. The club is told in its bell.
   async "club.certificate"(ctx, body) {

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useT } from "@/i18n/client";
 import { MIN_PASSWORD, authErrorMessage } from "@/lib/authErrors";
 import AuthCard, { authButton, authInput, authLabel } from "@/components/auth/AuthCard";
+import { CLUB_NAME_MAX, clubNameOk, tidyClubName } from "@/lib/clubName";
 import CheckEmail from "@/components/auth/CheckEmail";
 
 // Clubs sign up with just the basics; the package is chosen later from the
@@ -29,6 +30,7 @@ export default function ClubRegisterPage() {
     setError(null);
     if (password.length < MIN_PASSWORD) return setError(t("auth.weakPassword"));
     if (password !== repeat) return setError(t("auth.passwordsDiffer"));
+    if (!clubNameOk(tidyClubName(clubName))) return setError(t("clubData.nameInvalid"));
 
     setBusy(true);
     // The server creates the account: it checks the phone (and club name),
@@ -36,7 +38,7 @@ export default function ClubRegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "club", email: email.trim(), password, phone: phone.trim(), clubName: clubName.trim(), firstName: firstName.trim(), lastName: lastName.trim() }),
+      body: JSON.stringify({ role: "club", email: email.trim(), password, phone: phone.trim(), clubName: tidyClubName(clubName), firstName: firstName.trim(), lastName: lastName.trim() }),
     }).catch(() => null);
     const data = res
       ? ((await res.json().catch(() => ({}))) as { session?: boolean; error?: { code?: string; message: string; status?: number } })
@@ -56,7 +58,8 @@ export default function ClubRegisterPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className={authLabel}>{t("auth.clubName")}</label>
-          <input id="name" required minLength={2} maxLength={100} autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
+          <input id="name" required minLength={2} maxLength={CLUB_NAME_MAX} autoComplete="organization" value={clubName} onChange={(e) => setClubName(e.target.value)} className={authInput} />
+          <p className="mt-1 text-xs text-muted">{t("clubData.nameRules")}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

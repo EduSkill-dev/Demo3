@@ -792,6 +792,20 @@ async function main() {
         blocked.status === 200 && blockedLogin.status !== 200 && reopened.status === 200 && reopenedLogin.status === 200,
         `block=${blocked.status} login=${blockedLogin.status} ${JSON.stringify(blockedLogin.body)} reopen=${reopened.status} login=${reopenedLogin.status}`);
 
+      // Admin lists: who is booked on a hike (needs "Listings"), a person's hikes (needs "Individuals"); both logged.
+      {
+        const bookedOn = (await admin.from('bookings').select('tour_id').eq('user_id', ids.ind).eq('status', 'confirmed').limit(1).single()).data;
+        const people = await act({ action: 'tour.participants', tourId: bookedOn?.tour_id }, superCookie);
+        const noPerm = await act({ action: 'tour.participants', tourId: bookedOn?.tour_id }, admCookie);
+        const hikesUp = await act({ action: 'individual.hikes', userId: ids.ind, which: 'upcoming' }, admCookie);
+        const hikesPast = await act({ action: 'individual.hikes', userId: ids.ind, which: 'past' }, admCookie);
+        const viewed = (await admin.from('activity_log').select('action').in('action', ['admin.tour_participants_viewed', 'admin.individual_hikes_viewed']).in('actor_id', [ids.super, ids.adm])).data || [];
+        check('admin lists: a hike\'s booked people (with contacts) for "Listings" admins only, a person\'s hikes for "Individuals" admins; each opening is logged',
+          people.status === 200 && (people.body.people || []).some((p) => p.userId === ids.ind && p.email) && noPerm.status === 403
+            && hikesUp.status === 200 && Array.isArray(hikesUp.body.items) && hikesUp.body.items.length >= 1 && hikesPast.status === 200 && viewed.length >= 3,
+          `people=${people.status}/${(people.body.people || []).length} noPerm=${noPerm.status} up=${hikesUp.status}/${(hikesUp.body.items || []).length} past=${hikesPast.status} logged=${viewed.length}`);
+      }
+
       // A blocked club disappears from the platform (its data stays) and comes back when re-activated.
       {
         ids.club4 = await makeUser('club4', { role: 'club', club_name: 'E2E Club Blocked' });
@@ -1293,6 +1307,14 @@ async function main() {
         const approve = await act({ action: 'club.certificate', userId: ids.club, decision: 'approve' }, superCookie);
         const shown = (await anon.from('clubs').select('certificate_status').eq('id', clubA).single()).data?.certificate_status;
         const told = (await admin.from('notifications').select('id').eq('user_id', ids.club).like('message', '%հավաստագիրը հաստատվել է%')).data || [];
+        // Names: one alphabet, digits, "_", single spaces, up to 50; a new name sends the certificate back to the check.
+        const { data: before } = await admin.from('clubs').select('name').eq('id', clubA).single();
+        const badName = await anon.from('clubs').update({ name: 'Bad-Name Ակումբ' }).eq('id', clubA).select('name');
+        const renamed = await anon.from('clubs').update({ name: 'E2E Club A Renamed' }).eq('id', clubA).select('name, certificate_status').single();
+        await anon.from('clubs').update({ name: before.name }).eq('id', clubA);
+        check('club names follow the rule; a renamed certified club goes back to the check',
+          !!badName.error && renamed.data?.name === 'E2E Club A Renamed' && renamed.data?.certificate_status === 'pending',
+          `bad=${badName.error ? 'refused' : 'ALLOWED'} renamed=${JSON.stringify(renamed.data)} ${renamed.error?.message ?? ''}`);
         const reup = await anon.from('clubs').update({ certificate_url: pic + '?2' }).eq('id', clubA).select('certificate_status').single();
         const noReason = await act({ action: 'club.certificate', userId: ids.club, decision: 'reject' }, superCookie);
         const byClub = await act({ action: 'club.certificate', userId: ids.club, decision: 'approve' }, clubCookie);

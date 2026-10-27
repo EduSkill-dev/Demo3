@@ -86,6 +86,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.share_saved": "Փոխեց սոց. ցանցերում կիսվելու կարգավորումները",
   "admin.club_share_set": "Փոխեց ակումբի կիսվելու հնարավորությունը",
   "admin.certificate_approve": "Հաստատեց ակումբի հավաստագիրը",
+  "admin.tour_participants_viewed": "Դիտեց արշավի մասնակիցների ցուցակը",
+  "admin.individual_hikes_viewed": "Դիտեց անհատի արշավների ցուցակը",
   "admin.certificate_reject": "Մերժեց ակումբի հավաստագիրը",
   "admin.certificate_revoke": "Հետ կանչեց ակումբի հավաստագրի հաստատումը",
   "admin.block_removed": "Բացեց ավտոմատ արգելքը",

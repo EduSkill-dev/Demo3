@@ -1,11 +1,10 @@
-import Link from "next/link";
+import Pager, { readPageSize } from "@/components/admin/Pager";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdmin } from "@/lib/admin";
 import { ACTION_LABELS, PERM_LABELS, ROLE_LABELS, type AdminPerm } from "@/lib/adminLabels";
 import { adminGhost, adminInlineInput } from "@/components/admin/adminApi";
 
-const PAGE_SIZE = 50;
 
 type Entry = {
   id: number;
@@ -48,7 +47,7 @@ function details(e: Entry): string {
 export default async function AdminLogsPage({
   searchParams,
 }: {
-  searchParams: { role?: string; action?: string; q?: string; page?: string };
+  searchParams: { role?: string; action?: string; q?: string; page?: string; size?: string };
 }) {
   const me = await getAdmin();
   if (!me) redirect("/login?next=/admin/logs");
@@ -58,13 +57,14 @@ export default async function AdminLogsPage({
   const action = searchParams.action && searchParams.action in ACTION_LABELS ? searchParams.action : "";
   const q = (searchParams.q ?? "").trim().replace(/[,()%*\\]/g, " ").slice(0, 80);
   const page = Math.max(1, Number(searchParams.page) || 1);
+  const size = readPageSize(searchParams.size);
 
   let query = createAdminClient()
     .from("activity_log")
     .select("id, at, actor_role, actor_label, action, target_label, ip, meta", { count: "exact" })
     .order("at", { ascending: false })
     .order("id", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    .range((page - 1) * size, page * size - 1);
   // Without a filter the super admin also sees entries nobody "did" (the
   // abuse guard's blocks and pauses).
   if (role) query = query.eq("actor_role", role);
@@ -73,16 +73,18 @@ export default async function AdminLogsPage({
   if (q) query = query.or(`actor_label.ilike.%${q}%,target_label.ilike.%${q}%,ip.ilike.%${q}%`);
   const { data, count } = await query;
   const entries = (data ?? []) as Entry[];
-  const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil((count ?? 0) / size));
 
   const actions = Object.entries(ACTION_LABELS).filter(([key]) => me.isSuper || !(key.startsWith("admin.") || key.startsWith("security.")));
-  const link = (p: number) => {
+  const link = (p: number, n: number) => {
     const params = new URLSearchParams();
     if (role) params.set("role", role);
     if (action) params.set("action", action);
     if (q) params.set("q", q);
-    params.set("page", String(p));
-    return `/admin/logs?${params}`;
+    if (p > 1) params.set("page", String(p));
+    if (n !== 50) params.set("size", String(n));
+    const query = params.toString();
+    return query ? `/admin/logs?${query}` : "/admin/logs";
   };
 
   return (
@@ -90,6 +92,7 @@ export default async function AdminLogsPage({
       <h2 className="font-serif text-xl font-semibold text-heading">Լոգեր ({count ?? 0})</h2>
 
       <form className="mt-4 flex flex-wrap items-end gap-2">
+        {size !== 50 && <input type="hidden" name="size" value={size} />}
         <select name="role" defaultValue={role} aria-label="Օգտվողի տեսակ" className={`${adminInlineInput} w-44`}>
           <option value="">Բոլոր օգտվողները</option>
           {roles.map((r) => (
@@ -106,7 +109,7 @@ export default async function AdminLogsPage({
         <button type="submit" className={adminGhost}>Զտել</button>
       </form>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface">
+      <div id="log" className="mt-4 scroll-mt-24 overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full text-left text-[13px]">
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr>
@@ -139,13 +142,7 @@ export default async function AdminLogsPage({
         </table>
       </div>
 
-      {pages > 1 && (
-        <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Էջեր">
-          {page > 1 ? <Link href={link(page - 1)} className={adminGhost}>← Ավելի նոր</Link> : <span />}
-          <span className="text-muted">Էջ {page} / {pages}</span>
-          {page < pages ? <Link href={link(page + 1)} className={adminGhost}>Ավելի հին →</Link> : <span />}
-        </nav>
-      )}
+      {(count ?? 0) > 25 && <Pager page={Math.min(page, pages)} pages={pages} size={size} href={link} anchor="log" />}
     </div>
   );
 }

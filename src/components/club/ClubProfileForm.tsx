@@ -11,6 +11,7 @@ import type { Club } from "@/types/database";
 import { SOCIAL_EXAMPLES, SOCIAL_NAMES, SOCIAL_NETS, normalizeSocial, socialOk, type SocialNet } from "@/lib/socialLinks";
 import SocialIcon, { SOCIAL_COLOR } from "@/components/club/SocialIcon";
 import InfoTip from "@/components/ui/InfoTip";
+import { CLUB_NAME_MAX, clubNameOk, tidyClubName } from "@/lib/clubName";
 
 const input =
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-muted focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/30";
@@ -65,8 +66,9 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    const clubName = name.trim().replace(/\s+/g, " ");
-    if (clubName.length < 2 || clubName.length > 100) return setError(t("clubData.nameInvalid"));
+    const clubName = tidyClubName(name);
+    // Names given before the rule stay as they are until they are changed.
+    if (clubName !== club.name && !clubNameOk(clubName)) return setError(t("clubData.nameInvalid"));
     const address = slug.trim().toLowerCase();
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(address) || address.length < 3 || address.length > 40) return setError(t("clubData.slugInvalid"));
     if (wrong.length) return setError(t("clubData.socialWrong", { network: SOCIAL_NAMES[wrong[0]] }));
@@ -92,6 +94,7 @@ export default function ClubProfileForm({ club }: { club: Club }) {
     if (err) {
       const net = SOCIAL_NETS.find((n) => err.message.includes(`${n}_url`));
       if (err.message.includes("Այս անունով ակումբ")) return setError(t("clubData.nameTaken"));
+      if (err.message.includes("club_name_invalid")) return setError(t("clubData.nameInvalid"));
       return setError(net ? t("clubData.socialWrong", { network: SOCIAL_NAMES[net] }) : err.code === "23505" && err.message.includes("slug") ? t("clubData.slugTaken") : err.code === "23514" ? t("clubData.slugInvalid") : err.message);
     }
     setSocial(Object.fromEntries(SOCIAL_NETS.map((n) => [n, normalizeSocial(n, social[n])])) as Record<SocialNet, string>);
@@ -146,7 +149,8 @@ export default function ClubProfileForm({ club }: { club: Club }) {
       <form onSubmit={saveInfo} className="max-w-2xl space-y-5">
         <div className="max-w-md">
           <label htmlFor="club-name" className="mb-1 block text-sm font-medium text-ink">{t("clubData.name")}</label>
-          <input id="club-name" required minLength={2} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} className={input} />
+          <input id="club-name" required minLength={2} maxLength={CLUB_NAME_MAX} value={name} onChange={(e) => setName(e.target.value)} className={input} />
+          <p className="mt-1 text-xs text-muted">{t("clubData.nameRules")}</p>
         </div>
         <div>
           <label htmlFor="about" className="mb-1 block text-sm font-medium text-ink">{t("clubData.about")}</label>
