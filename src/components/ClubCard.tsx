@@ -17,17 +17,21 @@ export default function ClubCard({
 }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:shadow-md">
-      <div className="relative">
-        <Link href={`/clubs/${club.id}`}>
+      {/* The logo in one round frame of the same size on every card,
+          whatever was uploaded: it fills the circle (the corners go, the
+          middle, where a logo's name sits, stays whole). */}
+      <Link href={`/clubs/${club.id}`} className="flex h-40 items-center justify-center bg-gradient-to-b from-sand to-sand/30" aria-label={club.name}>
+        <span className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white shadow-md ring-1 ring-line">
           {club.photo_url ? (
-            <div className="flex h-44 items-center justify-center bg-sand">
-              <img src={club.photo_url} alt={club.name} className="max-h-full max-w-full object-contain" />
-            </div>
+            <img src={club.photo_url} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-44 items-center justify-center bg-gradient-to-br from-spruce-500 to-spruce-300 text-4xl">🏔️</div>
+            <svg viewBox="0 0 32 32" className="h-12 w-12 text-spruce-500" fill="currentColor" aria-hidden="true">
+              <path d="M13 7 3 26h12Z" opacity=".55" />
+              <path d="M20 12 11 26h18Z" />
+            </svg>
           )}
-        </Link>
-      </div>
+        </span>
+      </Link>
       <div className="flex flex-1 flex-col p-5">
         <span className="flex items-center gap-1.5">
           <Link href={`/clubs/${club.id}`} className="font-serif text-xl font-semibold text-heading hover:text-terracotta-700">

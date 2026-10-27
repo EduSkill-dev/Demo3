@@ -53,7 +53,7 @@ const en: DeepPartial<Dictionary> = {
   },
   photoTips: {
     tours: "Best: landscape photos at 4:3 or 3:2, at least 1600 pixels wide. The site scales them to 1600px and crops cards from the centre, so keep the subject in the middle. The first photo shows on the card and when shared.",
-    club: "A square (1:1) logo or photo, at least 800×800 pixels. The site scales it to 800px and crops it from the centre in places.",
+    club: "A square (1:1) logo or photo, at least 800×800 pixels. Cards show it in a circle, so keep the main part (name, mark) in the middle, away from the edges.",
     portrait: "A square (1:1) portrait with the face in the middle, at least 600×600 pixels. The site scales it and shows it in a circle, cropping the edges.",
   },
   common: {
