@@ -18,7 +18,6 @@
 // Either card is null while there is nothing to show yet.
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { activePackage } from "@/lib/catalog";
 import { todayInYerevan, addDays } from "@/lib/calendar";
 
 export type Spotlight = {
@@ -94,12 +93,11 @@ export const getSpotlight = cache(async (): Promise<Spotlight> => {
     if (perClub.size > 0) {
       const ids = [...perClub.keys()];
       const [{ data: clubRows }, { data: ratingRows }] = await Promise.all([
-        db.from("clubs").select("id, name, slug, photo_url, tariff, package_ends_at").in("id", ids).eq("owner_blocked", false), // a blocked club is not shown
+        db.from("clubs").select("id, name, slug, photo_url").in("id", ids).eq("owner_blocked", false), // a blocked club is not shown
         db.from("ratings").select("club_id, score, comment, created_at").in("club_id", ids),
       ]);
       const ratings = (ratingRows ?? []) as { club_id: string; score: number; comment: string | null; created_at: string }[];
-      const scored = ((clubRows ?? []) as { id: string; name: string; slug: string | null; photo_url: string | null; tariff: string | null; package_ends_at: string | null }[])
-        .filter((c) => activePackage(c))
+      const scored = ((clubRows ?? []) as { id: string; name: string; slug: string | null; photo_url: string | null }[])
         .map((c) => {
           const s = perClub.get(c.id)!;
           const own = ratings.filter((r) => r.club_id === c.id);

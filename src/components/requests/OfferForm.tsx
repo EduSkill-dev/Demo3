@@ -21,7 +21,7 @@ export default function OfferForm({
   requestId: string;
   mine: OfferView | null;
   defaultDate: string;
-  canOffer: boolean; // false: no active package
+  canOffer: boolean; // false: the request is closed
 }) {
   const t = useT();
   const fmt = useFormatDate();
@@ -81,7 +81,6 @@ export default function OfferForm({
           <button type="button" disabled={!canOffer} className={primaryButton} onClick={() => setOpen(true)}>
             {t("requests.sendOffer")}
           </button>
-          {!canOffer && <span className="text-xs text-muted">{t("requests.needPackage")}</span>}
           {statusText && <span className="text-xs text-muted">{statusText}</span>}
         </div>
       )}

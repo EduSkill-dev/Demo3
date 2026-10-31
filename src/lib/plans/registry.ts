@@ -9,7 +9,6 @@ import { activePackage, type PackageId } from "@/lib/catalog";
 
 // The admin screens list the capabilities under these headings.
 export const PLAN_GROUPS = {
-  limits: "Սահմանաչափեր",
   public: "Ինչ են տեսնում այցելուները",
   tools: "Ակումբի վահանակ և գործիքներ",
   later: "Շուտով (դեռ միայն նշում է)",
@@ -21,11 +20,10 @@ export type FeatureDef =
   | { key: string; group: PlanGroup; type: "number"; label: string; help?: string; default: number; min: number }
   | { key: string; group: PlanGroup; type: "boolean"; label: string; help?: string; default: boolean };
 
-export const PLAN_FEATURES = [
-  { key: "max_active_tours", group: "limits", type: "number", label: "Ակտիվ արշավների առավելագույն թիվ", help: "Առաջիկա ակտիվ և թաքցված հայտարարությունները միասին։", default: 2, min: 0 },
-  { key: "max_participants_per_tour", group: "limits", type: "number", label: "Մասնակիցների առավելագույն թիվ մեկ արշավի համար", help: "Քանի ամրագրում է հարթակն ընդունում մեկ արշավի համար։", default: 5, min: 0 },
-  { key: "public_show_rating", group: "public", type: "boolean", label: "Ակումբի վարկանիշը երևում է այցելուներին", default: false },
-  { key: "public_show_comments", group: "public", type: "boolean", label: "Մեկնաբանությունները երևում են այցելուներին", default: false },
+const FEATURES = [
+  { key: "public_show_rating", group: "public", type: "boolean", label: "Ակումբի վարկանիշը երևում է այցելուներին", default: true },
+  { key: "public_show_comments", group: "public", type: "boolean", label: "Մեկնաբանությունները երևում են այցելուներին", default: true },
+  { key: "dashboard_monthly_numbers", group: "tools", type: "boolean", label: "Անցած ամսվա թվերը վահանակում", default: true },
   { key: "dashboard_registrants_list", group: "tools", type: "boolean", label: "Գրանցվածների ցանկը վահանակում", default: true },
   { key: "dashboard_comments_tab", group: "tools", type: "boolean", label: "Մեկնաբանությունների բաժինը վահանակում", help: "Ակումբն ինքը տեսնում է իր ստացած մեկնաբանությունները։", default: false },
   { key: "registrants_csv_export", group: "tools", type: "boolean", label: "Գրանցվածների CSV արտահանում", default: false },
@@ -35,7 +33,10 @@ export const PLAN_FEATURES = [
   { key: "analytics", group: "later", type: "boolean", label: "Վերլուծության գործիքներ", default: false },
 ] as const satisfies readonly FeatureDef[];
 
-type Feature = (typeof PLAN_FEATURES)[number];
+// The screens read the general shape, so a number feature can come back.
+export const PLAN_FEATURES: readonly FeatureDef[] = FEATURES;
+
+type Feature = (typeof FEATURES)[number];
 export type NumberFeature = Extract<Feature, { type: "number" }>["key"];
 export type BooleanFeature = Extract<Feature, { type: "boolean" }>["key"];
 export type PlanConfig = { [K in NumberFeature]: number } & { [K in BooleanFeature]: boolean };
@@ -44,7 +45,8 @@ export type Plan = {
   id: PackageId;
   name: string;
   priceAmd: number; // per month; 0 = free
-  isAvailable: boolean; // false = shown as "coming soon", cannot be chosen
+  isAvailable: boolean; // false = cannot be bought
+  isVisible: boolean; // false = frozen: seen only by the super admin
   rank: number; // higher = bigger plan
   config: PlanConfig;
   reportItems: string[] | null; // the monthly report's default lines (null = all); see lib/report/items
@@ -79,18 +81,11 @@ export function cleanOverrides(raw: unknown): PlanOverrides {
   return out as PlanOverrides;
 }
 
-// A club without an active plan can do nothing that a plan grants.
-export const NO_PLAN: PlanConfig = Object.fromEntries(
-  PLAN_FEATURES.map((f) => [f.key, f.type === "number" ? 0 : false])
-) as PlanConfig;
-
-// What a club may do right now: its active plan with the club's own changes
-// on top, or nothing when it has no plan (or the plan lapsed).
+// What a club may do right now: its plan (START when no paid plan runs) with
+// the club's own changes on top. The database's club_has_feature() agrees.
 export type PlanHolder = { tariff: string | null; package_ends_at: string | null; plan_overrides?: unknown };
 export function clubConfig(plans: Plans, club: PlanHolder | null | undefined): PlanConfig {
-  const id = activePackage(club);
-  return id ? { ...plans[id].config, ...cleanOverrides(club?.plan_overrides) } : NO_PLAN;
+  return { ...plans[activePackage(club)].config, ...cleanOverrides(club?.plan_overrides) };
 }
 
 export const can = (config: PlanConfig, key: BooleanFeature): boolean => config[key];
-export const limitOf = (config: PlanConfig, key: NumberFeature): number => config[key];

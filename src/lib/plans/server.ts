@@ -6,10 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PACKAGE_IDS, isPackageId, type PackageId } from "@/lib/catalog";
 import { clubConfig, resolveConfig, type Plan, type PlanConfig, type PlanHolder, type Plans } from "./registry";
 
-type Row = { id: string; name: string; price_amd: number; is_available: boolean; sort: number; config: unknown; report_items: string[] | null };
+type Row = { id: string; name: string; price_amd: number; is_available: boolean; is_visible: boolean; sort: number; config: unknown; report_items: string[] | null };
 
 export const getPlans = cache(async (): Promise<Plans> => {
-  const { data } = await createAdminClient().from("packages").select("id, name, price_amd, is_available, sort, config, report_items");
+  const { data } = await createAdminClient().from("packages").select("id, name, price_amd, is_available, is_visible, sort, config, report_items");
   const rows = new Map(((data ?? []) as Row[]).map((r) => [r.id, r]));
   return Object.fromEntries(
     PACKAGE_IDS.map((id, i): [PackageId, Plan] => {
@@ -21,6 +21,7 @@ export const getPlans = cache(async (): Promise<Plans> => {
           name: r?.name ?? id,
           priceAmd: r?.price_amd ?? 0,
           isAvailable: r?.is_available ?? false,
+          isVisible: r?.is_visible ?? false,
           rank: r?.sort ?? i + 1,
           config: resolveConfig(r?.config),
           reportItems: r?.report_items ?? null,

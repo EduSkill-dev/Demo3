@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/clubs", key: "header.clubs" },
   { href: "/hikers", key: "header.hikers" },
   { href: "/faq", key: "header.faq" },
+  { href: "/pricing", key: "pricing.title" },
   { href: "/terms", key: "footer.terms" },
   { href: "/privacy", key: "footer.privacy" },
   { href: "/help", key: "footer.help" },

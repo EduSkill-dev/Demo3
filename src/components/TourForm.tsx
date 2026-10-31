@@ -29,14 +29,13 @@ const hint = "mt-1 text-xs text-muted";
 // hardest place sets the difficulty — the database writes the same, so the
 // two never disagree). The rest is the club's: dates, size, price, cancel
 // window, contact, meeting point and time, description, what to bring and
-// photos. `seatCap` is how many sign-ups the platform takes under the plan.
+// photos.
 export default function TourForm({
   mode,
   clubId,
   clubPhone = "",
   initialTour,
   template,
-  seatCap,
   sights,
   planner = false,
 }: {
@@ -45,7 +44,6 @@ export default function TourForm({
   clubPhone?: string; // the club's phone: the coordinator's number by default
   initialTour?: Tour;
   template?: Tour; // "publish again": a new listing pre-filled from this one, without its date
-  seatCap: number;
   sights: SightOption[];
   planner?: boolean; // the plan shows what other clubs have on the chosen day
 }) {
@@ -62,7 +60,7 @@ export default function TourForm({
   const [endDate, setEndDate] = useState(initialTour?.end_date ?? "");
   const [overnight, setOvernight] = useState(source?.overnight ?? false);
   const [cancelHours, setCancelHours] = useState(source?.cancel_hours ?? DEFAULT_CANCEL_HOURS);
-  const [maxParticipants, setMaxParticipants] = useState(String(source?.max_participants ?? (seatCap || "")));
+  const [maxParticipants, setMaxParticipants] = useState(String(source?.max_participants ?? ""));
   const [price, setPrice] = useState(source?.price != null ? String(source.price) : "0");
   // A new listing left at 0 ֏ without touching the price: one question first,
   // "Is the hike free?" — the next press of Publish means yes.
@@ -301,7 +299,6 @@ export default function TourForm({
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
           <input id="cap" required type="number" min={1} max={10000} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
-          {seatCap > 0 && <p className={hint}>{t("tourForm.capacityHint", { max: seatCap })}</p>}
         </div>
         <div>
           <label htmlFor="price" className={label}>{t("tourForm.price")}</label>

@@ -11,9 +11,9 @@ import type { Tour } from "@/types/database";
 export default async function NewTourPage({ searchParams }: { searchParams: { from?: string } }) {
   const mine = await getMyClub();
   if (!mine) redirect("/login");
-  // No package, the cap is reached, or an admin switched posting off: the
-  // listings page explains why.
-  if (mine.limits.used >= mine.limits.maxListings || mine.club.posting_blocked) redirect("/dashboard");
+  // Too many running at once, or an admin switched posting off: the listings
+  // page explains why.
+  if (mine.limits.running >= mine.limits.runningMax || mine.club.posting_blocked) redirect("/dashboard");
 
   const t = await getT();
   let template: Tour | undefined;
@@ -24,7 +24,7 @@ export default async function NewTourPage({ searchParams }: { searchParams: { fr
   return (
     <div>
       <h2 className="mb-6 font-serif text-xl font-semibold text-heading">{t("announcements.newTitle")}</h2>
-      <TourForm mode="create" template={template} clubId={mine.club.id} clubPhone={mine.club.phone ?? ""} seatCap={mine.limits.maxPerTour} sights={await getSightOptions()} planner={mine.limits.config.planner_other_clubs} />
+      <TourForm mode="create" template={template} clubId={mine.club.id} clubPhone={mine.club.phone ?? ""} sights={await getSightOptions()} planner={mine.limits.config.planner_other_clubs} />
     </div>
   );
 }

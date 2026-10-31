@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicTours } from "@/lib/publicTours";
-import { activePackage } from "@/lib/catalog";
 import { getPlans } from "@/lib/plans/server";
 import { clubConfig } from "@/lib/plans/registry";
 import { getT } from "@/i18n/server";
@@ -37,9 +36,8 @@ export default async function ClubsPage() {
       ) : (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((club) => {
-            const pkg = activePackage(club);
             const r = ratingOf.get(club.id);
-            const rating = pkg && clubConfig(plans, club).public_show_rating ? { average: Number(r?.average ?? 0), count: r?.count ?? 0 } : null;
+            const rating = clubConfig(plans, club).public_show_rating ? { average: Number(r?.average ?? 0), count: r?.count ?? 0 } : null;
             return <ClubCard key={club.id} club={club} rating={rating} upcoming={upcoming.get(club.id) ?? 0} t={t} />;
           })}
         </div>

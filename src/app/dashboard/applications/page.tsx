@@ -34,7 +34,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   if (!mine) redirect("/login");
   const { club, limits } = mine;
   const t = await getT();
-  if (limits.pkg && !limits.config.dashboard_registrants_list) {
+  if (!limits.config.dashboard_registrants_list) {
     return <p className="rounded-xl border border-line bg-surface p-8 text-center text-muted">{t("applications.notInPlan")}</p>;
   }
   const supabase = await createClient();
@@ -68,7 +68,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
       unread: !b.read_at,
       tourTitle: tour.title,
       tourDate: tour.date,
-      cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
+      cap: tour.max_participants,
       // Booked without an account: the details they gave (the club is not told which).
       person: b.profiles ?? (b.guests ? { ...b.guests, age: null } : null),
       attended: b.attended,
@@ -76,10 +76,8 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
     };
   });
 
-  // N/M: live applications on upcoming tours, against what the package allows
-  // in total (listings × applications per listing).
+  // Live applications on upcoming tours.
   const used = rows.filter((r) => r.status === "confirmed" && r.tourDate >= today).length;
-  const max = limits.maxListings * limits.maxPerTour;
 
   const csvClass = "rounded-lg border-2 px-4 py-2 text-sm font-semibold";
   return (
@@ -91,7 +89,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-semibold text-ink">{only ? t("applications.forTourCount", { count: rows.filter((r) => r.status === "confirmed").length }) : t("applications.counter", { used, max })}</p>
+        <p className="font-semibold text-ink">{only ? t("applications.forTourCount", { count: rows.filter((r) => r.status === "confirmed").length }) : t("applications.counter", { used })}</p>
         {/* CSV: the plan decides; without it the button is there but off. */}
         {limits.config.registrants_csv_export ? (
           rows.length > 0 && (

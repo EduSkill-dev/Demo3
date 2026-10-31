@@ -179,7 +179,7 @@ function outsideDateWindow(request: NextRequest): boolean {
 // The first part of every address the site serves (pages, routes, files).
 const KNOWN_ROOTS = new Set([
   "", "about", "account", "admin", "api", "auth", "bookings", "calendar", "calendar.ics", "clubs", "contact", "dashboard", "faq",
-  "help", "hikers", "login", "newsletter", "places", "privacy", "receipts", "register", "requests", "terms", "tours",
+  "help", "hikers", "login", "newsletter", "places", "pricing", "privacy", "receipts", "register", "requests", "terms", "tours",
   "robots.txt", "sitemap.xml", "icon.svg", ".well-known", "_next", "brand", "images", "favicon.ico",
 ]);
 // File kinds the site never serves, anywhere.

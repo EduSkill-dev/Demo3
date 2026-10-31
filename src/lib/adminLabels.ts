@@ -85,6 +85,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "admin.sight_saved": "Խմբագրեց տեսարժան վայրերի ցանկը",
   "admin.share_saved": "Փոխեց սոց. ցանցերում կիսվելու կարգավորումները",
   "admin.club_share_set": "Փոխեց ակումբի կիսվելու հնարավորությունը",
+  "admin.business_saved": "Փոխեց հարթակի թվերը (սահմաններ, միջնորդավճար)",
   "admin.certificate_approve": "Հաստատեց ակումբի հավաստագիրը",
   "admin.tour_participants_viewed": "Դիտեց արշավի մասնակիցների ցուցակը",
   "admin.individual_hikes_viewed": "Դիտեց անհատի արշավների ցուցակը",

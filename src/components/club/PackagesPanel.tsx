@@ -2,15 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import {
-  PACKAGE_IDS,
-  RENEW_WINDOW_DAYS,
-  activePackage,
-  addOneMonth,
-  formatAmd,
-  type PackageId,
-} from "@/lib/catalog";
-import { serverErrorMessage } from "@/lib/serverErrors";
+import { PACKAGE_IDS, activePackage, addDaysTo, formatAmd, type PackageId } from "@/lib/catalog";
+import { PLAN_LINES, planHasLine } from "@/lib/plans/display";
 import type { Plans } from "@/lib/plans/registry";
 import { useFormatDate, useT } from "@/i18n/client";
 import PaymentSheet, { type ChargeResponse } from "@/components/PaymentSheet";
@@ -21,16 +14,16 @@ import ReceiptDownload from "@/components/ui/ReceiptDownload";
 type ClubRow = { id: string; name: string; tariff: PackageId | null; package_ends_at: string | null };
 type PaymentRow = ReceiptPayment & { tariff: PackageId | null };
 
-// The club's plan: what it has, what each plan offers (as the super admin set
-// it), buying, extending and the payment history.
-export default function PackagesPanel({ plans }: { plans: Plans }) {
+// The club's plan: START is permanent and asks for nothing; Advanced is bought
+// and extended here at any time (each payment adds `days`), and when it ends
+// the club is simply on START again. Also the payment history.
+export default function PackagesPanel({ plans, days, monthLimit }: { plans: Plans; days: number; monthLimit: number }) {
   const t = useT();
   const fmt = useFormatDate();
   const [club, setClub] = useState<ClubRow | null>(null);
   const [email, setEmail] = useState("");
   const [history, setHistory] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [paying, setPaying] = useState<PackageId | null>(null);
   const [receipt, setReceipt] = useState<PaymentRow | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -70,26 +63,13 @@ export default function PackagesPanel({ plans }: { plans: Plans }) {
 
   const active = activePackage(club);
   const endsAt = club.package_ends_at ? new Date(club.package_ends_at) : null;
-  const daysLeft = active && endsAt ? (endsAt.getTime() - Date.now()) / 86400000 : null;
-  const canExtend = daysLeft != null && daysLeft <= RENEW_WINDOW_DAYS;
-  // "Recommended" sits on Advanced unless the club already has Advanced or PRO.
-  const recommendAdvanced = active === null || active === "start";
+  const paid = active !== "start";
+  const lapsed = !paid && club.tariff && club.tariff !== "start" && endsAt ? club.tariff : null;
 
-  async function buy(id: PackageId) {
+  function buy(id: PackageId) {
     setMessage(null);
     setError(null);
-    if (plans[id].priceAmd > 0) return setPaying(id);
-
-    setBusy(true);
-    const res = await fetch("/api/payments/charge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind: "subscription", tariff: id }),
-    });
-    const data = (await res.json().catch(() => ({}))) as ChargeResponse;
-    setBusy(false);
-    if (!res.ok || data.status !== "succeeded") return setError(serverErrorMessage(t, data.error));
-    done(id, data.package_ends_at);
+    setPaying(id);
   }
 
   function done(id: PackageId, until?: string) {
@@ -102,102 +82,47 @@ export default function PackagesPanel({ plans }: { plans: Plans }) {
     <div className="space-y-8">
       {/* Status line */}
       <div className="rounded-xl border border-line bg-surface p-4 text-sm">
-        {active && endsAt ? (
-          <p className="text-ink">
-            <b>{t("packagesPage.current", { name: plans[active].name })}</b>,{" "}
-            <span className="text-muted">{t("packagesPage.until", { date: day(endsAt) })}</span>
-          </p>
-        ) : (
-          <>
-            {club.tariff && endsAt && (
-              <p className="mb-1 font-semibold text-red-600">
-                {t("packagesPage.lapsed", { name: plans[club.tariff].name, date: day(endsAt) })}
-              </p>
-            )}
-            <p className="text-ink">{t("packagesPage.none")}</p>
-          </>
+        {lapsed && endsAt && (
+          <p className="mb-1 font-semibold text-red-600">{t("packagesPage.lapsed", { name: plans[lapsed].name, date: day(endsAt) })}</p>
         )}
+        <p className="text-ink">
+          <b>{t("packagesPage.current", { name: plans[active].name })}</b>,{" "}
+          <span className="text-muted">{paid && endsAt ? t("packagesPage.until", { date: day(endsAt) }) : t("packagesPage.forever")}</span>
+        </p>
       </div>
 
-      {/* Package cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {PACKAGE_IDS.map((id) => {
+      {/* The plans: only the open ones show (a frozen plan is the super admin's business). */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {PACKAGE_IDS.filter((id) => plans[id].isVisible || active === id).map((id) => {
           const p = plans[id];
-          const c = p.config;
           const isActive = active === id;
-          const recommended = id === "advanced" && recommendAdvanced;
-          const lower = active !== null && p.rank < plans[active].rank;
-          const soon = !p.isAvailable; // the super admin has not opened this plan yet
-          const lines = [
-            t("package.listings", { count: c.max_active_tours }),
-            t("package.perTour", { count: c.max_participants_per_tour }),
-            c.public_show_rating && c.public_show_comments
-              ? t("package.ratingsVisible")
-              : c.public_show_rating
-                ? t("package.ratingOnly")
-                : c.public_show_comments
-                  ? t("package.commentsVisible")
-                  : t("package.ratingsHidden"),
-            ...(c.monthly_report ? [`${t("package.monthlyReport")} (${t("package.soon")})`] : []),
-            ...(c.analytics ? [`${t("package.analytics")} (${t("package.soon")})`] : []),
-          ];
-
+          const nextEnd = isActive && endsAt ? addDaysTo(endsAt, days) : addDaysTo(new Date(), days);
           return (
-            <div
-              key={id}
-              className="relative flex flex-col rounded-2xl border border-line bg-surface p-5"
-            >
+            <div key={id} className="relative flex flex-col rounded-2xl border border-line bg-surface p-5">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-serif text-xl font-semibold text-heading">{p.name}</h3>
-                {isActive ? (
-                  <span className="rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-white">
-                    {t("packagesPage.active")}
-                  </span>
-                ) : soon ? (
-                  <span className="rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-muted">
-                    {t("packagesPage.comingSoon")}
-                  </span>
-                ) : recommended ? (
-                  <span className="rounded-full bg-spruce-500 px-2.5 py-1 text-xs font-semibold text-white">
-                    {t("packagesPage.recommended")}
-                  </span>
-                ) : null}
+                {isActive && <span className="rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-white">{t("packagesPage.active")}</span>}
               </div>
               <p className="mt-1 text-lg font-semibold text-ink">
                 {p.priceAmd > 0 ? t("package.perMonth", { price: formatAmd(p.priceAmd) }) : t("common.free")}
               </p>
               <ul className="mt-3 flex-1 list-disc space-y-1 pl-5 text-sm text-muted">
-                {lines.map((l) => (
-                  <li key={l}>{l}</li>
+                {PLAN_LINES.filter((l) => planHasLine(p.config, l.feature)).map((l) => (
+                  <li key={l.label}>
+                    {t(l.label, { count: monthLimit })}
+                    {l.soon && ` (${t("package.soon")})`}
+                  </li>
                 ))}
               </ul>
-
-              {isActive ? (
-                canExtend && endsAt && !soon ? (
-                  <div className="mt-5">
-                    <button
-                      onClick={() => buy(id)}
-                      disabled={busy}
-                      className="w-full rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {t("packagesPage.extend")}
-                    </button>
-                    <p className="mt-1.5 text-xs text-muted">
-                      {t("packagesPage.extendHint", { date: day(addOneMonth(endsAt)) })}
-                    </p>
-                  </div>
-                ) : null
-              ) : (
+              {p.priceAmd > 0 && p.isAvailable && (
                 <div className="mt-5">
                   <button
                     onClick={() => buy(id)}
-                    disabled={busy || lower || soon}
-                    title={soon ? t("packagesPage.comingSoon") : lower ? t("packagesPage.afterExpiry") : undefined}
-                    className="w-full rounded-lg border border-line py-2.5 text-sm font-semibold text-ink transition hover:border-spruce-500 hover:text-terracotta-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg bg-spruce-500 py-2.5 text-sm font-semibold text-white transition hover:bg-spruce-900"
                   >
-                    {soon ? t("packagesPage.comingSoon") : t("packagesPage.choose", { name: p.name })}
+                    {isActive ? t("packagesPage.extend") : t("packagesPage.choose", { name: p.name })}
                   </button>
-                  {lower && !soon && <p className="mt-1.5 text-xs text-muted">{t("packagesPage.afterExpiry")}</p>}
+                  <p className="mt-1.5 text-xs text-muted">{t("packagesPage.extendHint", { date: day(nextEnd) })}</p>
                 </div>
               )}
             </div>
@@ -229,7 +154,7 @@ export default function PackagesPanel({ plans }: { plans: Plans }) {
                 {history.map((h) => {
                   // The row whose period is running now, for the package in force.
                   const live =
-                    !!active && h.tariff === active && !!h.period_start && !!h.period_end &&
+                    h.tariff === active && !!h.period_start && !!h.period_end &&
                     new Date(h.period_start).getTime() <= Date.now() && Date.now() < new Date(h.period_end).getTime();
                   return (
                   <tr key={h.id} className="border-b border-line last:border-0">

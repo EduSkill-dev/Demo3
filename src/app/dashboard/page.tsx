@@ -5,15 +5,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import { getShareNetworks } from "@/lib/siteSettings";
 import { getMyClub } from "@/lib/myClub";
-import { getT } from "@/i18n/server";
+import { getFormatDate, getT } from "@/i18n/server";
+import { dateWords, monthTitle } from "@/lib/calendar";
 import type { Tour } from "@/types/database";
 import AnnouncementsTable, { type ListingRow } from "@/components/club/AnnouncementsTable";
+import LastMonthNumbers from "@/components/club/LastMonthNumbers";
 
 export default async function AnnouncementsPage() {
   const mine = await getMyClub();
   if (!mine) redirect("/login");
   const { club, limits } = mine;
   const t = await getT();
+  const fmt = await getFormatDate();
   const supabase = await createClient();
 
   const { data: tourRows } = await supabase
@@ -42,14 +45,15 @@ export default async function AnnouncementsPage() {
       status: tour.status,
       adminHidden: tour.admin_hidden,
       taken: mineB.filter((b) => b.status === "confirmed").length,
-      cap: limits.pkg ? Math.min(tour.max_participants, limits.maxPerTour) : tour.max_participants,
+      cap: tour.max_participants,
       unread: mineB.filter((b) => !b.read_at).length,
       past: tour.date < today,
       photo: tour.photo_urls?.[0] ?? null,
     };
   });
 
-  const canAdd = limits.used < limits.maxListings && !club.posting_blocked;
+  const canAdd = limits.running < limits.runningMax && !club.posting_blocked;
+  const words = dateWords(t);
 
   // How many people follow the club: individuals with a saved search that
   // names it (they hear of its new hikes). Counted on the server: a club
@@ -68,13 +72,11 @@ export default async function AnnouncementsPage() {
         </p>
         <p className="whitespace-nowrap font-semibold text-ink">{t("dashboard.followers", { count: followers ?? 0 })}</p>
       </div>
-      {!limits.pkg && (
-        <div className="rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 p-4 text-sm text-ink">
-          {t("announcements.noPackage")}{" "}
-          <Link href="/dashboard/packages" className="font-semibold text-terracotta-700 underline dark:text-terracotta-300">
-            {t("announcements.noPackageLink")}
-          </Link>
-        </div>
+      {limits.config.dashboard_monthly_numbers && <LastMonthNumbers clubId={club.id} />}
+      {limits.promoEndsAt && (
+        <p className="rounded-xl border border-apricot-500/50 bg-apricot-100/60 p-4 text-sm text-ink dark:bg-apricot-500/10">
+          {t("announcements.promo", { date: fmt(limits.promoEndsAt, "long") })}
+        </p>
       )}
       {club.posting_blocked && (
         <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
@@ -86,19 +88,21 @@ export default async function AnnouncementsPage() {
           {t("announcements.applicationsBlocked")}
         </p>
       )}
-      {limits.pkg && limits.used >= limits.maxListings && (
-        <div className="rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 p-4 text-sm text-ink">
-          {t("announcements.atLimit", { name: limits.planName, max: limits.maxListings })}{" "}
-          <Link href="/dashboard/packages" className="font-semibold text-terracotta-700 underline dark:text-terracotta-300">
-            {t("announcements.atLimitLink")}
-          </Link>
-        </div>
+      {limits.running >= limits.runningMax && (
+        <p className="rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 p-4 text-sm text-ink">
+          {t("announcements.atLimit", { max: limits.runningMax })}
+        </p>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-semibold text-ink">
-          {t("announcements.counter", { used: limits.used, max: limits.maxListings })}
-        </p>
+        {/* Two limits together: at the same time, and per calendar month (a
+            cancelled listing does not give its month's place back). */}
+        <div className="text-sm">
+          <p className="font-semibold text-ink">{t("announcements.counter", { used: limits.running, max: limits.runningMax })}</p>
+          <p className="mt-0.5 text-muted">
+            {[limits.thisMonth, limits.nextMonth].map((m) => t("announcements.counterMonth", { month: monthTitle(m.month, words), used: m.published, max: limits.monthMax })).join(" · ")}
+          </p>
+        </div>
         {canAdd ? (
           <Link href="/dashboard/listings/new" className="rounded-lg bg-spruce-500 px-4 py-2 text-sm font-semibold text-white hover:bg-spruce-900">
             {t("announcements.new")}

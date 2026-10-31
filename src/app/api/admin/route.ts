@@ -15,7 +15,8 @@ import { adminDisplayName, answerSuggestion, answerSupport } from "@/lib/message
 import { SHARE_NETWORKS_KEY } from "@/lib/siteSettings";
 import { platformNewsEmail, sendEmailBatch } from "@/lib/email";
 import { markAdminEventsSeen } from "@/lib/adminEvents";
-import { DIFFICULTIES, REGIONS, TERRAINS, addOneMonth, isPackageId } from "@/lib/catalog";
+import { DIFFICULTIES, REGIONS, TERRAINS, addDaysTo, isPackageId } from "@/lib/catalog";
+import { getBusinessSettings } from "@/lib/business";
 import { MAX_PLAN_NUMBER, PLAN_FEATURES, cleanOverrides, resolveConfig } from "@/lib/plans/registry";
 import { DICTIONARIES } from "@/i18n/translate";
 import { isLocale } from "@/i18n/config";
@@ -348,6 +349,29 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     return NextResponse.json({ ok: true, people });
   },
 
+  // The numbers the business runs on (super admin). Each one has its range;
+  // the database reads the same row for the limits it enforces.
+  async "business.save"(ctx, body) {
+    if (!ctx.me.isSuper) return fail(FORBIDDEN, 403);
+    const v = (body.values && typeof body.values === "object" ? body.values : {}) as Record<string, unknown>;
+    const whole = (k: string, min: number, max: number) => (typeof v[k] === "number" && Number.isInteger(v[k]) && (v[k] as number) >= min && (v[k] as number) <= max ? (v[k] as number) : null);
+    const percent = typeof v.platform_fee_percent === "number" && v.platform_fee_percent >= 0 && v.platform_fee_percent <= 50 ? v.platform_fee_percent : null;
+    const value = {
+      listing_limit_month: whole("listing_limit_month", 1, 1000),
+      listing_limit_active: whole("listing_limit_active", 1, 1000),
+      platform_fee_percent: percent,
+      fee_includes_bank_fee: v.fee_includes_bank_fee === true,
+      promo_days: whole("promo_days", 0, 3650),
+      advanced_days: whole("advanced_days", 1, 366),
+      advanced_reminder_days: whole("advanced_reminder_days", 0, 60),
+    };
+    if (Object.values(value).some((x) => x === null)) return fail("Թվերից մեկը սխալ է կամ թույլատրելի սահմաններից դուրս։");
+    const { error } = await ctx.db.from("site_settings").upsert({ key: "business", value, updated_by: ctx.me.userId, updated_at: new Date().toISOString() });
+    if (error) return fail(error.message, 500);
+    await logActivity({ actor: ctx.me.userId, action: "admin.business_saved", ip: ctx.ip, meta: value });
+    return NextResponse.json({ ok: true });
+  },
+
   // One person's hikes ("Individuals"): those taken part in (over, not
   // marked absent) or those booked to come. Each opening is logged.
   async "individual.hikes"(ctx, body) {
@@ -593,8 +617,6 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
         ...(body.reportItems === undefined ? {} : { report_items: reportList(body.reportItems) }),
         config,
         // The older columns are kept equal to the config they were replaced by.
-        max_listings: config.max_active_tours,
-        max_per_tour: config.max_participants_per_tour,
         shows_ratings: config.public_show_rating,
         shows_comments: config.public_show_comments,
         monthly_report: config.monthly_report,
@@ -636,7 +658,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
     const club = row as { tariff: string | null; package_ends_at: string | null; plan_overrides: unknown } | null;
     if (!club) return fail("Ակումբը չի գտնվել։", 404);
     const running = club.tariff === tariff && !!club.package_ends_at && new Date(club.package_ends_at).getTime() > Date.now();
-    const until = !tariff ? null : running ? club.package_ends_at : addOneMonth(new Date()).toISOString();
+    const until = !tariff ? null : running ? club.package_ends_at : addDaysTo(new Date(), (await getBusinessSettings()).advanced_days).toISOString();
 
     let overrides: Record<string, number | boolean> = cleanOverrides(club.plan_overrides);
     if (body.overrides !== undefined) {

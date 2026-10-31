@@ -7,8 +7,6 @@ import TourToggle from "@/components/admin/TourToggle";
 import SearchBox from "@/components/admin/SearchBox";
 import { SortLink, readSort, sortRows, type SortState } from "@/components/admin/Sortable";
 import AdminToursTable from "@/components/admin/AdminToursTable";
-import { getPlans } from "@/lib/plans/server";
-import { clubConfig } from "@/lib/plans/registry";
 
 type Row = {
   id: string;
@@ -17,7 +15,7 @@ type Row = {
   status: "active" | "hidden" | "cancelled";
   admin_hidden: boolean;
   max_participants: number;
-  clubs: { name: string; tariff: string | null; package_ends_at: string | null; plan_overrides: unknown; applications_blocked: boolean } | null;
+  clubs: { name: string; applications_blocked: boolean } | null;
 };
 
 const STATUS: Record<Row["status"], string> = { active: "Ակտիվ", hidden: "Թաքցված (ակումբի կողմից)", cancelled: "Չեղարկված" };
@@ -31,7 +29,7 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
   const fmt = await getFormatDate();
   const { data } = await createAdminClient()
     .from("tours")
-    .select("id, title, date, status, admin_hidden, max_participants, clubs(name, tariff, package_ends_at, plan_overrides, applications_blocked)")
+    .select("id, title, date, status, admin_hidden, max_participants, clubs(name, applications_blocked)")
     .order("date", { ascending: false })
     .limit(1000);
   const q = (searchParams.q ?? "").trim().toLowerCase();
@@ -41,16 +39,13 @@ export default async function AdminToursPage({ searchParams }: { searchParams: {
     { title: (r) => r.title, club: (r) => r.clubs?.name ?? null, date: (r) => r.date },
     sort
   );
-  // Seats as the cards count them: what the club's plan allows on this hike
-  // (0 when sign-ups are closed), less the confirmed bookings.
+  // Seats as the cards count them: the club's own number (0 when sign-ups are
+  // closed), less the confirmed bookings.
   const db = createAdminClient();
-  const [plans, { data: seatRows }] = await Promise.all([
-    getPlans(),
-    rows.length ? db.rpc("tours_seats_taken", { p_tours: rows.map((r) => r.id) }) : Promise.resolve({ data: [] }),
-  ]);
+  const { data: seatRows } = rows.length ? await db.rpc("tours_seats_taken", { p_tours: rows.map((r) => r.id) }) : { data: [] };
   const taken = new Map(((seatRows ?? []) as { tour_id: string; taken: number }[]).map((x) => [x.tour_id, x.taken]));
   const seatsOf = (r: Row) => {
-    const cap = !r.clubs || r.clubs.applications_blocked ? 0 : Math.min(r.max_participants, clubConfig(plans, r.clubs).max_participants_per_tour);
+    const cap = !r.clubs || r.clubs.applications_blocked ? 0 : r.max_participants;
     return { free: Math.max(0, cap - (taken.get(r.id) ?? 0)), cap };
   };
   const sortHref = (x: SortState) => `/admin/tours?${new URLSearchParams({ ...(searchParams.q ? { q: searchParams.q } : {}), sort: x.col, dir: x.dir })}`;

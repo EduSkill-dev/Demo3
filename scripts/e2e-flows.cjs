@@ -226,16 +226,12 @@ async function main() {
     const catalogSrc = fs.readFileSync(path.join(process.cwd(), 'src/lib/catalog.ts'), 'utf8');
     check('catalog.ts holds no plan limits or prices', !/maxListings|maxPerTour|priceAmd/.test(catalogSrc));
     const dbPackages = (await admin.from('packages').select('*')).data || [];
-    for (const id of ['start', 'advanced', 'pro']) {
-      const row = dbPackages.find((x) => x.id === id);
-      const c = row?.config || {};
-      const listings = (await admin.rpc('tariff_max_listings', { p_tariff: id })).data;
-      const perTour = (await admin.rpc('tariff_max_participants', { p_tariff: id })).data;
-      check(`plan ${id}: the limits the database enforces are the ones in its config`,
-        Number.isInteger(c.max_active_tours) && listings === c.max_active_tours && perTour === c.max_participants_per_tour
-          && typeof c.public_show_rating === 'boolean' && typeof c.dashboard_registrants_list === 'boolean',
-        `config=${c.max_active_tours}/${c.max_participants_per_tour} enforced=${listings}/${perTour}`);
-    }
+    const planOf = (id) => dbPackages.find((x) => x.id === id) || {};
+    check('plans: START is free and public; Advanced adds the tools; PRO is frozen and shown nowhere',
+      Number(planOf('start').price_amd) === 0 && planOf('start').config?.public_show_rating === true && planOf('start').config?.registrants_csv_export === false
+        && Number(planOf('advanced').price_amd) === 20000 && planOf('advanced').config?.registrants_csv_export === true && planOf('advanced').config?.analytics === true
+        && planOf('pro').is_visible === false && planOf('pro').is_available === false,
+      JSON.stringify(dbPackages.map((p) => [p.id, p.price_amd, p.is_visible, p.is_available])));
 
     // ---------- accounts ----------
     ids.ind = await makeUser('ind', {
@@ -264,10 +260,11 @@ async function main() {
     const clubA = clubRow.data.id;
     const clubB = (await admin.from('clubs').select('id').eq('owner_id', ids.club2).single()).data.id;
 
-    // ---------- publishing needs a package ----------
+    // ---------- every club is on START from its first day ----------
     await signIn('club');
-    const noPkg = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E No package' }));
-    check('a club without a package cannot publish', !!noPkg.error, noPkg.error ? noPkg.error.message : 'ALLOWED');
+    const noPkg = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E No package' })).select('id').single();
+    check('a new club publishes without buying anything (START)', !noPkg.error, noPkg.error?.message ?? 'ok');
+    if (noPkg.data) await admin.from('tours').delete().eq('id', noPkg.data.id);
 
     await givePackage(clubA, 'advanced');
     await givePackage(clubB, 'start');
@@ -333,7 +330,8 @@ async function main() {
     check('saving profile.phone works', !saveProfile.error, saveProfile.error ? saveProfile.error.message : '');
 
     // ---------- capacity, hidden tours ----------
-    const zeroTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Full Tour', date: future(79), max_participants: 0 })).select('id').single()).data;
+    const zeroTour = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Full Tour', date: future(79), max_participants: 1 })).select('id').single()).data;
+    await admin.from('bookings').insert({ tour_id: zeroTour.id, user_id: ids.ind, status: 'confirmed' });
     const full = await admin.from('bookings').insert({ tour_id: zeroTour.id, user_id: ids.ind2, status: 'confirmed' });
     check('booking a tour with no seats left is rejected', !!full.error, full.error ? full.error.message : 'ALLOWED');
 
@@ -343,36 +341,82 @@ async function main() {
     const bookHidden = await admin.from('bookings').insert({ tour_id: hidden.id, user_id: ids.ind2, status: 'confirmed' });
     check('a hidden tour cannot be booked', !!bookHidden.error, bookHidden.error ? bookHidden.error.message : 'ALLOWED');
 
-    // ---------- listing limits (club A, Advanced = 5 upcoming active+hidden) ----------
-    await signIn('club');
-    const upcoming = async () => (await admin.from('tours').select('id', { count: 'exact', head: true })
-      .eq('club_id', clubA).in('status', ['active', 'hidden']).gte('date', future(0))).count ?? 0;
-    const beforeCount = await upcoming();
-    let created = 0;
-    for (let i = 0; i < 5; i++) {
-      const r = await anon.from('tours').insert(tourRow(clubA, { title: `E2E Limited ${i}`, date: future(90 + i), max_participants: 5 }));
-      if (!r.error) created++;
+    // ---------- listings: 30 at the same time, 30 per calendar month ----------
+    {
+      ids.clubL = await makeUser('clubL', { role: 'club', club_name: 'E2E Club Limits' });
+      const clubL = (await admin.from('clubs').select('id').eq('owner_id', ids.clubL).single()).data.id;
+      // Two whole months ahead, so every date is in the future whatever today is.
+      const now = new Date();
+      const month = (n) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + n, 1)).toISOString().slice(0, 10);
+      const m1 = month(2), m2 = month(3), m3 = month(4);
+      const day = (m, d) => `${m.slice(0, 8)}${String(d).padStart(2, '0')}`;
+      const counted = async (m) => (await admin.from('club_listing_counts').select('published').eq('club_id', clubL).eq('month', m).maybeSingle()).data?.published ?? 0;
+      const publish = (m, d, extra = {}) => admin.from('tours').insert(tourRow(clubL, { title: `E2E L ${m} ${d}`, date: day(m, d), ...extra })).select('id').single();
+      const first = [];
+      for (let d = 1; d <= 28; d++) first.push((await publish(m1, d)).data?.id);
+      first.push((await publish(m1, 28)).data?.id, (await publish(m1, 28)).data?.id);
+      const thirtyFirst = await publish(m2, 1);
+      check('listings: the 31st at the same time is refused, wherever its date is',
+        first.filter(Boolean).length === 30 && (await counted(m1)) === 30 && /listing_limit_active/.test(thirtyFirst.error?.message ?? ''),
+        `made=${first.filter(Boolean).length} counted=${await counted(m1)} err=${thirtyFirst.error?.message}`);
+
+      // Gor's example: 30 for this month, 10 are over, so 10 may go out for the next, leaving 20 for it.
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const over = await admin.from('tours').update({ date: yesterday, end_date: null }).in('id', first.slice(0, 10)).select('id');
+      const next = [];
+      for (let d = 1; d <= 10; d++) next.push((await publish(m2, d)).data?.id);
+      const eleventh = await publish(m2, 11);
+      check('listings: as hikes end, places open for the next month; it counts towards that month',
+        (over.data || []).length === 10 && next.filter(Boolean).length === 10 && (await counted(m2)) === 10 && (await counted(m1)) === 30 && /listing_limit_active/.test(eleventh.error?.message ?? ''),
+        `over=${(over.data || []).length} ${over.error?.message ?? ''} next=${next.filter(Boolean).length} m2=${await counted(m2)} m1=${await counted(m1)} err=${eleventh.error?.message}`);
+
+      // A cancelled listing frees "at the same time", never its month.
+      await admin.from('tours').update({ status: 'cancelled' }).eq('id', first[15]);
+      const sameMonth = await publish(m1, 20);
+      const otherMonth = await publish(m2, 12);
+      const deleted = (await publish(m3, 1));
+      const m3Before = await counted(m3);
+      check('listings: cancelling does not give the month\'s place back, but frees one for another month',
+        /listing_limit_month/.test(sameMonth.error?.message ?? '') && !otherMonth.error && (await counted(m1)) === 30 && (await counted(m2)) === 11 && /listing_limit_active/.test(deleted.error?.message ?? '') && m3Before === 0,
+        `same=${sameMonth.error?.message} other=${otherMonth.error?.message} m1=${await counted(m1)} m2=${await counted(m2)} full=${deleted.error?.message}`);
+
+      // Drafts take no place until published; a re-published listing is not counted twice.
+      const draft = await publish(m3, 2, { status: 'hidden' });
+      const draftCount = await counted(m3);
+      await admin.from('tours').update({ status: 'hidden' }).eq('id', otherMonth.data?.id);
+      const m2Hidden = await counted(m2);
+      const publishDraft = await admin.from('tours').update({ status: 'active' }).eq('id', draft.data?.id).select('id');
+      const m3After = await counted(m3);
+      const republishFull = await admin.from('tours').update({ status: 'active' }).eq('id', otherMonth.data?.id);
+      await admin.from('tours').update({ status: 'hidden' }).eq('id', draft.data?.id);
+      const republish = await admin.from('tours').update({ status: 'active' }).eq('id', otherMonth.data?.id);
+      check('listings: a draft counts only once published, and hiding and publishing again does not count twice',
+        !draft.error && draftCount === 0 && m2Hidden === 11 && !publishDraft.error && m3After === 1 && /listing_limit_active/.test(republishFull.error?.message ?? '') && !republish.error && (await counted(m2)) === 11,
+        `draft=${draft.error?.message} ${draftCount} hidden=${m2Hidden} pub=${publishDraft.error?.message} m3=${m3After} full=${republishFull.error?.message} rep=${republish.error?.message} m2=${await counted(m2)}`);
+
+      // The browser cannot touch the counters or the listing's counted month.
+      await signIn('clubL');
+      const forge = await anon.from('club_listing_counts').update({ published: 0 }).eq('club_id', clubL).select('month');
+      const forgeMonth = await anon.from('tours').update({ counted_month: null }).eq('id', first[20]).select('counted_month').single();
+      check('listings: a club cannot reset its counters', (forge.data || []).length === 0 && (await counted(m1)) === 30 && !!forgeMonth.data?.counted_month,
+        `forge=${JSON.stringify(forge.data)} month=${JSON.stringify(forgeMonth.data)}`);
+      await admin.auth.admin.deleteUser(ids.clubL);
+      ids.clubL = null;
     }
-    check('Advanced club stops exactly at 5 upcoming listings (past ones do not count)',
-      beforeCount + created === 5, `before=${beforeCount} created=${created}`);
-    const over = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E Over limit', date: future(120) }));
-    check('the next listing past the cap is rejected', !!over.error, over.error ? over.error.message : 'ALLOWED');
 
-    await admin.from('clubs').update({ tariff: 'start' }).eq('id', clubA);
-    const afterDowngrade = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E After downgrade', date: future(150) }));
-    check('START club with 5 listings cannot add more', !!afterDowngrade.error, afterDowngrade.error ? afterDowngrade.error.message : 'ALLOWED');
-    await admin.from('clubs').update({ tariff: 'advanced' }).eq('id', clubA);
-
-    // ---------- an expired package closes bookings and publishing ----------
+    // ---------- a lapsed Advanced is simply START again ----------
+    await signIn('club');
+    const hasCsv = async () => (await admin.rpc('club_has_feature', { p_club: clubA, p_feature: 'registrants_csv_export' })).data;
+    const csvBefore = await hasCsv();
     await admin.from('clubs').update({ package_ends_at: inDays(-1) }).eq('id', clubA);
+    const csvAfter = await hasCsv();
     await admin.from('bookings').delete().eq('tour_id', tourId).eq('user_id', ids.ind2);
-    const expiredBook = await admin.from('bookings').insert({ tour_id: tourId, user_id: ids.ind2, status: 'confirmed' });
-    check('an expired package closes new bookings', !!expiredBook.error, expiredBook.error ? expiredBook.error.message : 'ALLOWED');
-    const expiredPublish = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E Expired', date: future(160) }));
-    check('an expired package blocks publishing', !!expiredPublish.error, expiredPublish.error ? expiredPublish.error.message : 'ALLOWED');
-    await givePackage(clubA, 'advanced');
     const ind2Booking = (await admin.from('bookings').insert({ tour_id: tourId, user_id: ids.ind2, status: 'confirmed' }).select('id, seq').single()).data;
-    check('re-applying after a renewal works (next free seq)', ind2Booking?.seq === 2, JSON.stringify(ind2Booking));
+    const stillPublish = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E After lapse', date: future(160) })).select('id').single();
+    check('a lapsed Advanced falls back to START: the tools close, bookings and publishing go on',
+      csvBefore === true && csvAfter === false && ind2Booking?.seq === 2 && !stillPublish.error,
+      `csv=${csvBefore}/${csvAfter} booking=${JSON.stringify(ind2Booking)} publish=${stillPublish.error?.message}`);
+    await givePackage(clubA, 'advanced');
 
     // ---------- applicants: visibility and read tracking ----------
     const ownApplicants = await anon.from('bookings')
@@ -457,7 +501,7 @@ async function main() {
       // Lori, no overnight → matches no search.
       const miss = (await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Unmatched', date: future(181), regions: ['lori'], overnight: false })).select('id').single()).data;
       const afterMiss = ((await admin.from('notifications').select('id').eq('user_id', ids.ind2)).data || []).length;
-      if (miss) await admin.from('tours').delete().eq('id', miss.id); // the club's listing limit
+      if (miss) await admin.from('tours').delete().eq('id', miss.id);
       // Syunik with an overnight → matches the region search.
       const hitRes = await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Matched', date: future(182), regions: ['syunik'], overnight: true })).select('id').single();
       const hit = hitRes.data;
@@ -491,8 +535,6 @@ async function main() {
     const cancelledAt = (await admin.from('bookings').select('cancelled_at').eq('id', ind2Booking.id).single()).data?.cancelled_at;
     check('cancelling stamps cancelled_at', !!cancelledAt, String(cancelledAt));
 
-    // Free a slot under club A's cap (the limit tests filled it).
-    await admin.from('tours').delete().eq('club_id', clubA).like('title', 'E2E Limited%');
     // Cancelling the whole tour tells everyone still signed up.
     const cancelTourRes = await anon.from('tours').update({ status: 'cancelled' }).eq('id', tourId);
     const cancelNote = (await admin.from('notifications').select('kind').eq('user_id', ids.ind).eq('tour_id', tourId).eq('kind', 'tour_cancelled')).data || [];
@@ -593,37 +635,32 @@ async function main() {
       check('HTTP /api/bookings: cancel within 48 h is refused (409)', lateRes.status === 409,
         `status=${lateRes.status} body=${JSON.stringify(lateRes.body)}`);
 
-      // Packages for club B (START active, about a month left).
+      // Packages for club B (on START).
       const club2Cookie = await cookieFor('club2');
       const card = { number: '4242424242424242', exp: '12/28', cvc: '123' };
 
       const startAgain = await api('/api/payments/charge', { kind: 'subscription', tariff: 'start' }, club2Cookie);
-      check('HTTP packages: extending more than 7 days early is refused', startAgain.status === 409,
-        `status=${startAgain.status} body=${JSON.stringify(startAgain.body)}`);
+      const proBuy = await api('/api/payments/charge', { kind: 'subscription', tariff: 'pro', card }, club2Cookie);
+      check('HTTP packages: START is not bought, and frozen PRO cannot be', startAgain.status === 409 && proBuy.status === 409,
+        `start=${startAgain.status} pro=${proBuy.status}`);
 
       const upgrade = await api('/api/payments/charge', { kind: 'subscription', tariff: 'advanced', card }, club2Cookie);
       const afterUpgrade = (await admin.from('clubs').select('tariff, package_ends_at').eq('id', clubB).single()).data;
-      const monthAhead = Math.abs(new Date(afterUpgrade.package_ends_at) - new Date(new Date().setMonth(new Date().getMonth() + 1))) < 3600e3;
-      check('HTTP packages: upgrade to Advanced starts a new month now',
-        upgrade.status === 200 && upgrade.body.status === 'succeeded' && afterUpgrade.tariff === 'advanced' && monthAhead,
+      const daysAhead = Math.abs(new Date(afterUpgrade.package_ends_at) - (Date.now() + 30 * 86400000)) < 3600e3;
+      check('HTTP packages: buying Advanced starts 30 days now',
+        upgrade.status === 200 && upgrade.body.status === 'succeeded' && afterUpgrade.tariff === 'advanced' && daysAhead,
         `status=${upgrade.status} body=${JSON.stringify(upgrade.body)} club=${JSON.stringify(afterUpgrade)}`);
 
       const receipt = (await admin.from('payments').select('amount, period_start, period_end').eq('id', upgrade.body.payment_id).single()).data;
       check('HTTP packages: the payment records amount and period',
         Number(receipt?.amount) === 20000 && !!receipt?.period_start && !!receipt?.period_end, JSON.stringify(receipt));
 
-      const downgrade = await api('/api/payments/charge', { kind: 'subscription', tariff: 'start' }, club2Cookie);
-      check('HTTP packages: downgrading mid-period is refused', downgrade.status === 409,
-        `status=${downgrade.status} body=${JSON.stringify(downgrade.body)}`);
-
-      const oldEnd = inDays(3);
-      await admin.from('clubs').update({ package_ends_at: oldEnd }).eq('id', clubB);
+      const before = afterUpgrade.package_ends_at;
       const extend = await api('/api/payments/charge', { kind: 'subscription', tariff: 'advanced', card }, club2Cookie);
-      const expected = new Date(oldEnd); expected.setMonth(expected.getMonth() + 1);
       const afterExtend = (await admin.from('clubs').select('package_ends_at').eq('id', clubB).single()).data;
-      check('HTTP packages: extend adds a month to the old end date',
-        extend.status === 200 && Math.abs(new Date(afterExtend.package_ends_at) - expected) < 60e3,
-        `status=${extend.status} ends=${afterExtend?.package_ends_at} expected=${expected.toISOString()}`);
+      check('HTTP packages: extending at any time adds 30 days to the current end',
+        extend.status === 200 && Math.abs(new Date(afterExtend.package_ends_at) - (new Date(before).getTime() + 30 * 86400000)) < 60e3,
+        `status=${extend.status} before=${before} ends=${afterExtend?.package_ends_at}`);
 
       const announceRes = await api('/api/tours/announce', { tour_id: newTourId }, club2Cookie);
       check('HTTP /api/tours/announce: emails followers (skipped without key)',
@@ -1326,6 +1363,26 @@ async function main() {
         await admin.from('notifications').delete().eq('user_id', ids.club).like('message', '%հավաստագիր%');
       }
 
+      // A club answers its comments: on Advanced, and only its own.
+      {
+        const review = (await admin.from('public_reviews').select('id').eq('club_id', clubA).limit(1).maybeSingle()).data;
+        await signIn('club2');
+        const foreign = await anon.rpc('club_reply_rating', { p_rating: review?.id, p_reply: 'Ուրիշի պատասխան' });
+        await signIn('club');
+        const reply = await anon.rpc('club_reply_rating', { p_rating: review?.id, p_reply: 'Շնորհակալություն' });
+        const shown = (await visitor.from('public_reviews').select('club_reply').eq('id', review?.id).single()).data;
+        const direct = await anon.from('rating_replies').update({ reply: 'x' }).eq('rating_id', review?.id).select('reply');
+        const removed = await anon.rpc('club_reply_rating', { p_rating: review?.id, p_reply: '  ' });
+        const left = (await admin.from('rating_replies').select('rating_id').eq('rating_id', review?.id)).data || [];
+        const started = (await admin.from('clubs').select('tariff, package_ends_at').eq('id', clubA).single()).data;
+        await admin.from('clubs').update({ package_ends_at: inDays(-1) }).eq('id', clubA);
+        const onStart = await anon.rpc('club_reply_rating', { p_rating: review?.id, p_reply: 'Առանց փաթեթի' });
+        await admin.from('clubs').update(started).eq('id', clubA);
+        check('club replies: only the club itself and only on Advanced; everyone reads the reply; nobody writes it past the function',
+          !!review && !!foreign.error && !reply.error && shown?.club_reply === 'Շնորհակալություն' && (direct.data || []).length === 0 && !removed.error && left.length === 0 && !!onStart.error,
+          `review=${!!review} foreign=${foreign.error?.message} reply=${reply.error?.message} shown=${shown?.club_reply} direct=${JSON.stringify(direct.data)} left=${left.length} start=${onStart.error?.message}`);
+      }
+
       // Plans: only the super admin edits them or hands them out.
       const proRow = dbPackages.find((x) => x.id === 'pro');
       const samePlan = { action: 'plan.save', id: 'pro', priceAmd: proRow.price_amd, isAvailable: proRow.is_available, config: proRow.config };
@@ -1345,19 +1402,30 @@ async function main() {
       const giveInd = await act({ action: 'club.setPlan', userId: ids.ind2, tariff: 'pro' }, superCookie);
       const givePro = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro' }, superCookie);
       const clubPro = (await admin.from('clubs').select('tariff, package_ends_at').eq('id', clubB).single()).data;
-      // One club gets what its plan does not have; the database limit follows.
-      const proCap = proRow.config.max_participants_per_tour;
-      const ownBad = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro', overrides: { max_participants_per_tour: -3 } }, superCookie);
-      const ownSet = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro', overrides: { max_participants_per_tour: proCap + 7, max_active_tours: proRow.config.max_active_tours } }, superCookie);
+      // One club gets something apart from its plan; the database follows.
+      const ownBad = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro', overrides: { analytics: 'yes' } }, superCookie);
+      const ownSet = await act({ action: 'club.setPlan', userId: ids.club2, tariff: 'pro', overrides: { analytics: false, monthly_report: true } }, superCookie);
       const ownRow = (await admin.from('clubs').select('package_ends_at, plan_overrides').eq('id', clubB).single()).data;
-      const ownCap = (await admin.rpc('club_max_participants', { p_club: clubB })).data;
+      const ownFlag = (await admin.rpc('club_has_feature', { p_club: clubB, p_feature: 'analytics' })).data;
       await signIn('club2');
-      await anon.from('clubs').update({ plan_overrides: { max_participants_per_tour: 999 } }).eq('id', clubB);
-      const selfCap = (await admin.rpc('club_max_participants', { p_club: clubB })).data;
-      check('plans: one club can get more than its plan gives, only from the super admin, and only the difference is stored',
-        ownBad.status === 400 && ownSet.status === 200 && JSON.stringify(ownRow.plan_overrides) === JSON.stringify({ max_participants_per_tour: proCap + 7 })
-          && ownRow.package_ends_at === clubPro.package_ends_at && ownCap === proCap + 7 && selfCap === proCap + 7,
-        `bad=${ownBad.status} set=${ownSet.status} stored=${JSON.stringify(ownRow.plan_overrides)} cap=${ownCap} afterSelf=${selfCap}`);
+      await anon.from('clubs').update({ plan_overrides: { analytics: true } }).eq('id', clubB);
+      const selfFlag = (await admin.rpc('club_has_feature', { p_club: clubB, p_feature: 'analytics' })).data;
+      check('plans: one club can differ from its plan, only by the super admin, and only the difference is stored',
+        ownBad.status === 400 && ownSet.status === 200 && JSON.stringify(ownRow.plan_overrides) === JSON.stringify({ analytics: false })
+          && ownRow.package_ends_at === clubPro.package_ends_at && ownFlag === false && selfFlag === false,
+        `bad=${ownBad.status} set=${ownSet.status} stored=${JSON.stringify(ownRow.plan_overrides)} flag=${ownFlag} afterSelf=${selfFlag}`);
+
+      // The business numbers: super admin only, each within its range.
+      {
+        const row = (await admin.from('site_settings').select('value').eq('key', 'business').single()).data.value;
+        const byAdmin = await act({ action: 'business.save', values: row }, admCookie);
+        const bad = await act({ action: 'business.save', values: { ...row, platform_fee_percent: 90 } }, superCookie);
+        const same = await act({ action: 'business.save', values: row }, superCookie);
+        const pricing = await page('/pricing');
+        check('business numbers: only the super admin saves them, within range; the price list shows the plans but not PRO',
+          byAdmin.status === 403 && bad.status === 400 && same.status === 200 && pricing.includes('Advanced') && pricing.includes('START') && !pricing.includes('>PRO<'),
+          `admin=${byAdmin.status} bad=${bad.status} save=${same.status} pricing=${pricing.includes('Advanced')}`);
+      }
 
       const takeAway = await act({ action: 'club.setPlan', userId: ids.club2, tariff: null }, superCookie);
       const clubNone = (await admin.from('clubs').select('tariff, package_ends_at, plan_overrides').eq('id', clubB).single()).data;
@@ -1601,8 +1669,8 @@ async function main() {
       const run1 = await fetch(cronUrl, { headers: { Authorization: 'Bearer e2e-cron-secret' } });
       const run2 = await fetch(cronUrl, { headers: { Authorization: 'Bearer e2e-cron-secret' } });
       const sentReminders = (await admin.from('package_reminders').select('days').eq('club_id', clubA)).data || [];
-      check('HTTP cron: the 2-day package reminder goes out exactly once',
-        run1.status === 200 && run2.status === 200 && sentReminders.length === 1 && sentReminders[0].days === 2,
+      check('HTTP cron: the reminder before Advanced ends goes out exactly once',
+        run1.status === 200 && run2.status === 200 && sentReminders.length === 1 && sentReminders[0].days === 3,
         `runs=${run1.status}/${run2.status} reminders=${JSON.stringify(sentReminders)}`);
 
       // ---------- Roll call by Telegram ----------

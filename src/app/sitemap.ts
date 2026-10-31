@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { activePackage } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +21,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const db = createAdminClient();
     const today = new Date().toISOString().slice(0, 10);
     const [{ data: clubs }, { data: tours }, { data: sights }] = await Promise.all([
-      db.from("clubs").select("id, slug, tariff, package_ends_at").eq("owner_blocked", false), // blocked clubs and their hikes are hidden
+      db.from("clubs").select("id, slug").eq("owner_blocked", false), // blocked clubs and their hikes are hidden
       db.from("tours").select("id, club_id, created_at").eq("status", "active").eq("admin_hidden", false).gte("date", today),
       db.from("sights").select("id").eq("active", true),
     ]);
-    const live = ((clubs ?? []) as { id: string; slug: string | null; tariff: string | null; package_ends_at: string | null }[]).filter((c) => activePackage(c));
+    const live = (clubs ?? []) as { id: string; slug: string | null }[];
     const liveIds = new Set(live.map((c) => c.id));
     return [
       ...fixed,

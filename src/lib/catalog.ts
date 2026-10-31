@@ -12,25 +12,18 @@ export function isPackageId(value: unknown): value is PackageId {
   return typeof value === "string" && (PACKAGE_IDS as readonly string[]).includes(value);
 }
 
-// The package a club can use right now; null when it has none or it lapsed.
+// The plan a club is on right now: a paid one while it runs, otherwise START
+// — every club always has START, it never ends and needs no renewal. The
+// database answers the same way (club_active_tariff).
 export function activePackage(
   club: { tariff: string | null; package_ends_at: string | null } | null | undefined,
   now: number = Date.now()
-): PackageId | null {
-  if (!club || !isPackageId(club.tariff) || !club.package_ends_at) return null;
-  return new Date(club.package_ends_at).getTime() > now ? club.tariff : null;
+): PackageId {
+  if (!club || !isPackageId(club.tariff) || club.tariff === "start" || !club.package_ends_at) return "start";
+  return new Date(club.package_ends_at).getTime() > now ? club.tariff : "start";
 }
 
-// "Extend" appears once this many days (or fewer) remain.
-export const RENEW_WINDOW_DAYS = 7;
-// Email reminders go out this many days before the package lapses.
-export const EXPIRY_REMINDER_DAYS = [7, 2] as const;
-
-export function addOneMonth(from: Date): Date {
-  const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
-  return d;
-}
+export const addDaysTo = (from: Date, days: number): Date => new Date(from.getTime() + days * 86400000);
 
 export const REGIONS = [
   "yerevan", "aragatsotn", "ararat", "armavir", "gegharkunik", "kotayk",
@@ -98,34 +91,17 @@ export function formatAmd(amount: number | string): string {
   return `${whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} ֏`;
 }
 
-export type SubscriptionPlan =
-  | { ok: true; mode: "new" | "extend" | "upgrade"; periodStart: Date; periodEnd: Date }
-  | { ok: false; reason: "same_not_due" | "downgrade" };
-
-// What buying `target` means for a club right now:
-//   * no active package          -> new month from now
-//   * same package, <= 7 days    -> extend: one more month from the old end
-//   * same package, > 7 days     -> refused (the button is not shown yet)
-//   * bigger package             -> upgrade at once, new month from now
-//   * smaller package            -> refused until the current one lapses
+// What one payment for a paid plan buys: `days` from now, or on top of what
+// is left of the same plan (it can be extended at any time).
 export function planSubscription(
   club: { tariff: string | null; package_ends_at: string | null },
   target: PackageId,
-  rank: Record<PackageId, number>, // which plan is bigger (from the plans table)
+  days: number,
   now: Date = new Date()
-): SubscriptionPlan {
-  const current = activePackage(club, now.getTime());
-  if (!current) {
-    return { ok: true, mode: "new", periodStart: now, periodEnd: addOneMonth(now) };
+): { mode: "new" | "extend"; periodStart: Date; periodEnd: Date } {
+  if (activePackage(club, now.getTime()) === target && club.package_ends_at) {
+    const endsAt = new Date(club.package_ends_at);
+    return { mode: "extend", periodStart: endsAt, periodEnd: addDaysTo(endsAt, days) };
   }
-  const endsAt = new Date(club.package_ends_at!);
-  if (target === current) {
-    const daysLeft = (endsAt.getTime() - now.getTime()) / 86400000;
-    if (daysLeft > RENEW_WINDOW_DAYS) return { ok: false, reason: "same_not_due" };
-    return { ok: true, mode: "extend", periodStart: endsAt, periodEnd: addOneMonth(endsAt) };
-  }
-  if (rank[target] > rank[current]) {
-    return { ok: true, mode: "upgrade", periodStart: now, periodEnd: addOneMonth(now) };
-  }
-  return { ok: false, reason: "downgrade" };
+  return { mode: "new", periodStart: now, periodEnd: addDaysTo(now, days) };
 }

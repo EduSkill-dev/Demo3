@@ -5,7 +5,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chargeTestCard } from "@/lib/mockPayment";
-import { PACKAGE_IDS, isPackageId, planSubscription, type PackageId } from "@/lib/catalog";
+import { isPackageId, planSubscription, type PackageId } from "@/lib/catalog";
+import { getBusinessSettings } from "@/lib/business";
 import { getPlans } from "@/lib/plans/server";
 import {
   bookingConfirmationEmail,
@@ -79,7 +80,8 @@ async function handlePOST(req: Request) {
     }
     const target = body.tariff;
     const plans = await getPlans();
-    if (!plans[target].isAvailable) {
+    // START needs no buying: it is what every club is on without a paid plan.
+    if (!plans[target].isAvailable || !plans[target].isVisible || plans[target].priceAmd <= 0) {
       return NextResponse.json({ error: "Այս փաթեթը դեռ հասանելի չէ։" }, { status: 409 });
     }
     const { data: club } = await supabase
@@ -90,22 +92,7 @@ async function handlePOST(req: Request) {
     if (!club) {
       return NextResponse.json({ error: "Ակումբը չի գտնվել։" }, { status: 404 });
     }
-    const plan = planSubscription(
-      club as { tariff: string | null; package_ends_at: string | null },
-      target,
-      Object.fromEntries(PACKAGE_IDS.map((id) => [id, plans[id].rank])) as Record<PackageId, number>
-    );
-    if (!plan.ok) {
-      return NextResponse.json(
-        {
-          error:
-            plan.reason === "downgrade"
-              ? "Ավելի փոքր փաթեթ կարող եք ընտրել ընթացիկի ժամկետը լրանալուց հետո։"
-              : "Երկարաձգել կարող եք ժամկետի ավարտից 7 օր առաջ։",
-        },
-        { status: 409 }
-      );
-    }
+    const plan = planSubscription(club as { tariff: string | null; package_ends_at: string | null }, target, (await getBusinessSettings()).advanced_days);
     clubId = (club as { id: string }).id;
     label = `Փաթեթ՝ ${plans[target].name}`;
     amount = plans[target].priceAmd;
@@ -154,7 +141,7 @@ async function handlePOST(req: Request) {
     existingBookingId = existing?.id ?? null;
   }
 
-  // Nothing to charge (switching to the free START plan): skip the gateway.
+  // Nothing to charge (a free hike): skip the gateway.
   const charge =
     amount > 0
       ? chargeTestCard(body.card?.number ?? "", body.card?.exp, body.card?.cvc)

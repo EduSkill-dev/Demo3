@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewer } from "@/lib/viewer";
 import { getT } from "@/i18n/server";
 import { getSightNames } from "@/lib/sights";
-import { activePackage } from "@/lib/catalog";
 import { REQUEST_COLUMNS, toOfferView, toRequestView, type OfferRow, type RequestRow } from "@/lib/requests";
 import RequestSummary from "@/components/requests/RequestSummary";
 import OfferForm from "@/components/requests/OfferForm";
@@ -19,16 +18,14 @@ export default async function ClubOffersPage() {
 
   const [t, sightNames] = await Promise.all([getT(), getSightNames()]);
   const db = createAdminClient();
-  const [{ data }, { data: clubRow }] = await Promise.all([
+  const { data } = await (
     db
       .from("tour_offers")
       .select(`id, price, date, message, status, created_at, tour_requests(${REQUEST_COLUMNS}, user_id)`)
       .eq("club_id", viewer.club.id)
-      .order("created_at", { ascending: false }),
-    db.from("clubs").select("tariff, package_ends_at").eq("id", viewer.club.id).single(),
-  ]);
+      .order("created_at", { ascending: false })
+  );
   const rows = ((data ?? []) as unknown as Raw[]).filter((o) => o.tour_requests);
-  const canOffer = !!activePackage(clubRow as { tariff: string | null; package_ends_at: string | null });
 
   // Contacts only of the people who accepted this club's offer.
   const acceptedIds = rows.filter((o) => o.status === "accepted").map((o) => o.tour_requests!.user_id);
@@ -81,7 +78,7 @@ export default async function ClubOffersPage() {
                   requestId={request.id}
                   mine={toOfferView(o)}
                   defaultDate={o.date}
-                  canOffer={canOffer && request.status === "open"}
+                  canOffer={request.status === "open"}
                 />
               </li>
             );

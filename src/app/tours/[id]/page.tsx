@@ -3,7 +3,7 @@ import { cache } from "react";
 import { dateWords, dayAndMonth, dayInWords } from "@/lib/calendar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { activePackage, formatAmd } from "@/lib/catalog";
+import { formatAmd } from "@/lib/catalog";
 import { planConfigOf } from "@/lib/plans/server";
 import { getFormatDate, getT } from "@/i18n/server";
 import { getSightNames } from "@/lib/sights";
@@ -69,18 +69,17 @@ export default async function TourDetailPage({ params }: { params: { id: string 
     supabase.rpc("seats_taken", { p_tour: tour.id }),
     supabase
       .from("public_reviews")
-      .select("id, score, comment, created_at, author_deleted, author_first_name, author_last_initial")
+      .select("id, score, comment, created_at, author_deleted, author_first_name, author_last_initial, club_reply")
       .eq("tour_id", tour.id)
       .order("created_at", { ascending: false }),
   ]);
   const taken = typeof takenRaw === "number" ? takenRaw : 0;
 
   const club = tour.clubs;
-  const pkg = activePackage(club);
   const plan = await planConfigOf(club);
-  // Closed (cap 0) when the tour is not active, an admin took it down or
-  // switched the club's applications off, or the club's package lapsed.
-  const cap = pkg && tour.status === "active" && !tour.admin_hidden && !club?.applications_blocked ? Math.min(tour.max_participants, plan.max_participants_per_tour) : 0;
+  // Closed (cap 0) when the tour is not active, or an admin took it down or
+  // switched the club's applications off.
+  const cap = tour.status === "active" && !tour.admin_hidden && !club?.applications_blocked ? tour.max_participants : 0;
   const showReviews = plan.public_show_comments;
   const reviews = ((reviewRows ?? []) as {
     id: string;
@@ -88,6 +87,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
     comment: string | null;
     created_at: string;
     author_deleted: boolean;
+    club_reply: string | null;
     author_first_name: string | null;
     author_last_initial: string | null;
   }[]).filter((r) => r.comment?.trim());
@@ -128,6 +128,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
                       </div>
                       <p className="text-terracotta-500">{"★".repeat(r.score)}<span className="text-line">{"★".repeat(5 - r.score)}</span></p>
                       <p className="mt-1 whitespace-pre-line leading-6 text-ink">{r.comment}</p>
+                      {r.club_reply && <p className="mt-2 whitespace-pre-line border-l-2 border-line pl-3 text-ink"><b>{t("clubComments.clubAnswered")}</b> {r.club_reply}</p>}
                     </li>
                   ))}
                 </ul>

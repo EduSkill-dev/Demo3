@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Tour } from "@/types/database";
-import { activePackage } from "@/lib/catalog";
 import { getPlans } from "@/lib/plans/server";
 import { clubConfig } from "@/lib/plans/registry";
 import { getSightNames } from "@/lib/sights";
@@ -21,12 +20,11 @@ export type PublicTour = Tour & {
   taken: number; // confirmed seats
   likes: number; // thumbs-up from people who took part
   sights: { id: string; name: string }[]; // the ticked sights, named in the reader's language
-  cap: number; // seats the club's package allows on this tour; 0 = sign-up closed
+  cap: number; // the seats the club set for this tour; 0 = sign-up closed
 };
 
-// Tours the public may see and book: active, not in the past, run by a club
-// whose package has not lapsed (an expired club's tours drop off the site
-// until it renews). Soonest first. Optionally only one club's tours.
+// Tours the public may see and book: active, not in the past. Soonest first.
+// Optionally only one club's tours.
 //   range   (calendar, feeds) every hike that touches these days instead —
 //           past ones included; "to" may be left out.
 //   tourId  just this hike, whatever its date.
@@ -52,7 +50,7 @@ export async function getPublicTours(
   type Row = Tour & {
     clubs: { id: string; name: string; photo_url: string | null; tariff: string | null; package_ends_at: string | null; plan_overrides: unknown; applications_blocked: boolean; certificate_status: string | null } | null;
   };
-  const rows = ((data ?? []) as Row[]).filter((t) => t.clubs && activePackage(t.clubs));
+  const rows = ((data ?? []) as Row[]).filter((t) => t.clubs);
   if (rows.length === 0) return [];
 
   const plans = await getPlans();
@@ -68,7 +66,6 @@ export async function getPublicTours(
   );
 
   return rows.map(({ clubs, ...tour }) => {
-    const pkg = activePackage(clubs!)!;
     const r = rating.get(clubs!.id);
     return {
       ...tour,
@@ -83,7 +80,7 @@ export async function getPublicTours(
       sights: (tour.sight_ids ?? []).flatMap((id) => (sightNames.has(id) ? [{ id, name: sightNames.get(id)! }] : [])),
       taken: taken.get(tour.id) ?? 0,
       // 0 = sign-up closed (an admin switched the club's applications off).
-      cap: clubs!.applications_blocked ? 0 : Math.min(tour.max_participants, clubConfig(plans, clubs).max_participants_per_tour),
+      cap: clubs!.applications_blocked ? 0 : tour.max_participants,
     };
   });
 }

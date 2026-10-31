@@ -1,14 +1,15 @@
 import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { EXPIRY_REMINDER_DAYS, activePackage } from "@/lib/catalog";
+import { activePackage } from "@/lib/catalog";
+import { getBusinessSettings } from "@/lib/business";
 import { getPlans } from "@/lib/plans/server";
 import { newsletterDigestEmail, packageExpiryEmail, sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
 // Once a day (vercel.json → 06:00 UTC, 10:00 in Yerevan):
-//   1. remind clubs 7 and 2 days before their package lapses (once each)
+//   1. remind clubs some days before Advanced ends (once per period)
 //   2. email the hikes published since the last run to everyone who gets
 //      platform news (registered accounts unless switched off, plus visitors
 //      who subscribed)
@@ -25,7 +26,8 @@ async function handleGET(req: Request) {
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
 
   /* ---------------------------------------------------- package reminders */
-  const horizon = new Date(now.getTime() + Math.max(...EXPIRY_REMINDER_DAYS) * 86400000).toISOString();
+  const due = (await getBusinessSettings()).advanced_reminder_days;
+  const horizon = new Date(now.getTime() + due * 86400000).toISOString();
   const { data: expiring } = await admin
     .from("clubs")
     .select("id, name, tariff, package_ends_at, profiles!clubs_owner_id_fkey(email)")
@@ -43,11 +45,8 @@ async function handleGET(req: Request) {
   }[]) {
     const pkg = activePackage(club, now.getTime());
     const to = club.profiles?.email;
-    if (!pkg || !to) continue;
+    if (pkg === "start" || !to) continue;
     const daysLeft = Math.ceil((new Date(club.package_ends_at).getTime() - now.getTime()) / 86400000);
-    // The tightest reminder that applies (2 before 7), sent once per period.
-    const due = [...EXPIRY_REMINDER_DAYS].sort((a, b) => a - b).find((d) => daysLeft <= d);
-    if (!due) continue;
     const { error: already } = await admin
       .from("package_reminders")
       .insert({ club_id: club.id, ends_at: club.package_ends_at, days: due });

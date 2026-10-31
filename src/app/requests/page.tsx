@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewer } from "@/lib/viewer";
 import { getT } from "@/i18n/server";
 import { getSightNames } from "@/lib/sights";
-import { activePackage } from "@/lib/catalog";
 import { REQUEST_COLUMNS, toOfferView, toRequestView, type OfferRow, type RequestRow } from "@/lib/requests";
 import RequestSummary from "@/components/requests/RequestSummary";
 import OfferForm from "@/components/requests/OfferForm";
@@ -28,16 +27,14 @@ export default async function RequestsPage() {
     .limit(200);
   const requests = ((data ?? []) as RequestRow[]).map((r) => toRequestView(r, sightNames));
 
-  // The club's own answers to these requests, and whether it may answer at all.
+  // The club's own answers to these requests.
   const club = viewer.club;
-  const [{ data: offerRows }, { data: clubRow }] = await Promise.all([
+  const { data: offerRows } = await (
     club && requests.length
       ? db.from("tour_offers").select("id, request_id, price, date, message, status, created_at").eq("club_id", club.id).in("request_id", requests.map((r) => r.id))
-      : Promise.resolve({ data: [] }),
-    club ? db.from("clubs").select("tariff, package_ends_at").eq("id", club.id).single() : Promise.resolve({ data: null }),
-  ]);
+      : Promise.resolve({ data: [] })
+  );
   const mine = new Map(((offerRows ?? []) as (OfferRow & { request_id: string })[]).map((o) => [o.request_id, toOfferView(o)]));
-  const canOffer = !!clubRow && !!activePackage(clubRow as { tariff: string | null; package_ends_at: string | null });
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
@@ -51,7 +48,7 @@ export default async function RequestsPage() {
           {requests.map((r) => (
             <li key={r.id} className="space-y-4 rounded-2xl border border-line bg-surface p-5 shadow-sm">
               <RequestSummary request={r} showAuthor />
-              {club && <OfferForm requestId={r.id} mine={mine.get(r.id) ?? null} defaultDate={r.dateFrom} canOffer={canOffer} />}
+              {club && <OfferForm requestId={r.id} mine={mine.get(r.id) ?? null} defaultDate={r.dateFrom} canOffer />}
             </li>
           ))}
         </ul>

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewer, type Viewer } from "@/lib/viewer";
 import { clientIp, logActivity } from "@/lib/admin";
-import { REGIONS, TERRAINS, activePackage } from "@/lib/catalog";
+import { REGIONS, TERRAINS } from "@/lib/catalog";
 import { CANCEL_WINDOW_HOURS, MAX_OPEN_REQUESTS, MAX_REQUEST_CANCELS, hasContactDetails } from "@/lib/requests";
 import { newOfferEmail, offerAcceptedEmail, sendEmail } from "@/lib/email";
 
@@ -125,9 +125,8 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
   async offer(ctx, body) {
     const { viewer, db } = ctx;
     if (viewer.role !== "club" || !viewer.club) return fail("Առաջարկ կարող են ուղարկել միայն ակումբները։", 403);
-    const { data: clubRow } = await db.from("clubs").select("tariff, package_ends_at, posting_blocked").eq("id", viewer.club.id).single();
-    const club = clubRow as { tariff: string | null; package_ends_at: string | null; posting_blocked: boolean };
-    if (!activePackage(club)) return fail("Առաջարկ ուղարկելու համար ընտրեք փաթեթ։", 403);
+    const { data: clubRow } = await db.from("clubs").select("posting_blocked").eq("id", viewer.club.id).single();
+    const club = clubRow as { posting_blocked: boolean };
     if (club.posting_blocked) return fail("Նոր հայտարարություն ավելացնելու հնարավորությունն անջատված է ադմինիստրատորի կողմից։", 403);
 
     const price = hundreds(body.price);

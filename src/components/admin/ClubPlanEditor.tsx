@@ -155,7 +155,7 @@ export default function ClubPlanEditor({
                           <td className="px-3 py-2 text-ink">{f.label}</td>
                           {PACKAGE_IDS.map((id) => (
                             <td key={id} className={`${cell} text-muted ${tariff === id ? "bg-sand font-semibold text-ink" : ""}`}>
-                              {mark(plans[id].config[f.key])}
+                              {mark((plans[id].config as Record<string, number | boolean>)[f.key])}
                             </td>
                           ))}
                           <td className={`${cell} border-l border-line ${differs(f.key) ? "bg-apricot-500/15" : ""}`}>

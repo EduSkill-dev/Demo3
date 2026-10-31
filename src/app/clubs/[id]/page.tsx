@@ -27,6 +27,7 @@ type Review = {
   author_first_name: string | null;
   author_last_initial: string | null;
   author_photo_url: string | null;
+  club_reply: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -76,7 +77,7 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
     supabase.from("club_guides").select("*").eq("club_id", club.id).order("created_at"),
     supabase
       .from("public_reviews")
-      .select("id, score, comment, created_at, tour_id, tour_title, author_deleted, author_first_name, author_last_initial, author_photo_url")
+      .select("id, score, comment, created_at, tour_id, tour_title, author_deleted, author_first_name, author_last_initial, author_photo_url, club_reply")
       .eq("club_id", club.id)
       .order("created_at", { ascending: false }),
     supabase.from("club_rating_summary").select("average, count").eq("club_id", club.id).maybeSingle(),
@@ -244,6 +245,7 @@ export default async function ClubDetailPage({ params, searchParams }: { params:
                             {r.tour_title && <span className="ml-2 text-xs text-muted">{t("clubPage.onTour", { title: r.tour_title })}</span>}
                           </p>
                           <p className="mt-1 whitespace-pre-line text-sm leading-6 text-ink">{r.comment}</p>
+                          {r.club_reply && <p className="mt-2 whitespace-pre-line border-l-2 border-line pl-3 text-sm text-ink"><b>{t("clubComments.clubAnswered")}</b> {r.club_reply}</p>}
                         </div>
                       </li>
                     );
