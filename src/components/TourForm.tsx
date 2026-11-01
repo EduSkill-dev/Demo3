@@ -136,6 +136,7 @@ export default function TourForm({
     if (!coordinatorPhone.trim()) return setError(t("tourForm.errPhone"));
     if (!meetingPoint.trim() || !meetingTime) return setError(t("tourForm.errMeeting"));
     if (rollcall.length === 0) return setError(t("rollcall.errNone"));
+    if (savedPhotos.length + newFiles.length === 0) return setError(t("tourForm.errPhotos"));
 
     setSaving(true);
     const supabase = createClient();

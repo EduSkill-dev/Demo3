@@ -21,7 +21,7 @@ export const BUSINESS_DEFAULTS: BusinessSettings = {
   platform_fee_percent: 5,
   fee_includes_bank_fee: true,
   promo_days: 90,
-  advanced_days: 30,
+  advanced_days: 31,
   advanced_reminder_days: 3,
 };
 

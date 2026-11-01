@@ -510,6 +510,7 @@ const en: DeepPartial<Dictionary> = {
   tourForm: {
     freeQuestion: "Is the hike free? If so, press Publish again; if not, enter the price.",
     errMeeting: "Enter the meeting point and time.",
+    errPhotos: "Add at least one photo.",
     places: "Places the hike visits",
     placesHint: "Choose one or more places. The region, kind of terrain and difficulty follow from them.",
     placeMissing: "Place not in the list? Write to us.",

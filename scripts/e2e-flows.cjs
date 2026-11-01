@@ -394,6 +394,28 @@ async function main() {
         !draft.error && draftCount === 0 && m2Hidden === 11 && !publishDraft.error && m3After === 1 && /listing_limit_active/.test(republishFull.error?.message ?? '') && !republish.error && (await counted(m2)) === 11,
         `draft=${draft.error?.message} ${draftCount} hidden=${m2Hidden} pub=${publishDraft.error?.message} m3=${m3After} full=${republishFull.error?.message} rep=${republish.error?.message} m2=${await counted(m2)}`);
 
+      // Hidden, edited and published again as another hike: the date decides. The
+      // same month keeps its count; another month takes the place with it, and a
+      // full month refuses. Deleting never gives the month's place back.
+      const m2Start = await counted(m2), m3Start = await counted(m3);
+      await admin.from('tours').update({ status: 'hidden' }).eq('id', otherMonth.data?.id);
+      await admin.from('tours').update({ title: 'E2E L another hike', date: day(m2, 15) }).eq('id', otherMonth.data?.id);
+      const sameRepublish = await admin.from('tours').update({ status: 'active' }).eq('id', otherMonth.data?.id);
+      const m2Same = await counted(m2);
+      await admin.from('tours').update({ status: 'hidden' }).eq('id', otherMonth.data?.id);
+      await admin.from('tours').update({ date: day(m3, 15) }).eq('id', otherMonth.data?.id);
+      const m2StillHeld = await counted(m2);
+      const movedRepublish = await admin.from('tours').update({ status: 'active' }).eq('id', otherMonth.data?.id);
+      const m2Moved = await counted(m2), m3Moved = await counted(m3);
+      const toFull = await admin.from('tours').update({ date: day(m1, 25) }).eq('id', otherMonth.data?.id);
+      const m3Kept = await counted(m3);
+      await admin.from('tours').delete().eq('id', otherMonth.data?.id);
+      const m3Deleted = await counted(m3);
+      check('listings: hide, edit, publish again: the date decides; the same month counts once, another takes the place, a full one refuses, deleting gives nothing back',
+        !sameRepublish.error && m2Same === m2Start && m2StillHeld === m2Start && !movedRepublish.error && m2Moved === m2Start - 1 && m3Moved === m3Start + 1
+          && /listing_limit_month/.test(toFull.error?.message ?? '') && m3Kept === m3Moved && m3Deleted === m3Moved,
+        `same=${sameRepublish.error?.message} ${m2Same}/${m2Start} held=${m2StillHeld} moved=${movedRepublish.error?.message} m2=${m2Moved} m3=${m3Moved}/${m3Start} full=${toFull.error?.message} kept=${m3Kept} deleted=${m3Deleted}`);
+
       // The browser cannot touch the counters or the listing's counted month.
       await signIn('clubL');
       const forge = await anon.from('club_listing_counts').update({ published: 0 }).eq('club_id', clubL).select('month');
@@ -646,8 +668,9 @@ async function main() {
 
       const upgrade = await api('/api/payments/charge', { kind: 'subscription', tariff: 'advanced', card }, club2Cookie);
       const afterUpgrade = (await admin.from('clubs').select('tariff, package_ends_at').eq('id', clubB).single()).data;
-      const daysAhead = Math.abs(new Date(afterUpgrade.package_ends_at) - (Date.now() + 30 * 86400000)) < 3600e3;
-      check('HTTP packages: buying Advanced starts 30 days now',
+      const advancedDays = (await admin.from('site_settings').select('value').eq('key', 'business').single()).data.value.advanced_days;
+      const daysAhead = Math.abs(new Date(afterUpgrade.package_ends_at) - (Date.now() + advancedDays * 86400000)) < 3600e3;
+      check('HTTP packages: buying Advanced starts its days now',
         upgrade.status === 200 && upgrade.body.status === 'succeeded' && afterUpgrade.tariff === 'advanced' && daysAhead,
         `status=${upgrade.status} body=${JSON.stringify(upgrade.body)} club=${JSON.stringify(afterUpgrade)}`);
 
@@ -658,8 +681,8 @@ async function main() {
       const before = afterUpgrade.package_ends_at;
       const extend = await api('/api/payments/charge', { kind: 'subscription', tariff: 'advanced', card }, club2Cookie);
       const afterExtend = (await admin.from('clubs').select('package_ends_at').eq('id', clubB).single()).data;
-      check('HTTP packages: extending at any time adds 30 days to the current end',
-        extend.status === 200 && Math.abs(new Date(afterExtend.package_ends_at) - (new Date(before).getTime() + 30 * 86400000)) < 60e3,
+      check('HTTP packages: extending at any time adds its days to the current end',
+        extend.status === 200 && Math.abs(new Date(afterExtend.package_ends_at) - (new Date(before).getTime() + advancedDays * 86400000)) < 60e3,
         `status=${extend.status} before=${before} ends=${afterExtend?.package_ends_at}`);
 
       const announceRes = await api('/api/tours/announce', { tour_id: newTourId }, club2Cookie);
@@ -1725,6 +1748,13 @@ async function main() {
         await signIn('ind');
         const indSees = (await anon.from('guests').select('id')).data || [];
         const wrongToken = await api('/api/bookings/guest', { action: 'cancel', token: '00000000-0000-0000-0000-000000000000' });
+        // The admins' list of guests: for those allowed to manage individuals, nobody else.
+        const guestsAdmin = await fetch(`http://localhost:${DEV_PORT}/admin/guests?q=${encodeURIComponent(email('guest'))}`, { headers: { Cookie: superCookie }, redirect: 'manual' });
+        const guestsAdminText = await guestsAdmin.text();
+        const guestsPerson = await fetch(`http://localhost:${DEV_PORT}/admin/guests`, { headers: { Cookie: indCookie }, redirect: 'manual' });
+        check('guests: the admin list shows a guest and their hikes; a person cannot open it',
+          guestsAdmin.status === 200 && guestsAdminText.includes(email('guest')) && guestsPerson.status !== 200,
+          `admin=${guestsAdmin.status} found=${guestsAdminText.includes(email('guest'))} person=${guestsPerson.status}`);
         const cancel = await api('/api/bookings/guest', { action: 'cancel', token: gBook?.cancel_token });
         const afterCancel = (await admin.from('bookings').select('status').eq('id', gBook?.id ?? '').single()).data;
         // ticking "create an account": signed up, and the booking moves to the account once the email is confirmed
