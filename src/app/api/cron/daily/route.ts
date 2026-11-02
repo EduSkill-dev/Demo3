@@ -1,5 +1,6 @@
 import { withErrorReport } from "@/lib/errors";
 import { NextResponse } from "next/server";
+import { sendTourChangeNotices } from "@/lib/tourChanges";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { activePackage } from "@/lib/catalog";
 import { getBusinessSettings } from "@/lib/business";
@@ -10,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 // Once a day (vercel.json → 06:00 UTC, 10:00 in Yerevan):
 //   1. remind clubs some days before Advanced ends (once per period)
-//   2. email the hikes published since the last run to everyone who gets
+//   2. send any email about a changed hike that did not go out at the time
+//   3. email the hikes published since the last run to everyone who gets
 //      platform news (registered accounts unless switched off, plus visitors
 //      who subscribed)
 // Vercel Cron sends "Authorization: Bearer $CRON_SECRET"; anyone else is refused.
@@ -24,6 +26,8 @@ async function handleGET(req: Request) {
   const plans = await getPlans();
   const now = new Date();
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+
+  await sendTourChangeNotices(origin);
 
   /* ---------------------------------------------------- package reminders */
   const due = (await getBusinessSettings()).advanced_reminder_days;

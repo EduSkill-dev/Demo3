@@ -141,6 +141,7 @@ export default async function TourDetailPage({ params }: { params: { id: string 
             tourId={tour.id}
             clubId={tour.club_id}
             cancelHours={tour.cancel_hours}
+            lastChangeAt={tour.last_change_at}
             date={tour.date}
             taken={taken}
             limit={cap}

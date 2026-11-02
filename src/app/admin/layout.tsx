@@ -54,6 +54,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { key: "notifications", href: "/admin/notifications", label: "Ծանուցումներ" },
     ...(can(me, "clubs") ? [{ key: "clubs", href: "/admin/clubs", label: "Ակումբներ" }] : []),
     ...(can(me, "tours") ? [{ key: "tours", href: "/admin/tours", label: "Հայտարարություններ" }] : []),
+    ...(can(me, "tours") ? [{ key: "tourChanges", href: "/admin/tour-changes", label: "Արշավների փոփոխություններ" }] : []),
     ...(can(me, "individuals") ? [{ key: "individuals", href: "/admin/individuals", label: "Անհատներ" }] : []),
     ...(can(me, "individuals") ? [{ key: "guests", href: "/admin/guests", label: "Հյուրեր" }] : []),
     ...(can(me, "individuals") ? [{ key: "requests", href: "/admin/requests", label: "Անհատների հայտեր" }] : []),

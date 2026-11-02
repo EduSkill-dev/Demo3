@@ -76,6 +76,11 @@ export function tourStartsAt(date: string, meetingTime?: string | null): Date {
   return new Date(`${date}T${time}:00+04:00`);
 }
 
+// Booked before the club changed the hike: the deadline falls away, cancelling
+// stays open until the hike starts (0088).
+export const cancelHoursAfterChange = (hours: number, lastChangeAt: string | null | undefined, bookedAt: string | null | undefined) =>
+  lastChangeAt && bookedAt && new Date(lastChangeAt) > new Date(bookedAt) ? 0 : hours;
+
 export function canCancelBooking(
   date: string,
   meetingTime: string | null | undefined,

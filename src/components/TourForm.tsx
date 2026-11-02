@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { CHANGE_REASONS, type ChangeReason } from "@/lib/tourChangeReasons";
 import { useRouter } from "next/navigation";
 import RollcallPicker from "@/components/club/RollcallPicker";
 import DateField from "@/components/ui/DateField";
@@ -38,6 +39,8 @@ export default function TourForm({
   template,
   sights,
   planner = false,
+  booked = 0,
+  changeLimit = 0,
 }: {
   mode: "create" | "edit";
   clubId: string;
@@ -46,6 +49,8 @@ export default function TourForm({
   template?: Tour; // "publish again": a new listing pre-filled from this one, without its date
   sights: SightOption[];
   planner?: boolean; // the plan shows what other clubs have on the chosen day
+  booked?: number; // editing: people already booked, which limits what may change
+  changeLimit?: number; // how many times a booked hike may change
 }) {
   const router = useRouter();
   const t = useT();
@@ -77,6 +82,8 @@ export default function TourForm({
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [changeReason, setChangeReason] = useState<ChangeReason | "">("");
+  const [changeNote, setChangeNote] = useState("");
   // Who gets the roll-call list in Telegram. Editing: this hike's people; a
   // new listing: the people of the club's latest one.
   const [rollcall, setRollcall] = useState<string[]>([]);
@@ -101,6 +108,20 @@ export default function TourForm({
     return levels.length ? DIFFICULTIES[Math.max(...levels)] : null;
   }, [chosen]);
   const suggestedTitle = chosen.map((s) => s.name).join(", ");
+
+  // A booked hike: what counts as a change people must be told about.
+  const isBooked = mode === "edit" && booked > 0;
+  const routeChanged = isBooked && sightIds.join() !== (initialTour?.sight_ids ?? []).join();
+  const needsReason = isBooked && !!initialTour && (
+    routeChanged
+    || date !== initialTour.date
+    || (endDate && endDate > date ? endDate : null) !== (initialTour.end_date ?? null)
+    || overnight !== initialTour.overnight
+    || meetingTime !== (initialTour.meeting_time ?? "").slice(0, 5)
+    || meetingPoint.trim() !== (initialTour.meeting_point ?? "")
+  );
+  const changesUsed = initialTour?.changes_used ?? 0;
+  const noChangesLeft = changesUsed >= changeLimit;
 
   function pickPlaces(ids: string[]) {
     setSightIds(ids);
@@ -137,6 +158,9 @@ export default function TourForm({
     if (!meetingPoint.trim() || !meetingTime) return setError(t("tourForm.errMeeting"));
     if (rollcall.length === 0) return setError(t("rollcall.errNone"));
     if (savedPhotos.length + newFiles.length === 0) return setError(t("tourForm.errPhotos"));
+    if (needsReason && noChangesLeft) return setError(t("tourChange.noneLeft", { limit: changeLimit }));
+    if (needsReason && (!changeReason || (changeReason === "other" && changeNote.trim().length < 3))) return setError(t("tourChange.errReason"));
+    if (isBooked && Number(maxParticipants) < booked) return setError(t("tourChange.errCapacity", { count: booked }));
 
     setSaving(true);
     const supabase = createClient();
@@ -177,6 +201,7 @@ export default function TourForm({
       bring_items: BRING_ITEMS.filter((k) => bring.includes(k)),
       notes: notes.trim() || null,
       photo_urls: photoUrls,
+      ...(needsReason ? { change_reason: changeReason, change_note: changeNote.trim() || null } : {}),
     };
 
     const { data: created, error: dbError = null } =
@@ -209,6 +234,11 @@ export default function TourForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tour_id: (created as { id: string }).id }),
       }).catch(() => {});
+    }
+
+    // A change people booked for: the database recorded it, this emails them.
+    if (needsReason) {
+      fetch("/api/tours/changes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tour_id: initialTour!.id }), keepalive: true }).catch(() => {});
     }
 
     router.push("/dashboard");
@@ -269,6 +299,7 @@ export default function TourForm({
           <input
             id="title"
             maxLength={150}
+            disabled={isBooked && !routeChanged}
             placeholder={suggestedTitle || t("tourForm.placeHint")}
             value={title}
             onChange={(e) => {
@@ -299,7 +330,7 @@ export default function TourForm({
         </label>
         <div>
           <label htmlFor="cap" className={label}>{t("tourForm.capacity")}</label>
-          <input id="cap" required type="number" min={1} max={10000} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
+          <input id="cap" required type="number" min={isBooked ? booked : 1} max={10000} step={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className={input} />
         </div>
         <div>
           <label htmlFor="price" className={label}>{t("tourForm.price")}</label>
@@ -308,6 +339,7 @@ export default function TourForm({
             ref={priceRef}
             id="price"
             required
+            disabled={isBooked}
             type="number"
             min={0}
             step="100"
@@ -318,11 +350,11 @@ export default function TourForm({
             }}
             className={`${input} ${freeAsked && Number(price) === 0 ? "!border-red-500 ring-2 ring-red-500/30" : ""}`}
           />
-          <p className={hint}>{t("tourForm.priceHint")}</p>
+          <p className={hint}>{t(isBooked ? "tourChange.priceLocked" : "tourForm.priceHint")}</p>
         </div>
         <div className="sm:col-span-2">
           <label htmlFor="cancel-hours" className={label}>{t("tourForm.cancelHours")}</label>
-          <select id="cancel-hours" value={cancelHours} onChange={(e) => setCancelHours(Number(e.target.value))} className={input}>
+          <select id="cancel-hours" disabled={isBooked} value={cancelHours} onChange={(e) => setCancelHours(Number(e.target.value))} className={input}>
             {CANCEL_HOUR_OPTIONS.map((h) => (
               <option key={h} value={h}>{t("tourForm.cancelHoursOption", { hours: h })}</option>
             ))}
@@ -347,7 +379,30 @@ export default function TourForm({
           <TimeField id="mtime" required value={meetingTime} onChange={setMeetingTime} placeholder={t("time.pick")} className={input} />
         </div>
       </div>
-      {mode === "edit" && <p className={hint}>{t("tourForm.changeNotice")}</p>}
+      {mode === "edit" && !isBooked && <p className={hint}>{t("tourForm.changeNotice")}</p>}
+      {isBooked && (
+        <section className="space-y-3 rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 p-4 text-sm text-ink">
+          <p>{t("tourChange.rules", { booked, used: changesUsed, limit: changeLimit })}</p>
+          {needsReason && !noChangesLeft && (
+            <>
+              <div>
+                <label htmlFor="change-reason" className={label}>{t("tourChange.reason")}</label>
+                <select id="change-reason" required value={changeReason} onChange={(e) => setChangeReason(e.target.value as ChangeReason)} className={input}>
+                  <option value="">{t("tourChange.pickReason")}</option>
+                  {(Object.keys(CHANGE_REASONS) as ChangeReason[]).map((r) => (
+                    <option key={r} value={r}>{t(CHANGE_REASONS[r])}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="change-note" className={label}>{t(changeReason === "other" ? "tourChange.noteRequired" : "tourChange.note")}</label>
+                <textarea id="change-note" rows={2} maxLength={300} required={changeReason === "other"} value={changeNote} onChange={(e) => setChangeNote(e.target.value)} className={input} />
+              </div>
+            </>
+          )}
+          {needsReason && noChangesLeft && <p className="font-semibold" role="alert">{t("tourChange.noneLeft", { limit: changeLimit })}</p>}
+        </section>
+      )}
 
       {/* Who marks attendance: required. */}
       <section className="space-y-3 rounded-xl border-2 border-[#229ED9]/40 bg-surface p-4">

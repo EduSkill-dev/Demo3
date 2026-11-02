@@ -12,6 +12,7 @@ const NUMBERS: { key: Exclude<keyof BusinessSettings, "fee_includes_bank_fee">; 
   { key: "promo_days", label: "Անվճար ժամանակահատված գրանցումից (օր)" },
   { key: "advanced_days", label: "Advanced-ի մեկ վճարումը (օր)" },
   { key: "advanced_reminder_days", label: "Advanced-ի հիշեցում ավարտից (օր առաջ)" },
+  { key: "tour_change_limit", label: "Ամրագրված արշավի փոփոխություններ (անգամ)" },
 ];
 
 // The numbers the business runs on (super admin): the database and the site

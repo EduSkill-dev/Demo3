@@ -238,6 +238,66 @@ export function bookingCancelledEmail(input: {
   };
 }
 
+// Someone who booked: a change or cancellation of the hike, and their rights.
+export function tourChangedEmail(input: {
+  to: string;
+  kind: "change" | "cancel";
+  title: string;
+  clubName: string;
+  reason: string | null;
+  lines: [string, string, string][];
+  tourUrl: string;
+  cancelUrl: string;
+}) {
+  const title = esc(input.title);
+  const rows = [row("Ակումբ", esc(input.clubName))];
+  if (input.reason) rows.push(row("Պատճառ", esc(input.reason)));
+  for (const [label, was, now] of input.lines) rows.push(row(label, `${esc(was)} → <strong>${esc(now)}</strong>`));
+  const cancelled = input.kind === "cancel";
+  const html = layout(
+    cancelled ? "Արշավը չեղարկվել է" : "Արշավը փոխվել է",
+    cancelled
+      ? `<p>«${title}» արշավը չեղարկվել է ակումբի կողմից։ Եթե վճարել եք, գումարը կստանաք ամբողջությամբ։</p>
+         ${table(rows.join(""))}`
+      : `<p>Ակումբը փոխել է «${title}» արշավի տվյալները։</p>
+         ${table(rows.join(""))}
+         <p>Եթե նոր պայմանները Ձեզ չեն համապատասխանում, կարող եք չեղարկել ամրագրումը մինչև արշավի մեկնարկը։ Վճարված գումարը կստանաք ամբողջությամբ, փոխանցման միջնորդավճարները կրում է ակումբը։ Եթե համաձայն եք, ոչինչ անել պետք չէ։</p>
+         ${button(input.cancelUrl, "Չեղարկել ամրագրումը")}
+         <p><a href="${input.tourUrl}">Տեսնել արշավը</a></p>`
+  );
+  const facts = input.lines.map(([label, was, now]) => `${label}՝ ${was} → ${now}`).join("\n");
+  return {
+    to: input.to,
+    subject: `${cancelled ? "Արշավը չեղարկվել է" : "Արշավը փոխվել է"}՝ ${input.title}`,
+    html,
+    text: cancelled
+      ? `«${input.title}» արշավը չեղարկվել է։ Եթե վճարել եք, գումարը կստանաք ամբողջությամբ։`
+      : `«${input.title}» արշավը փոխվել է։\n${input.reason ? `Պատճառ՝ ${input.reason}\n` : ""}${facts}\nԿարող եք չեղարկել մինչև մեկնարկը և ստանալ գումարն ամբողջությամբ՝ ${input.cancelUrl}`,
+  };
+}
+
+// The admins: what a club changed on a booked hike.
+export function tourChangeAdminEmail(input: {
+  to: string;
+  kind: "change" | "cancel";
+  title: string;
+  clubName: string;
+  reason: string | null;
+  lines: [string, string, string][];
+  url: string;
+}) {
+  const rows = [row("Ակումբ", esc(input.clubName)), row("Արշավ", esc(input.title))];
+  if (input.reason) rows.push(row("Պատճառ", esc(input.reason)));
+  for (const [label, was, now] of input.lines) rows.push(row(label, `${esc(was)} → <strong>${esc(now)}</strong>`));
+  const heading = input.kind === "cancel" ? "Ակումբը չեղարկել է արշավը" : "Ակումբը փոխել է արշավը";
+  return {
+    to: input.to,
+    subject: `${heading}՝ ${input.title}`,
+    html: layout(heading, `${table(rows.join(""))}${button(input.url, "Բոլոր փոփոխությունները")}`),
+    text: `${heading}՝ ${input.title} (${input.clubName})\n${input.url}`,
+  };
+}
+
 export function newTourEmail(input: {
   to: string;
   clubName: string;

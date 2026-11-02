@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getT } from "@/i18n/server";
-import { canCancelBooking } from "@/lib/catalog";
+import { cancelHoursAfterChange, canCancelBooking } from "@/lib/catalog";
 import { dateWords, dayInWords } from "@/lib/calendar";
 import GuestCancelButton from "@/components/tour/GuestCancelButton";
 
@@ -17,7 +17,7 @@ export default async function GuestCancelPage({ params }: { params: { token: str
   const { data } = token
     ? await createAdminClient()
         .from("bookings")
-        .select("status, guest_id, guests(first_name), tours(id, title, date, meeting_time, cancel_hours, clubs(name))")
+        .select("status, created_at, guest_id, guests(first_name), tours(id, title, date, meeting_time, cancel_hours, last_change_at, clubs(name))")
         .eq("cancel_token", token)
         .maybeSingle()
     : { data: null };
@@ -25,7 +25,8 @@ export default async function GuestCancelPage({ params }: { params: { token: str
     status: string;
     guest_id: string | null;
     guests: { first_name: string } | null;
-    tours: { id: string; title: string; date: string; meeting_time: string | null; cancel_hours: number; clubs: { name: string } | null } | null;
+    created_at: string;
+    tours: { id: string; title: string; date: string; meeting_time: string | null; cancel_hours: number; last_change_at: string | null; clubs: { name: string } | null } | null;
   } | null;
 
   const box = "mx-auto mt-10 max-w-md rounded-2xl border border-line bg-surface p-6 text-center";
@@ -40,7 +41,7 @@ export default async function GuestCancelPage({ params }: { params: { token: str
     );
   }
   const tour = bk.tours;
-  const allowed = bk.status === "confirmed" && canCancelBooking(tour.date, tour.meeting_time, tour.cancel_hours);
+  const allowed = bk.status === "confirmed" && canCancelBooking(tour.date, tour.meeting_time, cancelHoursAfterChange(tour.cancel_hours, tour.last_change_at, bk.created_at));
   return (
     <main className="px-4 py-10">
       <div className={box}>

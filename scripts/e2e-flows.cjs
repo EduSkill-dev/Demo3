@@ -454,7 +454,7 @@ async function main() {
       const guestHike = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Guest Hike', date: future(151) })).select('id').single()).data;
       const guestRow = (await admin.from('guests').insert({ email: `e2e-onhike-${Date.now()}@example.com`, first_name: 'Հյուր', last_name: 'Թեստ', phone: '+374 91 777001', birth_date: '1990-01-01', gender: 'female' }).select('id').single()).data;
       const guestBooking = await admin.from('bookings').insert({ tour_id: guestHike?.id, guest_id: guestRow?.id, status: 'confirmed' });
-      const movedHike = await anon.from('tours').update({ date: future(152) }).eq('id', guestHike?.id ?? '');
+      const movedHike = await anon.from('tours').update({ date: future(152), change_reason: 'date' }).eq('id', guestHike?.id ?? '');
       const cancelledHike = await anon.from('tours').update({ status: 'cancelled' }).eq('id', guestHike?.id ?? '');
       await admin.from('tours').update({ status: 'active' }).eq('id', guestHike?.id ?? '');
       await admin.from('clubs').update({ owner_blocked: true }).eq('id', clubA);
@@ -467,6 +467,63 @@ async function main() {
       check('a guest on a hike does not stop the club moving or cancelling it; a blocked club takes no new bookings',
         !guestBooking.error && !movedHike.error && !cancelledHike.error && !!blockedBooking.error,
         `book=${guestBooking.error?.message} moved=${movedHike.error?.message} cancelled=${cancelledHike.error?.message} blocked=${blockedBooking.error?.message ?? 'ALLOWED'}`);
+    }
+
+    // ---------- changing a hike people have booked (0088) ----------
+    {
+      await signIn('club');
+      const hike = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Booked Hike', date: future(153), max_participants: 5 })).select('id, date').single()).data;
+      await admin.from('bookings').delete().eq('tour_id', hike.id);
+      const firstBooking = (await admin.from('bookings').insert({ tour_id: hike.id, user_id: ids.ind2, status: 'confirmed' }).select('id, created_at').single()).data;
+      const edit = (patch) => anon.from('tours').update(patch).eq('id', hike.id).select('id, changes_used, change_reason, change_note, last_change_at').single();
+      const noReason = await edit({ date: future(154) });
+      const otherEmpty = await edit({ date: future(154), change_reason: 'other', change_note: ' ' });
+      const price = await edit({ price: 500 });
+      const hours = await edit({ cancel_hours: 24 });
+      const title = await edit({ title: 'E2E Another Name' });
+      const small = await edit({ max_participants: 0 });
+      const free = await edit({ description: 'Ազատ խմբագրում' });
+      const one = await edit({ date: future(154), change_reason: 'weather', change_note: 'Ձյուն' });
+      const two = await edit({ meeting_time: '11:00', change_reason: 'other', change_note: 'Ճանապարհը փակ է' });
+      const three = await edit({ date: future(155), change_reason: 'weather' });
+      const log = (await admin.from('tour_changes').select('kind, reason, note, before, after, participants, changed_at').eq('tour_id', hike.id).order('id')).data || [];
+      check('a booked hike: a change needs a reason, "other" in words; price, deadline, name and size stay; at most two changes; free text is free',
+        /tour_change_reason/.test(noReason.error?.message ?? '') && /tour_change_reason/.test(otherEmpty.error?.message ?? '') && /tour_locked_price/.test(price.error?.message ?? '')
+          && /tour_locked_cancel_hours/.test(hours.error?.message ?? '') && /tour_locked_title/.test(title.error?.message ?? '') && /tour_capacity_below_booked|check constraint/.test(small.error?.message ?? '')
+          && !free.error && free.data?.changes_used === 0 && !one.error && one.data?.changes_used === 1 && one.data?.change_reason === null && !two.error && two.data?.changes_used === 2 && /tour_change_limit/.test(three.error?.message ?? ''),
+        `none=${noReason.error?.message} other=${otherEmpty.error?.message} price=${price.error?.message} hours=${hours.error?.message} title=${title.error?.message} small=${small.error?.message} free=${free.error?.message} ${free.data?.changes_used} one=${one.error?.message} ${JSON.stringify(one.data)} two=${two.error?.message} three=${three.error?.message}`);
+      check('a change is kept with what it was, what it became and why',
+        log.length === 2 && log[0].reason === 'weather' && log[0].note === 'Ձյուն' && log[0].before.date === hike.date && log[0].after.date === future(154) && log[0].participants === 1 && log[1].after.meeting_time?.startsWith('11:00'),
+        JSON.stringify(log).slice(0, 400));
+
+      // Inside the deadline now: the first booker may still leave, in full; someone who booked after the change may not; the club may only cancel.
+      const soon = future(1);
+      await admin.from('tours').update({ date: soon, end_date: null, cancel_hours: 48 }).eq('id', hike.id);
+      await new Promise((r) => setTimeout(r, 50));
+      const lateGuest = (await admin.from('guests').insert({ email: `e2e-late-${Date.now()}@example.com`, first_name: 'Հյուր', last_name: 'Ուշ', phone: '+374 91 777003', birth_date: '1990-01-01', gender: 'male' }).select('id').single()).data;
+      const lateBooking = (await admin.from('bookings').insert({ tour_id: hike.id, guest_id: lateGuest?.id, status: 'confirmed' }).select('id').single()).data;
+      const lateCancel = await admin.from('bookings').update({ status: 'cancelled' }).eq('id', lateBooking?.id ?? '').select('refund_in_full');
+      const firstCancel = await admin.from('bookings').update({ status: 'cancelled' }).eq('id', firstBooking.id).select('refund_in_full').single();
+      check('booked before a change: cancel until the start and in full; booked after it: the usual deadline',
+        !!lateCancel.error && !firstCancel.error && firstCancel.data?.refund_in_full === true,
+        `late=${lateCancel.error?.message ?? 'ALLOWED'} first=${firstCancel.error?.message} full=${firstCancel.data?.refund_in_full}`);
+      const pastDeadline = await edit({ description: 'Ուշ է' });
+      const cancelHike = await anon.from('tours').update({ status: 'cancelled' }).eq('id', hike.id).select('id');
+      const cancelRow = (await admin.from('tour_changes').select('kind, participants').eq('tour_id', hike.id).eq('kind', 'cancel')).data || [];
+      check('after the deadline a booked listing cannot be edited, only cancelled, and the cancellation is kept',
+        /tour_change_deadline/.test(pastDeadline.error?.message ?? '') && !cancelHike.error && cancelRow.length === 1 && cancelRow[0].participants === 1,
+        `edit=${pastDeadline.error?.message ?? 'ALLOWED'} cancel=${cancelHike.error?.message} rows=${JSON.stringify(cancelRow)}`);
+
+      const forged = await anon.from('tour_changes').update({ notified_at: null, reason: 'other' }).eq('tour_id', hike.id).select('id');
+      const inserted = await anon.from('tour_changes').insert({ tour_id: hike.id, club_id: clubA, tour_title: 'x', kind: 'change' }).select('id');
+      await signIn('club2');
+      const foreign = (await anon.from('tour_changes').select('id').eq('tour_id', hike.id)).data || [];
+      check('a club cannot rewrite the record of changes, and no other club reads it',
+        (forged.data || []).length === 0 && !!inserted.error && foreign.length === 0,
+        `forged=${JSON.stringify(forged.data)} inserted=${inserted.error?.message ?? 'ALLOWED'} foreign=${foreign.length}`);
+      await admin.from('bookings').delete().eq('tour_id', hike.id);
+      await admin.from('tours').delete().eq('id', hike.id);
+      if (lateGuest) await admin.from('guests').delete().eq('id', lateGuest.id);
     }
 
     // ---------- a lapsed Advanced is simply START again ----------
@@ -624,7 +681,7 @@ async function main() {
     check('a tour with participants cannot be deleted', !!bookedDelete.error && stillThere,
       bookedDelete.error ? bookedDelete.error.message : 'ALLOWED');
 
-    const moved = await anon.from('tours').update({ meeting_time: '08:30' }).eq('id', tourId);
+    const moved = await anon.from('tours').update({ meeting_time: '08:30', change_reason: 'departure' }).eq('id', tourId);
     const changeNote = (await admin.from('notifications').select('kind, message').eq('user_id', ids.ind).eq('tour_id', tourId).eq('kind', 'tour_changed')).data || [];
     check('changing the meeting time notifies participants', !moved.error && changeNote.length === 1, JSON.stringify(moved.error ?? changeNote));
 
@@ -1079,9 +1136,9 @@ async function main() {
       const midBooking = (await admin.from('bookings').insert({ tour_id: midTour.id, user_id: ids.ind, status: 'confirmed' }).select('id').single()).data;
       await signIn('club');
       const badHours = await anon.from('tours').update({ cancel_hours: 30 }).eq('id', midTour.id).select('cancel_hours');
-      const set60 = await anon.from('tours').update({ cancel_hours: 60 }).eq('id', midTour.id).select('cancel_hours');
+      const set60 = await admin.from('tours').update({ cancel_hours: 60 }).eq('id', midTour.id).select('cancel_hours');
       const late60 = await api('/api/bookings', { action: 'cancel', booking_id: midBooking.id }, indCookie);
-      const set24 = await anon.from('tours').update({ cancel_hours: 24 }).eq('id', midTour.id).select('cancel_hours');
+      const set24 = await admin.from('tours').update({ cancel_hours: 24 }).eq('id', midTour.id).select('cancel_hours');
       const ok24 = await api('/api/bookings', { action: 'cancel', booking_id: midBooking.id }, indCookie);
       await admin.from('tours').delete().eq('id', midTour.id);
       check('the cancel window is set per hike: 60 h refuses what 24 h allows',
@@ -1200,7 +1257,7 @@ async function main() {
       // Places decide the listing's tags; a finished hike keeps its date.
       const pl = (await admin.from('sights').select('id, region, terrain, difficulty').in('name_hy', ['Արագած լեռ', 'Սևանա լիճ'])).data || [];
       await signIn('club');
-      const placed = await anon.from('tours').update({ sight_ids: pl.map((x) => x.id), regions: ['yerevan'], terrains: ['caves'], difficulty: 'easy' }).eq('id', tourId).select('regions, terrains, difficulty');
+      const placed = await anon.from('tours').update({ sight_ids: pl.map((x) => x.id), regions: ['yerevan'], terrains: ['caves'], difficulty: 'easy', change_reason: 'route' }).eq('id', tourId).select('regions, terrains, difficulty');
       const pr = placed.data?.[0];
       const moveOld = await anon.from('tours').update({ date: future(90) }).eq('id', atTour.id).select('id');
       await admin.from('tours').update({ sight_ids: [] }).eq('id', tourId);
@@ -1795,6 +1852,28 @@ async function main() {
         await signIn('ind');
         const indSees = (await anon.from('guests').select('id')).data || [];
         const wrongToken = await api('/api/bookings/guest', { action: 'cancel', token: '00000000-0000-0000-0000-000000000000' });
+        // The emails after a change, and the admins' list of changes.
+        {
+          const noticeHike = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Notice Hike', date: future(156) })).select('id').single()).data;
+          const noticeGuest = (await admin.from('guests').insert({ email: `e2e-notice-${Date.now()}@example.com`, first_name: 'Հյուր', last_name: 'Նամակ', phone: '+374 91 777004', birth_date: '1990-01-01', gender: 'male' }).select('id').single()).data;
+          await admin.from('bookings').insert({ tour_id: noticeHike?.id, guest_id: noticeGuest?.id, status: 'confirmed' });
+          await signIn('club');
+          const noticeChange = await anon.from('tours').update({ meeting_time: '12:00', change_reason: 'transport' }).eq('id', noticeHike?.id ?? '').select('id');
+          const pendingBefore = (await admin.from('tour_changes').select('id').eq('tour_id', noticeHike?.id ?? '').is('notified_at', null)).data || [];
+          const noticeOther = await api('/api/tours/changes', { tour_id: noticeHike?.id }, indCookie);
+          const noticeOwner = await api('/api/tours/changes', { tour_id: noticeHike?.id }, await cookieFor('club'));
+          const pendingLeft = (await admin.from('tour_changes').select('id').eq('tour_id', noticeHike?.id ?? '').is('notified_at', null)).data || [];
+          const listAdmin = await fetch(`http://localhost:${DEV_PORT}/admin/tour-changes`, { headers: { Cookie: superCookie }, redirect: 'manual' });
+          const listText = await listAdmin.text();
+          const listPerson = await fetch(`http://localhost:${DEV_PORT}/admin/tour-changes`, { headers: { Cookie: indCookie }, redirect: 'manual' });
+          check('a change is emailed once, asked for only by the club; admins see the list, nobody else',
+            !noticeChange.error && pendingBefore.length === 1 && noticeOther.status === 403 && noticeOwner.status === 200 && pendingLeft.length === 0 && listAdmin.status === 200 && listText.includes('E2E Notice Hike') && listPerson.status !== 200,
+            `change=${noticeChange.error?.message} before=${pendingBefore.length} other=${noticeOther.status} owner=${noticeOwner.status} pending=${pendingLeft.length} admin=${listAdmin.status} found=${listText.includes('E2E Notice Hike')} person=${listPerson.status}`);
+          await admin.from('bookings').delete().eq('tour_id', noticeHike?.id ?? '');
+          await admin.from('tours').delete().eq('id', noticeHike?.id ?? '');
+          if (noticeGuest) await admin.from('guests').delete().eq('id', noticeGuest.id);
+        }
+
         // The admins' list of guests: for those allowed to manage individuals, nobody else.
         const guestsAdmin = await fetch(`http://localhost:${DEV_PORT}/admin/guests?q=${encodeURIComponent(email('guest'))}`, { headers: { Cookie: superCookie }, redirect: 'manual' });
         const guestsAdminText = await guestsAdmin.text();
@@ -1849,6 +1928,7 @@ async function main() {
     results.push({ name: 'script crashed: ' + e.message, ok: false });
   } finally {
     if (e2eSightId) await admin.from('sights').delete().eq('id', e2eSightId);
+    await admin.from('tour_changes').delete().like('tour_title', 'E2E%');
     // ---------- cleanup ----------
     if (devServer) {
       stopDevServer(devServer);

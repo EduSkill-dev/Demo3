@@ -9,6 +9,7 @@ type Raw = {
   id: string;
   seq: number;
   status: "confirmed" | "cancelled";
+  refund_in_full: boolean;
   created_at: string;
   cancelled_at: string | null;
   read_at: string | null;
@@ -51,7 +52,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   const { data } = tours.size
     ? await supabase
         .from("bookings")
-        .select("id, seq, status, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, attended, profiles(first_name, last_name, birth_date, age, gender, email, phone), guests(first_name, last_name, birth_date, gender, email, phone)")
+        .select("id, seq, status, refund_in_full, created_at, cancelled_at, read_at, tour_id, emergency_contact_name, emergency_contact_phone, attended, profiles(first_name, last_name, birth_date, age, gender, email, phone), guests(first_name, last_name, birth_date, gender, email, phone)")
         .in("tour_id", only ? [only.id] : [...tours.keys()])
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -63,6 +64,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
       id: b.id,
       seq: b.seq,
       status: b.status,
+      refundInFull: b.refund_in_full,
       createdAt: b.created_at,
       cancelledAt: b.cancelled_at,
       unread: !b.read_at,

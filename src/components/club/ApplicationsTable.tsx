@@ -11,6 +11,7 @@ export type ApplicationRow = {
   id: string;
   seq: number; // k in k/B
   status: "confirmed" | "cancelled";
+  refundInFull?: boolean; // cancelled after the club changed the hike
   createdAt: string;
   cancelledAt: string | null;
   unread: boolean;
@@ -238,7 +239,7 @@ export default function ApplicationsTable({ rows, oneTour = false }: { rows: App
           <div className="space-y-4 text-sm">
             {open.status === "cancelled" && (
               <p className="rounded-lg bg-red-50 p-3 text-red-700 dark:bg-red-950/40 dark:text-red-300">
-                {t("applications.refundNote")}
+                {t(open.refundInFull ? "applications.refundNoteFull" : "applications.refundNote")}
               </p>
             )}
             <dl className="divide-y divide-line rounded-xl border border-line">

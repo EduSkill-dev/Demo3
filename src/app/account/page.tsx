@@ -16,18 +16,18 @@ export default async function MyToursPage() {
   const today = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
     .from("bookings")
-    .select("id, tours(*, clubs(id, name))")
+    .select("id, created_at, tours(*, clubs(id, name))")
     .eq("user_id", user.id)
     .eq("status", "confirmed");
 
-  type Raw = { id: string; tours: (Tour & { clubs: { id: string; name: string } | null }) | null };
+  type Raw = { id: string; created_at: string; tours: (Tour & { clubs: { id: string; name: string } | null }) | null };
   const booked = ((data ?? []) as unknown as Raw[]).filter((b) => b.tours);
   const likes = await getLikeCounts(booked.map((b) => b.tours!.id));
   const rows: MyTourRow[] = ((data ?? []) as unknown as Raw[])
     .filter((b) => b.tours && b.tours.date >= today)
     .map((b) => {
       const { clubs, ...tour } = b.tours!;
-      return { bookingId: b.id, tour: { ...tour, likes: likes.tours.get(tour.id) ?? 0, club: clubs } };
+      return { bookingId: b.id, bookedAt: b.created_at, tour: { ...tour, likes: likes.tours.get(tour.id) ?? 0, club: clubs } };
     })
     .sort((a, b) => (a.tour.date < b.tour.date ? -1 : 1));
 

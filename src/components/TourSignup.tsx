@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_CANCEL_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
+import { cancelHoursAfterChange, DEFAULT_CANCEL_HOURS, canCancelBooking, formatAmd } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { parseEmergency } from "@/lib/emergency";
 import { useT } from "@/i18n/client";
 import GuestBookingForm from "@/components/tour/GuestBookingForm";
 import PaymentSheet, { type ChargeResponse } from "./PaymentSheet";
 
-type BookingRow = { id: string; status: "confirmed" | "cancelled" };
+type BookingRow = { id: string; status: "confirmed" | "cancelled"; created_at?: string };
 
 // Sign-up card for a single hike: free places, then register / pay / cancel
 // with the reason when that is not possible. Registration goes through
@@ -26,6 +26,7 @@ export default function TourSignup({
   total,
   meetingTime = null,
   cancelHours = DEFAULT_CANCEL_HOURS,
+  lastChangeAt = null,
   price = 0,
   bare = false,
 }: {
@@ -37,6 +38,7 @@ export default function TourSignup({
   total?: number; // the hike's own size, set by the club — display only
   meetingTime?: string | null;
   cancelHours?: number; // the club's cancel window
+  lastChangeAt?: string | null; // when the club last changed the hike
   price?: number;
   bare?: boolean; // no card frame (inside a modal footer)
 }) {
@@ -84,7 +86,7 @@ export default function TourSignup({
       const [{ data: saved }, { data: profile }, { data: row }] = await Promise.all([
         supabase.from("emergency_contacts").select("name, phone").eq("user_id", auth.user.id).maybeSingle(),
         supabase.from("profiles").select("role").eq("id", auth.user.id).single(),
-        supabase.from("bookings").select("id, status").eq("tour_id", tourId).eq("user_id", auth.user.id).maybeSingle(),
+        supabase.from("bookings").select("id, status, created_at").eq("tour_id", tourId).eq("user_id", auth.user.id).maybeSingle(),
       ]);
       const userRole = (profile as { role?: string } | null)?.role ?? null;
       setRole(userRole);
@@ -108,7 +110,8 @@ export default function TourSignup({
   const free = Math.max(0, limit - taken);
   const full = free <= 0;
   const closed = limit <= 0; // hidden/cancelled hike or the club's package lapsed
-  const cancellable = canCancelBooking(date, meetingTime, cancelHours);
+  const changedSince = cancelHoursAfterChange(cancelHours, lastChangeAt, booking?.created_at) !== cancelHours;
+  const cancellable = canCancelBooking(date, meetingTime, changedSince ? 0 : cancelHours);
 
   async function book() {
     setError(null);
@@ -277,7 +280,9 @@ export default function TourSignup({
 
       {confirmed && !isPast && (
         <p className="mt-3 text-xs text-muted">
-          {cancellable
+          {changedSince
+            ? t("signup.changedHint")
+            : cancellable
             ? t("signup.cancelHint", { hours: cancelHours })
             : t("signup.tooLateHint", { hours: cancelHours })}
         </p>

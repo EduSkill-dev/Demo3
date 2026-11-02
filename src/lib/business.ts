@@ -13,6 +13,7 @@ export type BusinessSettings = {
   promo_days: number; // days from a club's sign-up with no commission
   advanced_days: number; // what one Advanced payment buys
   advanced_reminder_days: number; // the reminder before Advanced ends
+  tour_change_limit: number; // how many times a club may change a booked hike
 };
 
 export const BUSINESS_DEFAULTS: BusinessSettings = {
@@ -23,6 +24,7 @@ export const BUSINESS_DEFAULTS: BusinessSettings = {
   promo_days: 90,
   advanced_days: 31,
   advanced_reminder_days: 3,
+  tour_change_limit: 2,
 };
 
 export const getBusinessSettings = cache(async (): Promise<BusinessSettings> => {

@@ -364,6 +364,7 @@ const ACTIONS: Record<string, (ctx: Ctx, body: Body) => Promise<NextResponse>> =
       promo_days: whole("promo_days", 0, 3650),
       advanced_days: whole("advanced_days", 1, 366),
       advanced_reminder_days: whole("advanced_reminder_days", 0, 60),
+      tour_change_limit: whole("tour_change_limit", 0, 20),
     };
     if (Object.values(value).some((x) => x === null)) return fail("Թվերից մեկը սխալ է կամ թույլատրելի սահմաններից դուրս։");
     const { error } = await ctx.db.from("site_settings").upsert({ key: "business", value, updated_by: ctx.me.userId, updated_at: new Date().toISOString() });

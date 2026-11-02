@@ -14,5 +14,6 @@ export const EVENT_KINDS: Record<string, { label: string; icon: string }> = {
   "support.new": { label: "Օգնության չաթ", icon: "💬" },
   "request.new": { label: "Անհատական հայտ", icon: "📝" },
   "tour.new": { label: "Նոր հայտարարություն", icon: "⛰️" },
+  "tour.changed": { label: "Արշավի փոփոխություն", icon: "⚠️" },
   "rating.new": { label: "Գնահատական", icon: "⭐" },
 };

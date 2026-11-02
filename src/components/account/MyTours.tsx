@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { canCancelBooking, cancelHoursOf } from "@/lib/catalog";
+import { cancelHoursAfterChange, canCancelBooking, cancelHoursOf } from "@/lib/catalog";
 import { serverErrorMessage } from "@/lib/serverErrors";
 import { useFormatDate, useT } from "@/i18n/client";
 import Modal from "@/components/ui/Modal";
 import TourDetails, { type TourForDetails } from "@/components/tour/TourDetails";
 import type { TourStatus } from "@/types/database";
 
-export type MyTourRow = { bookingId: string; tour: TourForDetails & { status: TourStatus } };
+export type MyTourRow = { bookingId: string; bookedAt: string; tour: TourForDetails & { status: TourStatus; last_change_at?: string | null } };
 
 // Upcoming hikes: name, date, region, overnight, coordinator phone, then
 // View (full announcement) and Cancel (only inside the hike's cancel window).
@@ -71,7 +71,7 @@ export default function MyTours({ rows }: { rows: MyTourRow[] }) {
           <tbody>
             {rows.map((r) => {
               const cancelled = r.tour.status === "cancelled";
-              const can = !cancelled && canCancelBooking(r.tour.date, r.tour.meeting_time, cancelHoursOf(r.tour));
+              const can = !cancelled && canCancelBooking(r.tour.date, r.tour.meeting_time, cancelHoursAfterChange(cancelHoursOf(r.tour), r.tour.last_change_at, r.bookedAt));
               return (
                 <tr key={r.bookingId} className="border-b border-line last:border-0 text-ink">
                   <td className="px-4 py-3">

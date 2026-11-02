@@ -77,7 +77,14 @@ export default function AnnouncementsTable({
     run(r.id, () => supabase().from("tours").update({ status }).eq("id", r.id));
   function remove(r: ListingRow) {
     if (r.taken > 0) {
-      if (confirm(t("announcements.confirmCancel", { title: r.title, count: r.taken }))) setStatus(r, "cancelled");
+      if (confirm(t("announcements.confirmCancel", { title: r.title, count: r.taken }))) {
+        // Saved first: the emails read what the database recorded.
+        run(r.id, async () => {
+          const result = await supabase().from("tours").update({ status: "cancelled" }).eq("id", r.id);
+          if (!result.error) fetch("/api/tours/changes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tour_id: r.id }), keepalive: true }).catch(() => {});
+          return result;
+        });
+      }
     } else if (confirm(t("announcements.confirmDelete", { title: r.title }))) {
       run(r.id, () => supabase().from("tours").delete().eq("id", r.id));
     }
