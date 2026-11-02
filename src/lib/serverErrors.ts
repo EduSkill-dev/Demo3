@@ -40,7 +40,6 @@ const KNOWN: [string, MessageKey][] = [
   ["listing_limit_month", "errors.listingLimitMonth"],
   ["tour_past_date", "tourForm.errDate"],
   ["tour_needs_place", "tourForm.errPlaces"],
-  ["tour_needs_meeting", "tourForm.errMeeting"],
   ["tour_needs_photo", "tourForm.errPhotos"],
   ["ջնջելու փոխարեն չեղարկեք", "errors.bookedTourDelete"],
   ["վճարովի է", "errors.paidTour"],

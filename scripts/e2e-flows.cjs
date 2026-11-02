@@ -206,8 +206,13 @@ async function givePackage(clubId, tariff, days = 30) {
   if (r.error) throw new Error('givePackage: ' + r.error.message);
 }
 
+// A place of our own whose tags equal the row's, and any stored photo address:
+// a browser cannot publish a listing without them (0087).
+let e2eSightId = null;
+const E2E_PHOTO = `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/club-assets/e2e.jpg`;
 function tourRow(clubId, overrides = {}) {
   return {
+    sight_ids: e2eSightId ? [e2eSightId] : [], photo_urls: [E2E_PHOTO],
     club_id: clubId, title: 'E2E Tour', regions: ['kotayk'], terrains: ['mountains'],
     date: future(78), max_participants: 4, difficulty: 'easy', overnight: false,
     coordinator_phone: '+374 55 123456',
@@ -258,6 +263,7 @@ async function main() {
     check('a new club starts without a package (metadata tariff ignored)',
       clubRow.data?.tariff === null && clubRow.data?.package_ends_at === null, JSON.stringify(clubRow.data));
     const clubA = clubRow.data.id;
+    e2eSightId = (await admin.from('sights').insert({ name_hy: 'E2E վայր', name_ru: 'E2E', name_en: 'E2E', region: 'kotayk', terrain: 'mountains', difficulty: 'easy', active: false }).select('id').single()).data?.id ?? null;
     const clubB = (await admin.from('clubs').select('id').eq('owner_id', ids.club2).single()).data.id;
 
     // ---------- every club is on START from its first day ----------
@@ -426,6 +432,43 @@ async function main() {
       ids.clubL = null;
     }
 
+    // ---------- what a listing needs before it goes out (0087) ----------
+    {
+      await signIn('club');
+      const rule = (extra) => anon.from('tours').insert(tourRow(clubA, { title: 'E2E Rule', date: future(150), ...extra })).select('id').single();
+      const noPhoto = await rule({ photo_urls: [] });
+      const noPlace = await rule({ sight_ids: [] });
+      const past = await rule({ date: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) });
+      const draft = await rule({ status: 'hidden', photo_urls: [], sight_ids: [] });
+      const publishEmpty = await anon.from('tours').update({ status: 'active' }).eq('id', draft.data?.id ?? '');
+      const fill = await anon.from('tours').update({ photo_urls: [E2E_PHOTO], sight_ids: [e2eSightId] }).eq('id', draft.data?.id ?? '');
+      const publishFull = await anon.from('tours').update({ status: 'active' }).eq('id', draft.data?.id ?? '');
+      const emptyAgain = await anon.from('tours').update({ photo_urls: [] }).eq('id', draft.data?.id ?? '');
+      await admin.from('tours').delete().eq('id', draft.data?.id ?? '');
+      check('a listing goes out with a future date, a place and a photo; a draft may be incomplete; the last photo of a published one stays',
+        /tour_needs_photo/.test(noPhoto.error?.message ?? '') && /tour_needs_place/.test(noPlace.error?.message ?? '') && /tour_past_date/.test(past.error?.message ?? '')
+          && !draft.error && !!publishEmpty.error && !fill.error && !publishFull.error && /tour_needs_photo/.test(emptyAgain.error?.message ?? ''),
+        `photo=${noPhoto.error?.message} place=${noPlace.error?.message} past=${past.error?.message} draft=${draft.error?.message} empty=${publishEmpty.error?.message} fill=${fill.error?.message} full=${publishFull.error?.message} again=${emptyAgain.error?.message}`);
+
+      // A guest on the hike: the club can still move and cancel it; a blocked club takes no bookings.
+      const guestHike = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Guest Hike', date: future(151) })).select('id').single()).data;
+      const guestRow = (await admin.from('guests').insert({ email: `e2e-onhike-${Date.now()}@example.com`, first_name: 'Հյուր', last_name: 'Թեստ', phone: '+374 91 777001', birth_date: '1990-01-01', gender: 'female' }).select('id').single()).data;
+      const guestBooking = await admin.from('bookings').insert({ tour_id: guestHike?.id, guest_id: guestRow?.id, status: 'confirmed' });
+      const movedHike = await anon.from('tours').update({ date: future(152) }).eq('id', guestHike?.id ?? '');
+      const cancelledHike = await anon.from('tours').update({ status: 'cancelled' }).eq('id', guestHike?.id ?? '');
+      await admin.from('tours').update({ status: 'active' }).eq('id', guestHike?.id ?? '');
+      await admin.from('clubs').update({ owner_blocked: true }).eq('id', clubA);
+      const guest2 = (await admin.from('guests').insert({ email: `e2e-onhike2-${Date.now()}@example.com`, first_name: 'Հյուր', last_name: 'Թեստ', phone: '+374 91 777002', birth_date: '1990-01-01', gender: 'male' }).select('id').single()).data;
+      const blockedBooking = await admin.from('bookings').insert({ tour_id: guestHike?.id, guest_id: guest2?.id, status: 'confirmed' });
+      await admin.from('clubs').update({ owner_blocked: false }).eq('id', clubA);
+      await admin.from('bookings').delete().eq('tour_id', guestHike?.id ?? '');
+      await admin.from('tours').delete().eq('id', guestHike?.id ?? '');
+      await admin.from('guests').delete().in('id', [guestRow?.id, guest2?.id].filter(Boolean));
+      check('a guest on a hike does not stop the club moving or cancelling it; a blocked club takes no new bookings',
+        !guestBooking.error && !movedHike.error && !cancelledHike.error && !!blockedBooking.error,
+        `book=${guestBooking.error?.message} moved=${movedHike.error?.message} cancelled=${cancelledHike.error?.message} blocked=${blockedBooking.error?.message ?? 'ALLOWED'}`);
+    }
+
     // ---------- a lapsed Advanced is simply START again ----------
     await signIn('club');
     const hasCsv = async () => (await admin.rpc('club_has_feature', { p_club: clubA, p_feature: 'registrants_csv_export' })).data;
@@ -521,11 +564,11 @@ async function main() {
       await admin.from('saved_searches').delete().eq('user_id', ids.ind2).not('club_id', 'is', null);
       const before = ((await admin.from('notifications').select('id').eq('user_id', ids.ind2)).data || []).length;
       // Lori, no overnight → matches no search.
-      const miss = (await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Unmatched', date: future(181), regions: ['lori'], overnight: false })).select('id').single()).data;
+      const miss = (await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Unmatched', date: future(181), regions: ['lori'], sight_ids: [], overnight: false })).select('id').single()).data;
       const afterMiss = ((await admin.from('notifications').select('id').eq('user_id', ids.ind2)).data || []).length;
       if (miss) await admin.from('tours').delete().eq('id', miss.id);
       // Syunik with an overnight → matches the region search.
-      const hitRes = await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Matched', date: future(182), regions: ['syunik'], overnight: true })).select('id').single();
+      const hitRes = await admin.from('tours').insert(tourRow(clubB, { title: 'E2E Matched', date: future(182), regions: ['syunik'], sight_ids: [], overnight: true })).select('id').single();
       const hit = hitRes.data;
       const hitNotes = (await admin.from('notifications').select('id').eq('user_id', ids.ind2).eq('tour_id', hit?.id ?? '')).data || [];
       await signIn('ind2');
@@ -1052,6 +1095,10 @@ async function main() {
       const refusedPost = await anon.from('tours').insert(tourRow(clubA, { title: 'E2E Not Allowed', date: future(70) })).select('id');
       const selfUnblock = await anon.from('clubs').update({ posting_blocked: false, applications_blocked: false }).eq('id', clubA).select('posting_blocked');
       const editOwn = await anon.from('tours').update({ notes: 'still editable' }).eq('id', tourId).select('id');
+      const hiddenForBlock = (await admin.from('tours').insert(tourRow(clubA, { title: 'E2E Hidden While Blocked', date: future(71), status: 'hidden' })).select('id').single()).data;
+      const refusedRepublish = await anon.from('tours').update({ status: 'active' }).eq('id', hiddenForBlock?.id ?? '').select('id');
+      await admin.from('tours').delete().eq('id', hiddenForBlock?.id ?? '');
+      check('a club whose posting is off cannot publish a hidden listing again', !!refusedRepublish.error, refusedRepublish.error?.message ?? 'ALLOWED');
       const refusedApply = await admin.from('bookings').insert({ tour_id: soonTour.id, user_id: ids.ind, status: 'confirmed' });
       const wrongKind = await act({ action: 'account.setLimit', userId: ids.club, limit: 'book', blocked: true }, superCookie);
       await act({ action: 'account.setLimit', userId: ids.club, limit: 'post', blocked: false }, superCookie);
@@ -1801,6 +1848,7 @@ async function main() {
     console.log('ERROR:', e.message);
     results.push({ name: 'script crashed: ' + e.message, ok: false });
   } finally {
+    if (e2eSightId) await admin.from('sights').delete().eq('id', e2eSightId);
     // ---------- cleanup ----------
     if (devServer) {
       stopDevServer(devServer);
